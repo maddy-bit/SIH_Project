@@ -3,12 +3,13 @@
 City-wide AI engine for multi-camera ANPR trajectory tracking and urban
 traffic analytics — a prototype for SIH problem statement SIH26127.
 
-> **Status: Phases 1–6.** The full pipeline runs end-to-end for a single
-> camera: real video → real YOLOv8 vehicle detection → real ByteTrack
-> tracking → real plate-region detection → real EasyOCR → normalized plate
-> → stored in the backend → searchable via `GET /api/vehicles/{plate}`.
-> Cross-camera trajectory scoring (Phase 9), the map, live mode and
-> analytics are not implemented yet.
+> **Status: Phases 1–9.** The full pipeline runs end-to-end across
+> multiple cameras: real video → real YOLOv8 vehicle detection → real
+> ByteTrack tracking → real plate-region detection → real EasyOCR →
+> normalized plate → stored in the backend → searchable via
+> `GET /api/vehicles/{plate}` → reconstructed into a confidence-scored
+> route via `GET /api/vehicles/{plate}/trajectory`. The map, live mode
+> and analytics are not implemented yet.
 
 ## Architecture
 
@@ -164,6 +165,68 @@ Every module exposes a small, swappable interface (`detect()`, `track_video()`,
 `read_plate()`, `embed()`/`similarity()`) so a stronger model can replace
 the baseline without touching callers.
 
+## Trajectory engine (Phases 8–9)
+
+`GET /api/vehicles/{plate}/trajectory` reconstructs the most probable route:
+
+```bash
+curl http://localhost:8080/api/vehicles/MH12AB1234/trajectory
+```
+
+```json
+{
+  "vehicle": { "plate": "MH12AB1234", "vehicleType": "SUV", "color": "White", ... },
+  "points": [
+    { "cameraId": "CAM-01", "timestamp": "...", "incomingTransitionConfidence": null, ... },
+    { "cameraId": "CAM-03", "timestamp": "...", "incomingTransitionConfidence": 0.90, ... },
+    { "cameraId": "CAM-07", "timestamp": "...", "incomingTransitionConfidence": 0.87, ... },
+    { "cameraId": "CAM-11", "timestamp": "...", "incomingTransitionConfidence": 0.89, ... }
+  ],
+  "overallConfidence": 0.888,
+  "estimatedDistanceKm": 11.18,
+  "estimatedDurationMinutes": 33,
+  "warning": null
+}
+```
+
+**How it works** (`backend/.../trajectory/`):
+
+1. `TrajectoryEngine` collapses the raw per-frame detections for a plate
+   (many rows per camera pass) into one visit per camera, in timestamp
+   order.
+2. `TrajectoryScoringService` scores every consecutive camera-to-camera
+   transition - this is the "don't just connect detections in timestamp
+   order" reasoning the pipeline is supposed to do:
+   `transition_confidence = 0.30·plate_score + 0.25·kinematic_score + 0.15·geographic_score + 0.15·direction_score + 0.15·appearance_score`
+   - **plate_score** - OCR confidence of the two reads.
+   - **kinematic_score** - is `distance / elapsed_time` a plausible urban
+     speed? An implied speed over 150 km/h is flagged as physically
+     implausible (capped confidence, explanatory note) rather than
+     silently trusted - e.g. a plate misread that happens to normalize to
+     a real-looking plate.
+   - **geographic_score** - stands in for road-network connectivity
+     (`CameraGraph`, see below).
+   - **direction_score** - does the camera-to-camera bearing agree with
+     the destination camera's recorded facing direction?
+   - **appearance_score** - Re-ID placeholder (neutral until embeddings
+     are persisted - see Known limitations).
+3. `CameraGraph` computes distance/bearing/estimated-travel-time
+   geometrically (great-circle) as a stand-in for a real road-network
+   `CameraEdge` table, which the prototype doesn't have.
+4. Overall confidence is the average transition confidence. One detection
+   only → `overallConfidence: null` and
+   `"warning": "NO_RELIABLE_TRAJECTORY_FOUND: only one camera detection available."`,
+   matching the master prompt's low-evidence error case.
+
+**Known limitation (honestly scoped):** a detection is only ever linked to
+a `Vehicle` when its own plate was read (see `DetectionIngestionService`),
+so there's exactly one detection stream per plate to score - not several
+competing candidate identities to disambiguate between using appearance
+when the plate is unreadable on some cameras. The scoring above still
+catches implausible *transitions* within that stream; multi-candidate
+appearance-based disambiguation (persisted Re-ID embeddings + a proper
+assignment step) is a natural next phase, not yet built.
+
 ## Configuration
 
 | File | Purpose |
@@ -186,6 +249,7 @@ mock vehicle registry, loaded at backend startup.
 | `GET /api/cameras/{id}` | One camera |
 | `GET /api/vehicles/{plate}` | Vehicle intelligence summary (first/last seen, cameras visited, detection count) |
 | `GET /api/vehicles/{plate}/detections` | Raw detection events for a plate, chronological |
+| `GET /api/vehicles/{plate}/trajectory` | Reconstructed route: cameras visited, per-transition confidence, distance, duration |
 | `POST /api/detections/ingest` | Store one AI-pipeline detection event (used by `scripts/process_video.py`) |
 | `POST /api/detections/ingest/batch` | Same, batched |
 | `GET /evidence/{cameraId}/{file}` | Saved evidence frame for a detection |
@@ -206,9 +270,9 @@ This project is built incrementally. See the phase plan for what's next:
 5. Plate detection + OCR ✅ (Haar cascade + EasyOCR)
 6. Detection storage + search API ✅
 7. Multi-object tracking ✅ (ByteTrack, folded into Phase 4-6 above)
-8. Cross-camera matching — not started (next)
-9. Trajectory reconstruction engine — not started
-10. Map visualization — not started
+8. Cross-camera matching ✅ (plate-linked; transition plausibility scored - see Known limitation above)
+9. Trajectory reconstruction engine ✅ (`GET /api/vehicles/{plate}/trajectory`)
+10. Map visualization — not started (next)
 11. Investigation frontend (search → results → evidence) — not started
 12. Evidence viewer — not started
 13. Live WebSocket simulation — not started

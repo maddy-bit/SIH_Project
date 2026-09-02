@@ -39,9 +39,9 @@ class PlateDetector:
         gray = cv2.cvtColor(vehicle_crop_bgr, cv2.COLOR_BGR2GRAY)
         rects, reject_levels, level_weights = self.cascade.detectMultiScale3(
             gray,
-            scaleFactor=1.05,
-            minNeighbors=4,
-            minSize=(40, 12),
+            scaleFactor=1.03,
+            minNeighbors=1,
+            minSize=(20, 8),
             outputRejectLevels=True,
         )
 
