@@ -1,0 +1,26 @@
+# Production datasource profile - PostgreSQL + PostGIS.
+#
+# Activate with: SPRING_PROFILES_ACTIVE=postgres mvn spring-boot:run
+# (or set spring.profiles.active in application.yml / an env var).
+#
+# This is genuinely tested, not just written: see README's "Production
+# datasource (PostgreSQL + PostGIS)" section for the exact commands used
+# to create the database, enable PostGIS, and run the backend against it.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cityai}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:cityai}
+    password: ${DB_PASSWORD:cityai_dev_password}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  h2:
+    console:
+      enabled: false

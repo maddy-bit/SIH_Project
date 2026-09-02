@@ -11,6 +11,7 @@ running first (`cd backend && mvn spring-boot:run`).
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -33,6 +34,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--frame-stride", type=int, default=5)
     parser.add_argument("--plate-sample-stride", type=int, default=3)
     parser.add_argument("--backend-url", default="http://localhost:8080")
+    parser.add_argument(
+        "--ingest-username", default=os.environ.get("INGEST_USERNAME", "ingest"),
+        help="POST /api/detections/ingest is behind HTTP Basic auth - see backend/security/SecurityConfig.java. "
+             "Defaults to $INGEST_USERNAME or 'ingest'.",
+    )
+    parser.add_argument(
+        "--ingest-password", default=os.environ.get("INGEST_PASSWORD", "change-me-in-production"),
+        help="Defaults to $INGEST_PASSWORD or the backend's dev default.",
+    )
     parser.add_argument(
         "--dry-run", action="store_true",
         help="Run the pipeline and print detections without posting to the backend.",
@@ -80,7 +90,12 @@ def main() -> None:
             "frameNumber": d.frame_number,
             "imagePath": d.image_path,
         }
-        response = requests.post(f"{args.backend_url}/api/detections/ingest", json=payload, timeout=10)
+        response = requests.post(
+            f"{args.backend_url}/api/detections/ingest",
+            json=payload,
+            auth=(args.ingest_username, args.ingest_password),
+            timeout=10,
+        )
         if response.status_code == 201:
             stored += 1
         else:

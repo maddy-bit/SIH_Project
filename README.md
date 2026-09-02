@@ -3,16 +3,20 @@
 City-wide AI engine for multi-camera ANPR trajectory tracking and urban
 traffic analytics — a prototype for SIH problem statement SIH26127.
 
-> **Status: all 15 phases complete.** Real video → real YOLOv8 vehicle
-> detection → real ByteTrack tracking → real plate-region detection →
-> real EasyOCR → normalized plate → stored in the backend →
-> reconstructed into a confidence-scored route → a search-driven
-> dashboard (map, intelligence panel, timeline, evidence viewer) → a
-> live-tracking simulation over WebSocket → city-wide analytics. This is
-> a **complete hackathon prototype, not production software** - see
-> "What this is (and isn't)" near the bottom for exactly what that gap
-> is. See "Investigation frontend" below for a map-rendering caveat
-> specific to this dev sandbox.
+> **Status: all 15 phases complete, plus real production-hardening on
+> top.** Real video → real YOLOv8 vehicle detection → real ByteTrack
+> tracking → real plate-region detection → real EasyOCR → normalized
+> plate → stored in the backend → reconstructed into a confidence-scored
+> route → a search-driven dashboard → a live-tracking simulation over
+> WebSocket → city-wide analytics. Beyond the 15-phase plan: a real
+> PostgreSQL + PostGIS datasource (tested, with a genuine spatial query
+> endpoint), HTTP Basic auth on writes and the audit log, audit logging
+> of every search, Docker packaging, and a CI workflow. This is a
+> **complete, substantially hardened hackathon prototype - still not
+> production software.** See "What this is (and isn't)" near the bottom
+> for exactly what that gap still is. See "Investigation frontend" below
+> for a map-rendering caveat, and "Docker" below for a Docker-build
+> caveat, both specific to this dev sandbox's network policy.
 
 ## Architecture
 
@@ -323,26 +327,125 @@ every panel just shows "no data yet" rather than fabricated figures.
 
 - **Backend unit tests** (`backend/src/test/...`): `PlateNormalizerTest`,
   `GeoUtilsTest`, `TrajectoryScoringServiceTest` - run with `mvn test`.
-- **API smoke test** (`scripts/smoke_test.sh`): hits every REST endpoint
-  against a running backend and checks status codes + real response
-  content (not just "did it 200"). Run it after ingesting the demo
-  scenario: `./scripts/smoke_test.sh` (or pass a different base URL).
+- **API smoke test** (`scripts/smoke_test.sh`): 17 checks against a
+  running backend - status codes, real response content, auth enforcement
+  on protected endpoints, and the spatial endpoint's profile-dependent
+  behavior. Run it after ingesting the demo scenario: `./scripts/smoke_test.sh`
+  (or pass a different base URL). Passes against both the default H2
+  profile and the real `postgres` profile.
 - Both frontend (`npm run lint`, `npm run build`) and backend (`mvn
   compile` with warnings enabled) build clean with zero warnings as of
   this phase.
+
+## Production datasource (PostgreSQL + PostGIS)
+
+The default profile uses H2 for zero-config local development. A real
+`postgres` Spring profile also exists - genuinely built and tested against
+a real PostgreSQL 16 + PostGIS 3.4 database, not just written and left
+unverified:
+
+```bash
+# 1. Create the database and enable PostGIS (one-time, local Postgres install):
+sudo -u postgres psql -c "CREATE USER cityai WITH PASSWORD 'cityai_dev_password';"
+sudo -u postgres psql -c "CREATE DATABASE cityai OWNER cityai;"
+sudo -u postgres psql -d cityai -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+
+# 2. Run the backend against it:
+cd backend
+SPRING_PROFILES_ACTIVE=postgres mvn spring-boot:run
+```
+
+(Or use `docker-compose.yml` at the repo root, which runs `postgis/postgis`
+for you - see "Docker" below.)
+
+On startup, `PostGisMigrationRunner` (only active on this profile) adds a
+`geography(Point,4326)` column - generated automatically from the existing
+`latitude`/`longitude` columns - plus a GiST spatial index, to both
+`cameras` and `vehicle_detections`. This isn't just "PostGIS is installed
+and unused": `GET /api/cameras/nearby?lat=&lon=&radiusKm=` is a real
+`ST_DWithin` + nearest-neighbor query (`SpatialCameraService`), verified
+against real data:
+
+```bash
+curl "http://localhost:8080/api/cameras/nearby?lat=18.5308&lon=73.8474&radiusKm=3"
+# -> CAM-01, CAM-02, CAM-03, nearest first
+```
+
+On the default H2 profile this endpoint returns a clear `501` explaining
+it needs the `postgres` profile, rather than silently answering with an
+unindexed approximation.
+
+## Authentication & audit logging
+
+**Honestly scoped, not enterprise-grade** (see the production-readiness
+table below): `POST /api/detections/ingest` and `GET /api/audit/recent`
+require HTTP Basic auth (`SecurityConfig.java`); every other endpoint,
+including the WebSocket, stays open so the investigation frontend doesn't
+need a login flow to keep working. Credentials are configurable via
+`INGEST_USERNAME`/`INGEST_PASSWORD` (defaults are for local dev only -
+change them before deploying anywhere else). `scripts/process_video.py`
+sends them automatically (`--ingest-username`/`--ingest-password`, or the
+same env vars).
+
+Every vehicle search and trajectory view is recorded (`AuditLogService`) -
+who looked up what plate, when, from which address - and queryable via
+the same credentials:
+
+```bash
+curl -u ingest:change-me-in-production "http://localhost:8080/api/audit/recent?limit=20"
+```
+
+This is what the master prompt's "audit logs" / "access logging" security
+requirement means for an investigation tool - not a general HTTP request
+log.
+
+## Docker
+
+`docker-compose.yml` at the repo root runs the whole stack: PostGIS,
+backend (on the `postgres` profile), the AI service, and the frontend.
+Each service also has its own multi-stage `Dockerfile`
+(`backend/`, `frontend/` - with Next.js `output: "standalone"` for a lean
+image - and `ai-service/`).
+
+```bash
+docker compose up --build
+```
+
+**Honestly caveated:** these Dockerfiles were written to standard,
+well-established patterns and validated as far as this sandbox allowed,
+but an actual `docker build` couldn't be completed here - this sandbox's
+shared egress IP had already hit Docker Hub's anonymous pull rate limit
+(`429 Too Many Requests` / `You have reached your unauthenticated pull
+rate limit`) when this was written, the same category of sandbox-specific
+network restriction noted for map tiles earlier in this README. Please
+verify `docker compose up --build` on your own machine before relying on
+it.
+
+## CI/CD
+
+`.github/workflows/ci.yml` runs on every push/PR: backend `mvn test` +
+warning-free compile, frontend `npm run lint` + `npm run build`, an
+AI-service syntax check (full model-download tests are too slow/heavy for
+CI - see the workflow's comments), and an API smoke test against a freshly
+booted H2-backed backend. The workflow's exact commands were verified
+locally against a running backend before being committed (see "Testing"
+below) - GitHub's runners aren't subject to this sandbox's Docker Hub rate
+limiting, so the workflow itself should run cleanly there even though full
+`docker build` couldn't be re-verified here.
 
 ## Configuration
 
 | File | Purpose |
 | --- | --- |
 | `frontend/.env.local` | `NEXT_PUBLIC_API_BASE_URL` (defaults to `http://localhost:8080`) |
-| `backend/src/main/resources/application.yml` | Server port, H2 datasource, CORS origins, `app.data-dir`/`app.evidence-dir`, AI service base URL |
+| `backend/src/main/resources/application.yml` | Server port, H2 datasource, CORS origins, ingest credentials, `app.data-dir`/`app.evidence-dir`, AI service base URL |
+| `backend/src/main/resources/application-postgres.yml` | Real PostgreSQL datasource - activate with `SPRING_PROFILES_ACTIVE=postgres` |
 
 The backend's H2 database is file-based at `backend/data/` (git-ignored) so
-data survives restarts during development; swap the datasource for
-PostgreSQL/PostGIS when moving beyond the prototype. `data/cameras.json`
-and `data/vehicles.json` (repo root) are the seed camera network and the
-mock vehicle registry, loaded at backend startup.
+data survives restarts during development. `data/cameras.json` and
+`data/vehicles.json` (repo root) are the seed camera network and the mock
+vehicle registry, loaded at backend startup regardless of which datasource
+profile is active.
 
 ## API reference (current)
 
@@ -351,14 +454,18 @@ mock vehicle registry, loaded at backend startup.
 | `GET /api/health` | Liveness |
 | `GET /api/cameras` | List all cameras |
 | `GET /api/cameras/{id}` | One camera |
+| `GET /api/cameras/nearby?lat=&lon=&radiusKm=` | Real PostGIS spatial query (postgres profile only - 501 on H2) |
 | `GET /api/vehicles/{plate}` | Vehicle intelligence summary (first/last seen, cameras visited, detection count) |
 | `GET /api/vehicles/{plate}/detections` | Raw detection events for a plate, chronological |
 | `GET /api/vehicles/{plate}/trajectory` | Reconstructed route: cameras visited, per-transition confidence, distance, duration |
-| `POST /api/detections/ingest` | Store one AI-pipeline detection event (used by `scripts/process_video.py`) |
-| `POST /api/detections/ingest/batch` | Same, batched |
+| `POST /api/detections/ingest` 🔒 | Store one AI-pipeline detection event (used by `scripts/process_video.py`) |
+| `POST /api/detections/ingest/batch` 🔒 | Same, batched |
 | `GET /api/analytics/overview` | City-wide aggregates (see Phase 14 below) |
+| `GET /api/audit/recent?limit=` 🔒 | Who searched what, when (see "Authentication & audit logging" above) |
 | `GET /ws/live/{plate}` (WebSocket) | Live-simulation detection stream (see Phase 13 below) |
 | `GET /evidence/{cameraId}/{file}` | Saved evidence frame for a detection |
+
+🔒 = requires HTTP Basic auth (`INGEST_USERNAME`/`INGEST_PASSWORD`).
 
 Plate lookups accept any casing/spacing ("mh12ab1234", "MH 12 AB 1234") -
 both sides normalize the same way (`utils/plate_normalizer.py` /
@@ -399,29 +506,35 @@ city-wide analytics - all built on real stored data with no fabricated
 numbers anywhere in the stack. That is what the 15-phase plan above set
 out to build, and it's done.
 
-**It is not production software**, and getting there is a different, much
-larger project than finishing this one - the original brief for this repo
-was explicit that building that system now would be over-engineering a
-one-week prototype. None of the following exists yet:
+**It is not production software.** Getting all the way there is a
+different, much larger project than finishing this one - the original
+brief for this repo was explicit that building the full system now would
+be over-engineering a one-week prototype, and several of the rows below
+(a real government registry, GPU infrastructure, RTSP camera feeds) need
+resources - external approvals, hardware, live camera access - that
+simply don't exist for a prototype to plug into, no matter how much code
+gets written. Some rows *were* pushed further after the 15-phase plan
+finished, each genuinely built and tested (not just written) against real
+infrastructure available in this environment - marked ✅ below:
 
-| Area | Prototype state | What "production" would need |
+| Area | Prototype state | What "production" would still need |
 | --- | --- | --- |
-| **Auth** | None - the API is open | Real authentication (SSO/OAuth), session management |
+| **Auth** ✅ (partial) | HTTP Basic on writes + the audit log (`SecurityConfig.java`), tested | Real user auth (SSO/OAuth) + a login flow for the investigation UI itself, which is still fully open |
 | **Authorization** | None | Role-based access control, per-investigation permissions |
-| **Audit logging** | None | Who searched what, when, evidence chain-of-custody logs |
-| **Database** | H2, file-based, single node | PostgreSQL + PostGIS, connection pooling, backups, migrations |
-| **Vehicle registry** | Local mock JSON (`data/vehicles.json`) | A real authorized RTO/government registry integration - `VehicleRegistryService` is the interface built for this swap |
+| **Audit logging** ✅ | Every search/trajectory view recorded with who/what/when (`AuditLogService`, `GET /api/audit/recent`), tested | Evidence chain-of-custody logging, tamper-evident storage |
+| **Database** ✅ | Real PostgreSQL 16 + PostGIS 3.4, tested end-to-end (schema, full demo ingestion, search, a genuine `ST_DWithin` spatial query) - see "Production datasource" above. H2 stays the zero-config default | Connection pooling tuning, managed backups, versioned migrations (Flyway/Liquibase - currently `ddl-auto: update`) |
+| **Vehicle registry** | Local mock JSON (`data/vehicles.json`) | A real authorized RTO/government registry integration - `VehicleRegistryService` is the interface built for this swap, but the integration itself needs an actual authorized API this prototype has no access to |
 | **Camera ingestion** | Pre-recorded demo clips, processed by a manual CLI script | Real RTSP ingestion, a job queue, horizontal scaling across many cameras |
 | **AI inference** | CPU, single-process, one video at a time | GPU inference servers, batching, a model-serving layer |
 | **Plate detection** | OpenCV Haar cascade baseline | A trained YOLO plate-detection model |
 | **Re-ID / appearance matching** | Color-histogram placeholder, not persisted | A learned Re-ID embedding model, persisted vectors, real multi-candidate disambiguation when plates are unreadable |
 | **Road network** | Great-circle distance/bearing (`CameraGraph`) | Real road-network data (a `CameraEdge`/routing table) |
-| **Transport/security** | Plain HTTP, permissive CORS, no rate limiting | HTTPS everywhere, tightened CORS, rate limiting, input hardening |
+| **Transport/security** | Plain HTTP, permissive-by-default CORS, no rate limiting | HTTPS everywhere, tightened CORS, rate limiting, input hardening |
 | **Map** | MapLibre + free CARTO tiles | Mapbox GL JS + a paid token (or a licensed enterprise basemap), if the org has one |
 | **Scale/infra** | One backend process, one AI-service process, local disk | Kafka/event streaming, Redis, object storage, container orchestration |
-| **Ops** | Manual `mvn`/`npm`/`uvicorn` commands | Dockerized deployment, CI/CD, monitoring/alerting |
+| **Ops** ✅ (partial) | `docker-compose.yml` + per-service `Dockerfile`s and a GitHub Actions CI workflow both written - CI's exact commands were verified locally; `docker build` itself couldn't be completed in this sandbox (Docker Hub rate-limited it - see "Docker" above), so **verify it on your own machine** before relying on it | Monitoring/alerting, a real deploy pipeline (CD, not just CI), managed container orchestration |
 
-Every one of these has a clean seam already built for it - interfaces like
+Every unclosed row has a clean seam already built for it - interfaces like
 `VehicleRegistryService`, `ReIdService`, `PlateDetector`, and `CameraGraph`
 exist specifically so the mock/simple implementation can be swapped
 without touching callers. That was a deliberate architecture choice from

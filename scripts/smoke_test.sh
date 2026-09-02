@@ -37,6 +37,19 @@ check_contains() {
   fi
 }
 
+check_auth() {
+  local description="$1" method="$2" path="$3" expected_status="$4"
+  local status
+  status=$(curl -s -o /dev/null -w "%{http_code}" -X "$method" -u "ingest:${INGEST_PASSWORD:-change-me-in-production}" "${BASE_URL}${path}")
+  if [ "$status" = "$expected_status" ]; then
+    echo "PASS  ($status) $description"
+    PASS=$((PASS + 1))
+  else
+    echo "FAIL  (expected $expected_status, got $status) $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 echo "Smoke testing ${BASE_URL} ..."
 echo
 
@@ -54,6 +67,23 @@ check "analytics overview"                 GET "/api/analytics/overview"        
 
 check_contains "trajectory covers the demo route" "/api/vehicles/MH12AB1234/trajectory" "CAM-11"
 check_contains "analytics reports real camera count" "/api/analytics/overview" "totalCameras"
+
+# Security (SecurityConfig.java): writes and the audit log require auth.
+check "unauthenticated ingest -> 401"      POST "/api/detections/ingest"                       401
+check "unauthenticated audit log -> 401"   GET  "/api/audit/recent"                            401
+check_auth "authenticated audit log -> 200" GET "/api/audit/recent?limit=1"                     200
+
+# Spatial (SpatialCameraService.java): only meaningful on the postgres
+# profile - see README's "Production datasource" section. On H2 it's a
+# clear 501, which this still checks for (never a silent wrong answer).
+NEARBY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/cameras/nearby?lat=18.53&lon=73.85&radiusKm=5")
+if [ "$NEARBY_STATUS" = "200" ] || [ "$NEARBY_STATUS" = "501" ]; then
+  echo "PASS  ($NEARBY_STATUS) nearby-cameras spatial query (200 on postgres, 501 on H2)"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL  (got $NEARBY_STATUS) nearby-cameras spatial query"
+  FAIL=$((FAIL + 1))
+fi
 
 echo
 echo "----------------------------------------"

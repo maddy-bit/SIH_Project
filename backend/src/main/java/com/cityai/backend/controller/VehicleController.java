@@ -7,7 +7,9 @@ import com.cityai.backend.model.Vehicle;
 import com.cityai.backend.model.VehicleDetection;
 import com.cityai.backend.repository.VehicleDetectionRepository;
 import com.cityai.backend.repository.VehicleRepository;
+import com.cityai.backend.service.AuditLogService;
 import com.cityai.backend.util.PlateNormalizer;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -24,15 +26,21 @@ public class VehicleController {
 
     private final VehicleRepository vehicleRepository;
     private final VehicleDetectionRepository detectionRepository;
+    private final AuditLogService auditLogService;
 
-    public VehicleController(VehicleRepository vehicleRepository, VehicleDetectionRepository detectionRepository) {
+    public VehicleController(
+            VehicleRepository vehicleRepository,
+            VehicleDetectionRepository detectionRepository,
+            AuditLogService auditLogService) {
         this.vehicleRepository = vehicleRepository;
         this.detectionRepository = detectionRepository;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/{plate}")
-    public VehicleSummaryDto getVehicle(@PathVariable String plate) {
+    public VehicleSummaryDto getVehicle(@PathVariable String plate, HttpServletRequest request) {
         String normalized = PlateNormalizer.normalize(plate);
+        auditLogService.record("VEHICLE_SEARCH", normalized, request);
         Vehicle vehicle = vehicleRepository.findByPlate(normalized)
                 .orElseThrow(() -> new NoSuchElementException("No vehicle found for plate: " + normalized));
 
