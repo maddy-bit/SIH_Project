@@ -1,0 +1,7 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# Added starting Phase 3 (vehicle detection, plate detection, OCR, tracking):
+# ultralytics        # YOLO vehicle / plate detection
+# easyocr            # or paddleocr - plate OCR
+# opencv-python-headless
