@@ -3,6 +3,11 @@
 City-wide AI engine for multi-camera ANPR trajectory tracking and urban
 traffic analytics — a prototype for SIH problem statement SIH26127.
 
+**New here?** [`GETTING_STARTED.md`](./GETTING_STARTED.md) is the fast
+path to a working demo. For a printable step-by-step guide covering local
+setup *and* deploying this live to a real server, see
+[`docs/Run_Deployment_Guide.pdf`](./docs/Run_Deployment_Guide.pdf).
+
 > **Status: all 15 phases complete, plus real production-hardening on
 > top.** Real video → real YOLOv8 vehicle detection → real ByteTrack
 > tracking → real plate-region detection → real EasyOCR → normalized

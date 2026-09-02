@@ -199,6 +199,10 @@ issue or fix forward; don't assume it's supposed to be broken.
 - [`README.md`](./README.md) — architecture, every API endpoint, what's
   genuinely tested vs. not, and the full production-readiness gap
   analysis with a prioritized roadmap.
+- [`docs/Run_Deployment_Guide.pdf`](./docs/Run_Deployment_Guide.pdf) — a
+  printable, standalone version of this setup guide, plus a section on
+  deploying this live to a real server (VPS + Docker + reverse proxy, or
+  split managed hosting) and a pre-launch security checklist.
 - [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — what runs on
   every push.
 - No `LICENSE` file exists yet in this repo — that's the repo owner's
