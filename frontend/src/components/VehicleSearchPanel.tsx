@@ -6,14 +6,14 @@ import { motion } from "framer-motion";
 export type SearchMode = "historical" | "live" | "combined";
 
 interface VehicleSearchPanelProps {
-  onSearch: (plate: string) => void;
+  onSearch: (plate: string, mode: SearchMode) => void;
   isSearching: boolean;
 }
 
-const MODES: { value: SearchMode; label: string; enabled: boolean }[] = [
-  { value: "historical", label: "Historical", enabled: true },
-  { value: "live", label: "Live", enabled: false },
-  { value: "combined", label: "Historical + Live", enabled: false },
+const MODES: { value: SearchMode; label: string }[] = [
+  { value: "historical", label: "Historical" },
+  { value: "live", label: "Live" },
+  { value: "combined", label: "Historical + Live" },
 ];
 
 export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanelProps) {
@@ -23,7 +23,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!plate.trim()) return;
-    onSearch(plate.trim());
+    onSearch(plate.trim(), mode);
   }
 
   return (
@@ -46,14 +46,12 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
           <button
             key={m.value}
             type="button"
-            disabled={!m.enabled}
-            onClick={() => m.enabled && setMode(m.value)}
-            title={m.enabled ? undefined : "Coming in a later phase"}
-            className={`flex-1 rounded border px-2 py-1.5 text-[11px] font-medium transition-colors ${
+            onClick={() => setMode(m.value)}
+            className={`flex-1 cursor-pointer rounded border px-2 py-1.5 text-[11px] font-medium transition-colors hover:border-zinc-600 ${
               mode === m.value
                 ? "border-sky-500 bg-sky-500/15 text-sky-300"
                 : "border-zinc-800 text-zinc-500"
-            } ${m.enabled ? "cursor-pointer hover:border-zinc-600" : "cursor-not-allowed opacity-50"}`}
+            }`}
           >
             {m.label}
           </button>

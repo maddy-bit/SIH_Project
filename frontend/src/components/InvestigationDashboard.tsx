@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ApiError,
@@ -11,13 +11,15 @@ import {
   type TrajectoryResponseDto,
   type VehicleSummaryDto,
 } from "@/lib/api";
-import { VehicleSearchPanel } from "./VehicleSearchPanel";
+import { connectLiveTracking } from "@/lib/liveClient";
+import { VehicleSearchPanel, type SearchMode } from "./VehicleSearchPanel";
 import { VehicleIntelligencePanel } from "./VehicleIntelligencePanel";
 import { DetectionTimeline } from "./DetectionTimeline";
 import { EvidenceViewer } from "./EvidenceViewer";
 import { InvestigationMap } from "./InvestigationMap";
 
 type SearchState = "idle" | "searching" | "found" | "not-found" | "error";
+type LiveStatus = "idle" | "connecting" | "streaming" | "complete" | "error";
 
 export function InvestigationDashboard() {
   const [cameras, setCameras] = useState<CameraDto[]>([]);
@@ -27,6 +29,8 @@ export function InvestigationDashboard() {
   const [trajectory, setTrajectory] = useState<TrajectoryResponseDto | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [replayToken, setReplayToken] = useState(0);
+  const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
+  const liveCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     getCameras()
@@ -34,28 +38,89 @@ export function InvestigationDashboard() {
       .catch(() => setCameras([]));
   }, []);
 
-  async function handleSearch(plate: string) {
+  useEffect(() => {
+    return () => liveCleanupRef.current?.();
+  }, []);
+
+  function stopLive() {
+    liveCleanupRef.current?.();
+    liveCleanupRef.current = null;
+  }
+
+  function startLive(plate: string, mode: Extract<SearchMode, "live" | "combined">) {
+    setLiveStatus("connecting");
+    liveCleanupRef.current = connectLiveTracking(plate, {
+      onMessage: (message) => {
+        if (message.type === "connected") {
+          setLiveStatus("streaming");
+        } else if (message.type === "detection") {
+          if (mode === "live") {
+            // Build the trajectory progressively - this IS the data.
+            setTrajectory((prev) =>
+              prev
+                ? { ...prev, points: [...prev.points, message.point] }
+                : {
+                    vehicle: summary?.vehicle ?? { plate, vehicleType: null, color: null, make: null, model: null },
+                    points: [message.point],
+                    overallConfidence: null,
+                    estimatedDistanceKm: 0,
+                    estimatedDurationMinutes: 0,
+                    warning: null,
+                  },
+            );
+          }
+          // In combined mode the full route is already loaded from REST -
+          // live events just auto-advance the selection, like an automatic replay.
+          setSelectedIndex(message.index);
+        } else if (message.type === "complete") {
+          setTrajectory((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  overallConfidence: message.overallConfidence,
+                  estimatedDistanceKm: message.estimatedDistanceKm,
+                  estimatedDurationMinutes: message.estimatedDurationMinutes,
+                }
+              : prev,
+          );
+          setLiveStatus("complete");
+        } else if (message.type === "error") {
+          setLiveStatus("error");
+          setErrorMessage(message.message);
+        }
+      },
+      onError: () => setLiveStatus("error"),
+    });
+  }
+
+  async function handleSearch(plate: string, mode: SearchMode) {
+    stopLive();
     setSearchState("searching");
     setErrorMessage(null);
     setSummary(null);
     setTrajectory(null);
     setSelectedIndex(null);
+    setLiveStatus("idle");
 
     try {
       const summaryResult = await getVehicleSummary(plate);
       setSummary(summaryResult);
 
-      try {
-        const trajectoryResult = await getVehicleTrajectory(plate);
-        setTrajectory(trajectoryResult);
-        if (trajectoryResult.points.length > 0) setSelectedIndex(0);
-      } catch {
-        // Summary succeeded but trajectory failed (shouldn't normally happen) -
-        // still show what we have rather than a hard error.
-        setTrajectory(null);
+      if (mode === "historical" || mode === "combined") {
+        try {
+          const trajectoryResult = await getVehicleTrajectory(plate);
+          setTrajectory(trajectoryResult);
+          if (trajectoryResult.points.length > 0) setSelectedIndex(0);
+        } catch {
+          setTrajectory(null);
+        }
       }
 
       setSearchState("found");
+
+      if (mode === "live" || mode === "combined") {
+        startLive(plate, mode);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.isNotFound) {
         setSearchState("not-found");
@@ -68,6 +133,7 @@ export function InvestigationDashboard() {
 
   const points = trajectory?.points ?? [];
   const selectedPoint = selectedIndex !== null ? points[selectedIndex] ?? null : null;
+  const isLive = liveStatus === "connecting" || liveStatus === "streaming";
 
   return (
     <div className="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[320px_1fr_360px]">
@@ -99,13 +165,22 @@ export function InvestigationDashboard() {
             </motion.div>
           )}
           {searchState === "found" && summary && (
-            <motion.div key="found" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div key="found" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
+              {isLive && (
+                <div className="flex items-center gap-2 rounded border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
+                  </span>
+                  {liveStatus === "connecting" ? "CONNECTING TO LIVE FEED…" : "LIVE — RECEIVING DETECTIONS"}
+                </div>
+              )}
               <VehicleIntelligencePanel summary={summary} trajectory={trajectory} />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {points.length >= 2 && (
+        {points.length >= 2 && !isLive && (
           <button
             type="button"
             onClick={() => setReplayToken((n) => n + 1)}

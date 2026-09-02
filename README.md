@@ -3,14 +3,16 @@
 City-wide AI engine for multi-camera ANPR trajectory tracking and urban
 traffic analytics — a prototype for SIH problem statement SIH26127.
 
-> **Status: Phases 1–11.** The full investigation workflow runs
-> end-to-end: real video → real YOLOv8 vehicle detection → real ByteTrack
-> tracking → real plate-region detection → real EasyOCR → normalized
-> plate → stored in the backend → reconstructed into a confidence-scored
-> route → a search-driven dashboard (map, intelligence panel, timeline,
-> evidence viewer) built on that same real data. Live mode and analytics
-> are not implemented yet. See "Investigation frontend" below for a map
-> caveat specific to this dev sandbox.
+> **Status: all 15 phases complete.** Real video → real YOLOv8 vehicle
+> detection → real ByteTrack tracking → real plate-region detection →
+> real EasyOCR → normalized plate → stored in the backend →
+> reconstructed into a confidence-scored route → a search-driven
+> dashboard (map, intelligence panel, timeline, evidence viewer) → a
+> live-tracking simulation over WebSocket → city-wide analytics. This is
+> a **complete hackathon prototype, not production software** - see
+> "What this is (and isn't)" near the bottom for exactly what that gap
+> is. See "Investigation frontend" below for a map-rendering caveat
+> specific to this dev sandbox.
 
 ## Architecture
 
@@ -281,6 +283,54 @@ layers, `Marker` - is heavily used in production elsewhere, so this is
 flagged as "please confirm it visually on your machine" rather than
 claimed as verified.
 
+## Live tracking simulation (Phase 13)
+
+`GET /ws/live/{plate}` (WebSocket) replays a vehicle's already-reconstructed
+trajectory as a paced, chronological stream - the master prompt's "simulate
+live camera processing" spec. This is explicitly a simulation over stored
+demo data, not a live RTSP/camera feed (there is no such feed in this
+prototype). Each connection gets:
+
+```
+{"type":"connected","plate":"MH12AB1234","totalEvents":4}
+{"type":"detection","index":0,"total":4,"point":{...same shape as a trajectory point...}}
+... one every 3 seconds ...
+{"type":"complete","overallConfidence":0.888,"estimatedDistanceKm":11.18,"estimatedDurationMinutes":33}
+```
+
+An unknown plate gets `{"type":"error","message":"..."}` and the socket
+closes, instead of hanging.
+
+In the UI, the search panel's **Live** and **Historical + Live** modes use
+this: Live builds the map/timeline progressively as events arrive (nothing
+fetched up front); Historical + Live loads the full route immediately via
+REST and then uses the live stream purely to auto-advance the selected
+point, like an automatic guided replay. A pulsing "LIVE" badge shows
+connection state, and the map's marker/timeline stay in sync with whichever
+mode is active.
+
+## Analytics (Phase 14)
+
+`GET /api/analytics/overview` and the **City Traffic Summary** tab compute
+real aggregates from stored detections/trajectories - camera network
+status, vehicle type distribution, detections by hour, busiest cameras,
+average transition speed, common origins/destinations, and top routes (the
+most frequent camera-to-camera hops seen across all vehicles' scored
+trajectories). Nothing here is a canned number; on a fresh/empty database
+every panel just shows "no data yet" rather than fabricated figures.
+
+## Testing (Phase 15)
+
+- **Backend unit tests** (`backend/src/test/...`): `PlateNormalizerTest`,
+  `GeoUtilsTest`, `TrajectoryScoringServiceTest` - run with `mvn test`.
+- **API smoke test** (`scripts/smoke_test.sh`): hits every REST endpoint
+  against a running backend and checks status codes + real response
+  content (not just "did it 200"). Run it after ingesting the demo
+  scenario: `./scripts/smoke_test.sh` (or pass a different base URL).
+- Both frontend (`npm run lint`, `npm run build`) and backend (`mvn
+  compile` with warnings enabled) build clean with zero warnings as of
+  this phase.
+
 ## Configuration
 
 | File | Purpose |
@@ -306,6 +356,8 @@ mock vehicle registry, loaded at backend startup.
 | `GET /api/vehicles/{plate}/trajectory` | Reconstructed route: cameras visited, per-transition confidence, distance, duration |
 | `POST /api/detections/ingest` | Store one AI-pipeline detection event (used by `scripts/process_video.py`) |
 | `POST /api/detections/ingest/batch` | Same, batched |
+| `GET /api/analytics/overview` | City-wide aggregates (see Phase 14 below) |
+| `GET /ws/live/{plate}` (WebSocket) | Live-simulation detection stream (see Phase 13 below) |
 | `GET /evidence/{cameraId}/{file}` | Saved evidence frame for a detection |
 
 Plate lookups accept any casing/spacing ("mh12ab1234", "MH 12 AB 1234") -
@@ -329,9 +381,56 @@ This project is built incrementally. See the phase plan for what's next:
 10. Map visualization ✅ (MapLibre GL JS - see Known limitation below)
 11. Investigation frontend (search → results → evidence) ✅
 12. Evidence viewer ✅ (folded into Phase 11 - `EvidenceViewer` component)
-13. Live WebSocket simulation — not started (next)
-14. Analytics dashboard — not started
-15. Polish + testing — not started
+13. Live WebSocket simulation ✅ (`GET /ws/live/{plate}`, wired into Live/Historical+Live search modes)
+14. Analytics dashboard ✅ (`GET /api/analytics/overview` + City Traffic Summary tab)
+15. Polish + testing ✅ (backend unit tests, `scripts/smoke_test.sh`, zero-warning builds)
+
+**All 15 phases of the SIH26127 prototype plan are complete.** See
+"What this is (and isn't)" below for what that does and doesn't mean.
+
+## What this is (and isn't)
+
+This is a **complete, working hackathon prototype** that genuinely does
+what the problem statement asks: real pretrained-model inference
+(detection, tracking, OCR) on demo video, cross-camera trajectory
+reconstruction with a reasoned confidence score, a full investigation UI
+(search → map → timeline → evidence), a live-tracking simulation, and
+city-wide analytics - all built on real stored data with no fabricated
+numbers anywhere in the stack. That is what the 15-phase plan above set
+out to build, and it's done.
+
+**It is not production software**, and getting there is a different, much
+larger project than finishing this one - the original brief for this repo
+was explicit that building that system now would be over-engineering a
+one-week prototype. None of the following exists yet:
+
+| Area | Prototype state | What "production" would need |
+| --- | --- | --- |
+| **Auth** | None - the API is open | Real authentication (SSO/OAuth), session management |
+| **Authorization** | None | Role-based access control, per-investigation permissions |
+| **Audit logging** | None | Who searched what, when, evidence chain-of-custody logs |
+| **Database** | H2, file-based, single node | PostgreSQL + PostGIS, connection pooling, backups, migrations |
+| **Vehicle registry** | Local mock JSON (`data/vehicles.json`) | A real authorized RTO/government registry integration - `VehicleRegistryService` is the interface built for this swap |
+| **Camera ingestion** | Pre-recorded demo clips, processed by a manual CLI script | Real RTSP ingestion, a job queue, horizontal scaling across many cameras |
+| **AI inference** | CPU, single-process, one video at a time | GPU inference servers, batching, a model-serving layer |
+| **Plate detection** | OpenCV Haar cascade baseline | A trained YOLO plate-detection model |
+| **Re-ID / appearance matching** | Color-histogram placeholder, not persisted | A learned Re-ID embedding model, persisted vectors, real multi-candidate disambiguation when plates are unreadable |
+| **Road network** | Great-circle distance/bearing (`CameraGraph`) | Real road-network data (a `CameraEdge`/routing table) |
+| **Transport/security** | Plain HTTP, permissive CORS, no rate limiting | HTTPS everywhere, tightened CORS, rate limiting, input hardening |
+| **Map** | MapLibre + free CARTO tiles | Mapbox GL JS + a paid token (or a licensed enterprise basemap), if the org has one |
+| **Scale/infra** | One backend process, one AI-service process, local disk | Kafka/event streaming, Redis, object storage, container orchestration |
+| **Ops** | Manual `mvn`/`npm`/`uvicorn` commands | Dockerized deployment, CI/CD, monitoring/alerting |
+
+Every one of these has a clean seam already built for it - interfaces like
+`VehicleRegistryService`, `ReIdService`, `PlateDetector`, and `CameraGraph`
+exist specifically so the mock/simple implementation can be swapped
+without touching callers. That was a deliberate architecture choice from
+Phase 1 onward, not an afterthought.
+
+If you want to go further, the honest next step isn't "keep adding
+phases" - it's picking a specific piece from the table above (most likely:
+a real database + auth, since almost everything else depends on those)
+and scoping it as its own project.
 
 Later phases replace the mocked/H2/single-node pieces with PostgreSQL+PostGIS,
 Redis, and a proper vehicle registry integration — the interfaces are kept

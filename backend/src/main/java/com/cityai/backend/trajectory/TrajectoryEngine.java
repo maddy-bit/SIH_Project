@@ -1,5 +1,8 @@
 package com.cityai.backend.trajectory;
 
+import com.cityai.backend.dto.TrajectoryPointDto;
+import com.cityai.backend.dto.TrajectoryResponseDto;
+import com.cityai.backend.dto.VehicleDto;
 import com.cityai.backend.model.Camera;
 import com.cityai.backend.model.Vehicle;
 import com.cityai.backend.model.VehicleDetection;
@@ -77,6 +80,36 @@ public class TrajectoryEngine {
             long totalDurationMinutes,
             String warning
     ) {
+        /** Shared REST/WebSocket DTO shape - see TrajectoryController and LiveTrackingWebSocketHandler. */
+        public TrajectoryResponseDto toDto() {
+            List<TrajectoryPointDto> points = new ArrayList<>();
+            for (int i = 0; i < visits.size(); i++) {
+                CameraVisit visit = visits.get(i);
+                Double incomingConfidence = null;
+                String note = null;
+                if (i > 0) {
+                    Transition transition = transitions.get(i - 1);
+                    incomingConfidence = transition.score().confidence();
+                    note = transition.score().note();
+                }
+                points.add(new TrajectoryPointDto(
+                        visit.camera().getId(),
+                        visit.camera().getName(),
+                        visit.camera().getLatitude(),
+                        visit.camera().getLongitude(),
+                        visit.camera().getDirection(),
+                        visit.firstSeen(),
+                        visit.bestPlateConfidence(),
+                        visit.bestDetectionConfidence(),
+                        visit.bestImagePath(),
+                        visit.detectionCount(),
+                        incomingConfidence,
+                        note
+                ));
+            }
+            return new TrajectoryResponseDto(
+                    VehicleDto.from(vehicle), points, overallConfidence, totalDistanceKm, totalDurationMinutes, warning);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -124,6 +157,11 @@ public class TrajectoryEngine {
 
         return new TrajectoryResult(vehicle, visits, transitions, overallConfidence, totalDistance,
                 totalDurationMinutes, warning);
+    }
+
+    @Transactional(readOnly = true)
+    public TrajectoryResponseDto reconstructAsDto(String normalizedPlate) {
+        return reconstruct(normalizedPlate).toDto();
     }
 
     /** Collapses consecutive same-camera detections (many rows per pass) into one visit. */

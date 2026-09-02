@@ -83,6 +83,28 @@ export interface TrajectoryResponseDto {
   warning: string | null;
 }
 
+export interface AnalyticsOverviewDto {
+  totalCameras: number;
+  camerasOnline: number;
+  camerasProcessing: number;
+  camerasOffline: number;
+  totalVehicles: number;
+  totalDetections: number;
+  vehicleTypeDistribution: { vehicleType: string; count: number }[];
+  detectionsByHour: { hour: number; count: number }[];
+  busiestCameras: { cameraId: string; cameraName: string; count: number }[];
+  averageTransitionSpeedKmh: number | null;
+  commonOrigins: { cameraId: string; cameraName: string; count: number }[];
+  commonDestinations: { cameraId: string; cameraName: string; count: number }[];
+  topRoutes: {
+    fromCameraId: string;
+    fromCameraName: string;
+    toCameraId: string;
+    toCameraName: string;
+    count: number;
+  }[];
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -145,6 +167,10 @@ export function getVehicleDetections(plate: string): Promise<VehicleDetectionDto
 
 export function getVehicleTrajectory(plate: string): Promise<TrajectoryResponseDto> {
   return apiFetch<TrajectoryResponseDto>(`/vehicles/${encodeURIComponent(plate)}/trajectory`);
+}
+
+export function getAnalyticsOverview(): Promise<AnalyticsOverviewDto> {
+  return apiFetch<AnalyticsOverviewDto>("/analytics/overview");
 }
 
 /** Builds the URL for an evidence frame stored under data/evidence/. */
