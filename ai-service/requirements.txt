@@ -1,7 +1,15 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
+requests==2.34.2
 
-# Added starting Phase 3 (vehicle detection, plate detection, OCR, tracking):
-# ultralytics        # YOLO vehicle / plate detection
-# easyocr            # or paddleocr - plate OCR
-# opencv-python-headless
+# Computer-vision pipeline (Phase 3-6)
+ultralytics==8.4.138        # pretrained YOLOv8 vehicle detection + ByteTrack tracking
+lap==0.5.13                  # linear assignment solver required by ByteTrack
+easyocr==1.7.2               # pretrained OCR for plate text
+opencv-python-headless==4.10.0.84
+
+# Pulled in transitively (torch/torchvision for ultralytics + easyocr,
+# numpy). Pinned implicitly via the above; listed for visibility.
+# torch==2.13.0
+# torchvision==0.28.0
+# numpy==2.4.6

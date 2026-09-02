@@ -1,0 +1,2 @@
+# Pretrained weights are fetched, not committed as binaries.
+yolov8n.pt
