@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getHealth } from "@/lib/api";
+import { getCameras, getHealth } from "@/lib/api";
 
 type ConnectionState = "checking" | "online" | "offline";
 
@@ -28,6 +28,9 @@ function StatusItem({ label, value, tone }: StatusItemProps) {
 export function SystemStatusBar() {
   const [state, setState] = useState<ConnectionState>("checking");
   const [version, setVersion] = useState<string | null>(null);
+  const [cameraCounts, setCameraCounts] = useState<{ online: number; processing: number; total: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +44,19 @@ export function SystemStatusBar() {
         }
       } catch {
         if (!cancelled) setState("offline");
+      }
+
+      try {
+        const cameras = await getCameras();
+        if (!cancelled) {
+          setCameraCounts({
+            online: cameras.filter((c) => c.status === "ONLINE").length,
+            processing: cameras.filter((c) => c.status === "PROCESSING").length,
+            total: cameras.length,
+          });
+        }
+      } catch {
+        if (!cancelled) setCameraCounts(null);
       }
     }
 
@@ -70,8 +86,16 @@ export function SystemStatusBar() {
           <StatusItem label="Status" value={systemLabel} tone={systemTone} />
         </motion.div>
       </AnimatePresence>
-      <StatusItem label="Cameras Online" value="0 / 0" tone="neutral" />
-      <StatusItem label="Cameras Processing" value="0" tone="neutral" />
+      <StatusItem
+        label="Cameras Online"
+        value={cameraCounts ? `${cameraCounts.online} / ${cameraCounts.total}` : "— / —"}
+        tone="neutral"
+      />
+      <StatusItem
+        label="Cameras Processing"
+        value={cameraCounts ? String(cameraCounts.processing) : "—"}
+        tone="neutral"
+      />
       <StatusItem label="Active Investigations" value="0" tone="neutral" />
       {version && <StatusItem label="Backend" value={`v${version}`} tone="neutral" />}
     </div>

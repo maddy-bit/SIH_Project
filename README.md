@@ -3,13 +3,14 @@
 City-wide AI engine for multi-camera ANPR trajectory tracking and urban
 traffic analytics — a prototype for SIH problem statement SIH26127.
 
-> **Status: Phases 1–9.** The full pipeline runs end-to-end across
-> multiple cameras: real video → real YOLOv8 vehicle detection → real
-> ByteTrack tracking → real plate-region detection → real EasyOCR →
-> normalized plate → stored in the backend → searchable via
-> `GET /api/vehicles/{plate}` → reconstructed into a confidence-scored
-> route via `GET /api/vehicles/{plate}/trajectory`. The map, live mode
-> and analytics are not implemented yet.
+> **Status: Phases 1–11.** The full investigation workflow runs
+> end-to-end: real video → real YOLOv8 vehicle detection → real ByteTrack
+> tracking → real plate-region detection → real EasyOCR → normalized
+> plate → stored in the backend → reconstructed into a confidence-scored
+> route → a search-driven dashboard (map, intelligence panel, timeline,
+> evidence viewer) built on that same real data. Live mode and analytics
+> are not implemented yet. See "Investigation frontend" below for a map
+> caveat specific to this dev sandbox.
 
 ## Architecture
 
@@ -227,6 +228,59 @@ catches implausible *transitions* within that stream; multi-candidate
 appearance-based disambiguation (persisted Re-ID embeddings + a proper
 assignment step) is a natural next phase, not yet built.
 
+## Investigation frontend (Phases 10–11)
+
+The dashboard (`http://localhost:3000`) is a single search-driven view:
+
+- **`VehicleSearchPanel`** — registration number input + mode toggle
+  (Historical / Live / Historical+Live). Only Historical calls anything
+  right now; Live and Historical+Live are visibly present but disabled -
+  Phase 13 wires them up.
+- **`InvestigationMap`** (`components/InvestigationMap.tsx`) — the
+  centerpiece. **MapLibre GL JS**, not Mapbox GL JS: the master prompt
+  calls for Mapbox, but that requires a paid-tier API token this prototype
+  doesn't have. MapLibre is Mapbox GL JS's open-source fork with the same
+  API surface and no token required, so the swap is a later drop-in if a
+  token becomes available. The basemap is CARTO's free `dark_all` raster
+  tiles (no key needed) with all camera-network and trajectory data drawn
+  as GeoJSON layers on top: every camera as a small status-colored dot,
+  the reconstructed route as a line, numbered markers at each camera visit
+  (click one, or a timeline entry, to sync selection and fly the map
+  there), and a **Replay Trajectory** button that animates a marker along
+  the route, pacing each hop by its real elapsed time (capped to a
+  watchable ~6s total) rather than a fixed speed.
+- **`VehicleIntelligencePanel`** — first/last seen, cameras visited,
+  distance, travel time, overall trajectory confidence: all from
+  `GET /api/vehicles/{plate}` + `.../trajectory`, nothing hardcoded.
+- **`DetectionTimeline`** — one row per camera visit with the gap to the
+  next (`↓ 7 min`) and its match confidence, matching the master prompt's
+  timeline example format. Clicking a row (or a map marker) drives the
+  same `selectedIndex` state, so the evidence panel and map stay in sync.
+- **`EvidenceViewer`** — the actual saved frame for the selected
+  detection (`GET /evidence/{cameraId}/{file}`), with its confidence
+  scores.
+
+Search states are explicit, not just a spinner: idle → searching →
+**found** (intelligence panel + timeline + map all populate) or
+**not-found** (plain explanation, not a blank screen) or **error**
+(network/backend failure, distinguished from "no such vehicle").
+
+**Known limitation - map rendering wasn't visually verified.** This
+sandbox's outbound network policy blocks every public map-tile host
+(CARTO, OpenStreetMap, MapLibre's own demo tiles all return 403 here), and
+headless Chromium in this container never got WebGL past
+`isSourceLoaded()==false` even with an empty style and no tile requests at
+all - most likely a software-rendering quirk of this specific sandbox, not
+the app. What *is* verified: the component reaches `style.load`, adds its
+sources/layers with correctly-shaped GeoJSON (checked via
+`queryRenderedFeatures`/`getStyle()` in a live page), throws no console
+errors, and every non-map panel driven by the exact same search state
+renders real backend data correctly (see the screenshots taken during
+development). Standard MapLibre GL JS usage - GeoJSON sources, circle/line
+layers, `Marker` - is heavily used in production elsewhere, so this is
+flagged as "please confirm it visually on your machine" rather than
+claimed as verified.
+
 ## Configuration
 
 | File | Purpose |
@@ -272,10 +326,10 @@ This project is built incrementally. See the phase plan for what's next:
 7. Multi-object tracking ✅ (ByteTrack, folded into Phase 4-6 above)
 8. Cross-camera matching ✅ (plate-linked; transition plausibility scored - see Known limitation above)
 9. Trajectory reconstruction engine ✅ (`GET /api/vehicles/{plate}/trajectory`)
-10. Map visualization — not started (next)
-11. Investigation frontend (search → results → evidence) — not started
-12. Evidence viewer — not started
-13. Live WebSocket simulation — not started
+10. Map visualization ✅ (MapLibre GL JS - see Known limitation below)
+11. Investigation frontend (search → results → evidence) ✅
+12. Evidence viewer ✅ (folded into Phase 11 - `EvidenceViewer` component)
+13. Live WebSocket simulation — not started (next)
 14. Analytics dashboard — not started
 15. Polish + testing — not started
 
