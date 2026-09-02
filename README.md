@@ -423,15 +423,18 @@ it.
 
 ## CI/CD
 
+[![CI](https://github.com/maddy-bit/SIH_Project/actions/workflows/ci.yml/badge.svg)](https://github.com/maddy-bit/SIH_Project/actions/workflows/ci.yml)
+
 `.github/workflows/ci.yml` runs on every push/PR: backend `mvn test` +
 warning-free compile, frontend `npm run lint` + `npm run build`, an
 AI-service syntax check (full model-download tests are too slow/heavy for
 CI - see the workflow's comments), and an API smoke test against a freshly
-booted H2-backed backend. The workflow's exact commands were verified
-locally against a running backend before being committed (see "Testing"
-below) - GitHub's runners aren't subject to this sandbox's Docker Hub rate
-limiting, so the workflow itself should run cleanly there even though full
-`docker build` couldn't be re-verified here.
+booted H2-backed backend. **Confirmed running for real, not just written:**
+[run #33640908824](https://github.com/maddy-bit/SIH_Project/actions/runs/33640908824)
+passed all 4 jobs on GitHub's own infrastructure in ~40 seconds. GitHub's
+runners aren't subject to this sandbox's Docker Hub rate limiting, so the
+CI workflow itself is verified end-to-end even though a local
+`docker build` couldn't be re-run in this sandbox (see "Docker" above).
 
 ## Configuration
 
@@ -532,7 +535,7 @@ infrastructure available in this environment - marked ✅ below:
 | **Transport/security** | Plain HTTP, permissive-by-default CORS, no rate limiting | HTTPS everywhere, tightened CORS, rate limiting, input hardening |
 | **Map** | MapLibre + free CARTO tiles | Mapbox GL JS + a paid token (or a licensed enterprise basemap), if the org has one |
 | **Scale/infra** | One backend process, one AI-service process, local disk | Kafka/event streaming, Redis, object storage, container orchestration |
-| **Ops** ✅ (partial) | `docker-compose.yml` + per-service `Dockerfile`s and a GitHub Actions CI workflow both written - CI's exact commands were verified locally; `docker build` itself couldn't be completed in this sandbox (Docker Hub rate-limited it - see "Docker" above), so **verify it on your own machine** before relying on it | Monitoring/alerting, a real deploy pipeline (CD, not just CI), managed container orchestration |
+| **Ops** ✅ (CI confirmed, Docker unverified) | GitHub Actions CI genuinely running and green ([run #33640908824](https://github.com/maddy-bit/SIH_Project/actions/runs/33640908824), all 4 jobs). `docker-compose.yml` + per-service `Dockerfile`s are written but `docker build` itself couldn't be completed in this sandbox (Docker Hub rate-limited it - see "Docker" above), so **verify it on your own machine** before relying on it | Monitoring/alerting, a real deploy pipeline (CD, not just CI), managed container orchestration |
 
 Every unclosed row has a clean seam already built for it - interfaces like
 `VehicleRegistryService`, `ReIdService`, `PlateDetector`, and `CameraGraph`
@@ -540,11 +543,31 @@ exist specifically so the mock/simple implementation can be swapped
 without touching callers. That was a deliberate architecture choice from
 Phase 1 onward, not an afterthought.
 
-If you want to go further, the honest next step isn't "keep adding
-phases" - it's picking a specific piece from the table above (most likely:
-a real database + auth, since almost everything else depends on those)
-and scoping it as its own project.
+### Roadmap to production, in priority order
 
-Later phases replace the mocked/H2/single-node pieces with PostgreSQL+PostGIS,
-Redis, and a proper vehicle registry integration — the interfaces are kept
-clean for that swap; none of it is built prematurely.
+Not "do all of these" - pick one, scope it as its own piece of work, ship
+it, move to the next. Roughly in the order they unblock each other:
+
+1. **A real login for the investigation UI.** The API side is ready for
+   this (`SecurityConfig.java` already gates writes and the audit log) -
+   what's missing is a session/JWT layer and a login screen in the
+   frontend so the read endpoints stop being open. This is the natural
+   next step and the biggest actual gap left.
+2. **Role-based access control**, once real users exist to have roles.
+   Investigator vs. admin vs. read-only, at minimum.
+3. **Flyway/Liquibase migrations** instead of `ddl-auto: update` - matters
+   most once the `postgres` profile is the one actually being deployed.
+4. **A trained plate-detection model** to replace the Haar cascade
+   baseline (`PlateDetector`'s interface doesn't need to change) - the
+   single highest-leverage AI-quality improvement available.
+5. **Persisted Re-ID embeddings** + a real assignment step, so vehicles
+   with an unreadable plate on some cameras can still be linked via
+   appearance instead of being dropped from the trajectory.
+6. **GPU inference + a model-serving layer**, once there's enough camera
+   volume that CPU/single-process inference is the actual bottleneck -
+   premature before that.
+7. **A real vehicle registry integration**, RTSP camera ingestion, and a
+   real deploy pipeline (CD, monitoring, container orchestration) all
+   depend on infrastructure/access this prototype has no way to obtain on
+   its own - these are the ones that need an organizational decision, not
+   just more code.
