@@ -1,0 +1,10 @@
+[
+  { "plate": "MH12AB1234", "vehicleType": "SUV", "make": "Demo Motors", "model": "X1", "color": "White" },
+  { "plate": "MH14CD5678", "vehicleType": "Sedan", "make": "Demo Motors", "model": "S2", "color": "Silver" },
+  { "plate": "MH12EF9012", "vehicleType": "Hatchback", "make": "Demo Motors", "model": "H1", "color": "Red" },
+  { "plate": "MH20GH3456", "vehicleType": "Truck", "make": "Demo Freight", "model": "T4", "color": "Blue" },
+  { "plate": "MH12IJ7890", "vehicleType": "Motorcycle", "make": "Demo Cycles", "model": "M1", "color": "Black" },
+  { "plate": "MH04KL2345", "vehicleType": "Auto-rickshaw", "make": "Demo Auto", "model": "A3", "color": "Yellow" },
+  { "plate": "MH12MN6789", "vehicleType": "Van", "make": "Demo Motors", "model": "V2", "color": "White" },
+  { "plate": "MH12OP0123", "vehicleType": "Bus", "make": "Demo Transit", "model": "B1", "color": "Blue" }
+]

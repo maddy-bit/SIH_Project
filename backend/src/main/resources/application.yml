@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: city-ai-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cityai}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+# Credentials for POST /api/detections/ingest (HTTP Basic)
+ingest:
+  username: ${INGEST_USERNAME:ingest}
+  password: ${INGEST_PASSWORD:change-me-in-production}
+
+# Base URL of the Python AI microservice
+ai-service:
+  base-url: ${AI_SERVICE_URL:http://localhost:8000}
+
+# Seed data and evidence frames
+app:
+  data-dir: ${DATA_DIR:../data}
+  evidence-dir: ${EVIDENCE_DIR:../data/evidence}
+
+logging:
+  level:
+    com.cityai.backend: INFO

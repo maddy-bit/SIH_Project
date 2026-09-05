@@ -1,0 +1,14 @@
+[
+  { "id": "CAM-01", "name": "Shivajinagar Chowk", "latitude": 18.5308, "longitude": 73.8474, "direction": "SE", "status": "ONLINE", "videoSource": "videos/cam01.mp4" },
+  { "id": "CAM-02", "name": "FC Road Junction", "latitude": 18.5236, "longitude": 73.8478, "direction": "S", "status": "ONLINE", "videoSource": "videos/cam02.mp4" },
+  { "id": "CAM-03", "name": "JM Road - Deccan Gymkhana", "latitude": 18.5158, "longitude": 73.8412, "direction": "SW", "status": "ONLINE", "videoSource": "videos/cam03.mp4" },
+  { "id": "CAM-04", "name": "Karve Road Bridge", "latitude": 18.5074, "longitude": 73.8258, "direction": "W", "status": "ONLINE", "videoSource": "videos/cam04.mp4" },
+  { "id": "CAM-05", "name": "Swargate Junction", "latitude": 18.5008, "longitude": 73.8567, "direction": "E", "status": "ONLINE", "videoSource": "videos/cam05.mp4" },
+  { "id": "CAM-06", "name": "Hadapsar Industrial Estate", "latitude": 18.5089, "longitude": 73.9260, "direction": "E", "status": "ONLINE", "videoSource": "videos/cam06.mp4" },
+  { "id": "CAM-07", "name": "Kothrud Depot", "latitude": 18.5074, "longitude": 73.8077, "direction": "NW", "status": "ONLINE", "videoSource": "videos/cam07.mp4" },
+  { "id": "CAM-08", "name": "Baner Road", "latitude": 18.5642, "longitude": 73.7769, "direction": "N", "status": "ONLINE", "videoSource": "videos/cam08.mp4" },
+  { "id": "CAM-09", "name": "Hinjewadi Phase 1", "latitude": 18.5908, "longitude": 73.7392, "direction": "W", "status": "PROCESSING", "videoSource": "videos/cam09.mp4" },
+  { "id": "CAM-10", "name": "Wakad Bridge", "latitude": 18.5993, "longitude": 73.7629, "direction": "N", "status": "ONLINE", "videoSource": "videos/cam10.mp4" },
+  { "id": "CAM-11", "name": "Aundh - ITI Road", "latitude": 18.5590, "longitude": 73.8080, "direction": "NE", "status": "ONLINE", "videoSource": "videos/cam11.mp4" },
+  { "id": "CAM-12", "name": "University Circle", "latitude": 18.5529, "longitude": 73.8291, "direction": "SE", "status": "OFFLINE", "videoSource": "videos/cam12.mp4" }
+]
