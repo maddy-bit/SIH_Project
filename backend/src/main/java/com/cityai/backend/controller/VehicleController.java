@@ -48,9 +48,13 @@ public class VehicleController {
         Vehicle vehicle = vehicleRepository.findByPlate(normalized)
                 .orElseGet(() -> {
                     var reg = registryService.lookup(normalized);
-                    Vehicle v = reg.map(r -> new Vehicle(r.plate(), r.vehicleType(), r.color(), r.make(), r.model()))
-                            .orElseGet(() -> new Vehicle(normalized, "SUV", "White", "Demo Motors", "X1"));
-                    return vehicleRepository.save(v);
+                    if (reg.isPresent()) {
+                        var r = reg.get();
+                        Vehicle v = new Vehicle(r.plate(), r.vehicleType(), r.color(), r.make(), r.model());
+                        return vehicleRepository.save(v);
+                    }
+                    throw new org.springframework.web.server.ResponseStatusException(
+                            org.springframework.http.HttpStatus.NOT_FOUND, "No vehicle found for plate: " + normalized);
                 });
 
         List<VehicleDetection> detections =

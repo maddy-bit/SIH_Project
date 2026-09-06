@@ -151,7 +151,7 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
                   <span className="h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
                   <div>
                     <h3 className="text-base font-bold text-slate-900 font-mono">
-                      {expandedCam.id} // {expandedCam.name}
+                      {expandedCam.id} {"//"} {expandedCam.name}
                     </h3>
                     <div className="text-xs font-mono font-semibold text-sky-700">HIGH-PRECISION ANPR OPTICAL FEED</div>
                   </div>

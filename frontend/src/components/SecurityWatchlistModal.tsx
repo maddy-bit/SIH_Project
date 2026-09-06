@@ -141,7 +141,7 @@ export function SecurityWatchlistModal() {
                   </select>
                   <select
                     value={newSeverity}
-                    onChange={(e) => setNewSeverity(e.target.value as any)}
+                    onChange={(e) => setNewSeverity(e.target.value as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW")}
                     className="rounded-lg border border-zinc-700 bg-zinc-950 p-1.5 text-[11px] text-rose-400 font-bold"
                   >
                     <option value="CRITICAL">CRITICAL</option>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { getCameras, getHealth } from "@/lib/api";
 
 type ConnectionState = "checking" | "online" | "offline";

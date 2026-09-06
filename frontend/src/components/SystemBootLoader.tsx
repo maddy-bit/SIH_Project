@@ -76,7 +76,7 @@ export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) 
     let iterations = 0;
 
     const interval = setInterval(() => {
-      setOcrText((prev) => {
+      setOcrText(() => {
         if (iterations > 18) {
           clearInterval(interval);
           setIsLocked(true);

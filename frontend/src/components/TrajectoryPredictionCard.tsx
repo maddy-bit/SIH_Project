@@ -8,23 +8,46 @@ interface TrajectoryPredictionCardProps {
   plate: string;
 }
 
+const FALLBACK_CANDIDATES: TrajectoryCandidateDto[] = [
+  {
+    nextCameraId: "CAM-05",
+    nextCameraName: "Swargate Junction",
+    probability: 0.78,
+    estimatedTravelSeconds: 340,
+    estimatedArrivalIso: "18:20",
+  },
+  {
+    nextCameraId: "CAM-08",
+    nextCameraName: "Baner Road",
+    probability: 0.16,
+    estimatedTravelSeconds: 620,
+    estimatedArrivalIso: "18:25",
+  },
+  {
+    nextCameraId: "CAM-11",
+    nextCameraName: "Aundh ITI Circle",
+    probability: 0.06,
+    estimatedTravelSeconds: 890,
+    estimatedArrivalIso: "18:30",
+  },
+];
+
 export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProps) {
   const [candidates, setCandidates] = useState<TrajectoryCandidateDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
     predictTrajectory(plate)
       .then((data) => {
         if (active) {
-          setCandidates(data);
+          setCandidates(data && data.length > 0 ? data : FALLBACK_CANDIDATES);
           setIsLoading(false);
         }
       })
       .catch(() => {
         if (active) {
-          setCandidates([]);
+          setCandidates(FALLBACK_CANDIDATES);
           setIsLoading(false);
         }
       });
@@ -34,32 +57,7 @@ export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProp
     };
   }, [plate]);
 
-  const displayCandidates =
-    candidates.length > 0
-      ? candidates
-      : [
-          {
-            nextCameraId: "CAM-05",
-            nextCameraName: "Swargate Junction",
-            probability: 0.78,
-            estimatedTravelSeconds: 340,
-            estimatedArrivalIso: new Date(Date.now() + 340000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-          {
-            nextCameraId: "CAM-08",
-            nextCameraName: "Baner Road",
-            probability: 0.16,
-            estimatedTravelSeconds: 620,
-            estimatedArrivalIso: new Date(Date.now() + 620000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-          {
-            nextCameraId: "CAM-11",
-            nextCameraName: "Aundh ITI Circle",
-            probability: 0.06,
-            estimatedTravelSeconds: 890,
-            estimatedArrivalIso: new Date(Date.now() + 890000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ];
+  const displayCandidates = candidates.length > 0 ? candidates : FALLBACK_CANDIDATES;
 
   return (
     <div className="card-3d-light rounded-2xl border border-sky-200/80 bg-gradient-to-br from-white via-sky-50/30 to-blue-50/40 p-4 shadow-sm">
