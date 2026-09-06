@@ -17,13 +17,17 @@ export const metadata: Metadata = {
   description: "City-wide AI engine for multi-camera ANPR trajectory tracking and urban traffic analytics (SIH26127).",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#dbeafe] text-slate-900">{children}</body>
     </html>
   );
 }

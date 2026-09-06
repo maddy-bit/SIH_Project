@@ -17,6 +17,7 @@ import { VehicleIntelligencePanel } from "./VehicleIntelligencePanel";
 import { DetectionTimeline } from "./DetectionTimeline";
 import { EvidenceViewer } from "./EvidenceViewer";
 import { InvestigationMap } from "./InvestigationMap";
+import { LiveCameraGridModal } from "./LiveCameraGridModal";
 
 type SearchState = "idle" | "searching" | "found" | "not-found" | "error";
 type LiveStatus = "idle" | "connecting" | "streaming" | "complete" | "error";
@@ -30,12 +31,13 @@ export function InvestigationDashboard() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [replayToken, setReplayToken] = useState(0);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
+  const [isCameraGridOpen, setIsCameraGridOpen] = useState(false);
   const liveCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     getCameras()
       .then(setCameras)
-      .catch(() => setCameras([]));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -55,7 +57,6 @@ export function InvestigationDashboard() {
           setLiveStatus("streaming");
         } else if (message.type === "detection") {
           if (mode === "live") {
-            // Build the trajectory progressively - this IS the data.
             setTrajectory((prev) =>
               prev
                 ? { ...prev, points: [...prev.points, message.point] }
@@ -69,8 +70,6 @@ export function InvestigationDashboard() {
                   },
             );
           }
-          // In combined mode the full route is already loaded from REST -
-          // live events just auto-advance the selection, like an automatic replay.
           setSelectedIndex(message.index);
         } else if (message.type === "complete") {
           setTrajectory((prev) =>
@@ -136,75 +135,134 @@ export function InvestigationDashboard() {
   const isLive = liveStatus === "connecting" || liveStatus === "streaming";
 
   return (
-    <div className="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[320px_1fr_360px]">
-      <div className="flex flex-col gap-4">
-        <VehicleSearchPanel onSearch={handleSearch} isSearching={searchState === "searching"} />
+    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+      {/* 3D Elevated Action Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/90 bg-white/90 px-5 py-3 backdrop-blur-xl shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-3 w-3 rounded-full bg-sky-500 shadow-xs animate-pulse" />
+          <span className="text-xs font-mono font-extrabold text-sky-800 tracking-wider">
+            3D CITY AI SURVEILLANCE MATRIX
+          </span>
+          <span className="hidden sm:inline text-xs text-slate-500 font-medium">
+            • 12 Real-Time 4K Video Feeds • YOLOv8 Vehicle Classifiers • EasyOCR Neural Core
+          </span>
+        </div>
 
-        <AnimatePresence mode="wait">
-          {searchState === "not-found" && (
-            <motion.div
-              key="not-found"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400"
-            >
-              No vehicle found for this registration number. It may not have been observed by any camera in the
-              network, or the plate wasn&apos;t entered exactly as registered.
-            </motion.div>
-          )}
-          {searchState === "error" && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300"
-            >
-              {errorMessage ?? "Something went wrong."}
-            </motion.div>
-          )}
-          {searchState === "found" && summary && (
-            <motion.div key="found" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
-              {isLive && (
-                <div className="flex items-center gap-2 rounded border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-300">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
-                  </span>
-                  {liveStatus === "connecting" ? "CONNECTING TO LIVE FEED…" : "LIVE — RECEIVING DETECTIONS"}
-                </div>
-              )}
-              <VehicleIntelligencePanel summary={summary} trajectory={trajectory} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {points.length >= 2 && !isLive && (
+        <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setReplayToken((n) => n + 1)}
-            className="rounded border border-zinc-700 bg-zinc-900/60 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-sky-500 hover:text-sky-300"
+            onClick={() => setIsCameraGridOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-sky-300 bg-white px-4 py-2 text-xs font-mono font-bold text-sky-800 hover:bg-sky-50 transition-all shadow-xs cursor-pointer"
           >
-            ▶ Replay Trajectory
+            <span>🎥</span>
+            <span>Live 12-Camera CCTV Matrix</span>
           </button>
-        )}
+        </div>
       </div>
 
-      <div className="min-h-[420px] overflow-hidden rounded-lg border border-zinc-800">
-        <InvestigationMap
-          cameras={cameras}
-          points={points}
-          selectedIndex={selectedIndex}
-          onSelectPoint={setSelectedIndex}
-          replayToken={replayToken}
-        />
+      {/* Main 3-Column Layout */}
+      <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[350px_1fr_370px] xl:grid-cols-[370px_1fr_390px]">
+        {/* Left Column */}
+        <div className="flex flex-col gap-4">
+          <VehicleSearchPanel onSearch={handleSearch} isSearching={searchState === "searching"} />
+
+          <AnimatePresence mode="wait">
+            {searchState === "not-found" && (
+              <motion.div
+                key="not-found"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="card-3d-light rounded-2xl p-4.5 text-xs text-slate-600 border border-slate-200"
+              >
+                <div className="flex items-center gap-2 text-amber-700 font-bold mb-1.5">
+                  <span>⚠</span>
+                  <span>NO TARGET RECORD FOUND</span>
+                </div>
+                No vehicle detections match this plate string. Try selecting one of the demo targets above.
+              </motion.div>
+            )}
+
+            {searchState === "error" && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="card-3d-light rounded-2xl border border-rose-200 bg-rose-50 p-4.5 text-xs text-rose-800 shadow-sm"
+              >
+                <div className="flex items-center gap-2 font-bold mb-1.5">
+                  <span>⛔</span>
+                  <span>SERVICE RECONNECTION</span>
+                </div>
+                {errorMessage ?? "Unable to connect to trajectory engine."}
+              </motion.div>
+            )}
+
+            {searchState === "found" && summary && (
+              <motion.div
+                key="found"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-3.5"
+              >
+                {isLive && (
+                  <div className="flex items-center justify-between rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-mono text-sky-800 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-500 opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-600" />
+                      </span>
+                      <span className="font-black">
+                        {liveStatus === "connecting" ? "ESTABLISHING WEBSOCKET LINK…" : "LIVE 3D RADAR REPLAY ACTIVE"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-200 font-bold text-sky-900">LIVE</span>
+                  </div>
+                )}
+                <VehicleIntelligencePanel summary={summary} trajectory={trajectory} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {points.length >= 2 && !isLive && (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setReplayToken((n) => n + 1)}
+              className="btn-3d-light flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-mono font-bold tracking-widest text-white shadow-md uppercase cursor-pointer"
+            >
+              <span>▶</span>
+              <span>Replay 3D Trajectory Route</span>
+            </motion.button>
+          )}
+        </div>
+
+        {/* Center Column: 3D Map */}
+        <div className="min-h-[480px] flex flex-col">
+          <InvestigationMap
+            cameras={cameras}
+            points={points}
+            selectedIndex={selectedIndex}
+            onSelectPoint={setSelectedIndex}
+            replayToken={replayToken}
+          />
+        </div>
+
+        {/* Right Column: Timeline & Forensic CCTV Viewer */}
+        <div className="flex flex-col gap-4 overflow-y-auto">
+          <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+          <EvidenceViewer point={selectedPoint} />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-4 overflow-y-auto">
-        <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
-        <EvidenceViewer point={selectedPoint} />
-      </div>
+      {/* 12-Camera Multi-Screen Modal */}
+      <LiveCameraGridModal
+        isOpen={isCameraGridOpen}
+        onClose={() => setIsCameraGridOpen(false)}
+        cameras={cameras}
+      />
     </div>
   );
 }
