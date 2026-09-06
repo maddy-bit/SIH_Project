@@ -17,11 +17,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("train_plate_detector")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DATASET_YAML = REPO_ROOT / "datasets" / "license_plates" / "dataset.yaml"
+DATASET_YAML = REPO_ROOT / "data" / "dataset_samples" / "license_plates" / "dataset.yaml"
+if not DATASET_YAML.exists():
+    DATASET_YAML = REPO_ROOT / "datasets" / "license_plates" / "dataset.yaml"
 OUTPUT_MODEL_PATH = REPO_ROOT / "ai-service" / "models" / "plate_detector_yolov8n.pt"
 
 
-def train_model(epochs: int = 15, batch_size: int = 8, img_size: int = 640):
+def train_model(epochs: int = 10, batch_size: int = 32, img_size: int = 480):
     if not DATASET_YAML.exists():
         logger.error(f"Dataset configuration not found at {DATASET_YAML}. Run scripts/prepare_plate_dataset.py first!")
         return
@@ -29,13 +31,15 @@ def train_model(epochs: int = 15, batch_size: int = 8, img_size: int = 640):
     logger.info("Initializing YOLOv8n base model for fine-tuning...")
     model = YOLO("yolov8n.pt")
 
-    logger.info(f"Starting training for {epochs} epochs (batch={batch_size}, imgsz={img_size})...")
+    logger.info(f"Starting optimized training for {epochs} epochs (batch={batch_size}, imgsz={img_size})...")
     results = model.train(
         data=str(DATASET_YAML),
         epochs=epochs,
         batch=batch_size,
         imgsz=img_size,
         patience=5,
+        workers=8,
+        device="cpu",
         project=str(REPO_ROOT / "runs" / "detect"),
         name="train_plate",
         exist_ok=True,
@@ -43,13 +47,18 @@ def train_model(epochs: int = 15, batch_size: int = 8, img_size: int = 640):
     )
 
     best_weights = REPO_ROOT / "runs" / "detect" / "train_plate" / "weights" / "best.pt"
+    if not best_weights.exists():
+        best_weights = REPO_ROOT / "runs" / "detect" / "train_plate" / "weights" / "last.pt"
+
     if best_weights.exists():
         OUTPUT_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(str(best_weights), str(OUTPUT_MODEL_PATH))
         logger.info(f"Successfully trained and saved model weights to: {OUTPUT_MODEL_PATH}")
     else:
-        logger.warning(f"Could not locate best weights at {best_weights}.")
+        logger.warning(f"Could not locate trained weights at {best_weights}.")
 
 
 if __name__ == "__main__":
     train_model()
+
+

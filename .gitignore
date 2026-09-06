@@ -1,0 +1,25 @@
+.labeling_env/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+
+# Build Outputs
+backend/target/
+frontend/.next/
+frontend/node_modules/
+
+# Raw Datasets & Large Artifacts
+data/foggy_hazy_raw/
+data/plate_dataset/
+data/dataset_samples/
+videos/
+runs/
+
+# Large Model Weights (Keep project lightweight)
+*.pt
+*.pth
+*.onnx
+*.bin
+*.zip

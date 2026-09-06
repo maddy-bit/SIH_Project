@@ -9,6 +9,7 @@ to produce a high-confidence consensus license plate reading.
 from __future__ import annotations
 from collections import Counter, defaultdict
 import logging
+import numpy as np
 from schemas import PlateObservation, VehicleObservation
 from ai.ocr import validate_plate_format
 

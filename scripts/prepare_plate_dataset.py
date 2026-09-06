@@ -43,8 +43,8 @@ def detect_plate_bbox_heuristic(img):
     h_img, w_img = img.shape[:2]
 
     # Try OpenCV Haar cascade if available
-    cascade_path = cv2.data.haarcascades + "haarcascade_russian_plate_number.xml"
-    if os.path.exists(cascade_path):
+    cascade_path = getattr(getattr(cv2, 'data', None), 'haarcascades', '') + "haarcascade_russian_plate_number.xml"
+    if hasattr(cv2, 'CascadeClassifier') and os.path.exists(cascade_path):
         cascade = cv2.CascadeClassifier(cascade_path)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         plates = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(30, 15))
@@ -86,15 +86,51 @@ def detect_plate_bbox_heuristic(img):
     return px, py, pw, ph
 
 
-def prepare_dataset(sample_limit: int = 500):
+import zipfile
+
+def extract_zips_if_needed():
+    """Extracts raw dataset zip files into GT_DIR and HAZY_DIR if present."""
+    hazy_zip = Path(r"C:\Users\Anmol Trivedi\Downloads\Foggy-Hazy License Plates Images\Foggy-Hazy License Plates Images\New Hazy dataset.zip")
+    gt_zip = Path(r"C:\Users\Anmol Trivedi\Downloads\Foggy-Hazy License Plates Images\Foggy-Hazy License Plates Images\Ground Truth images.zip")
+
+    if hazy_zip.exists():
+        logger.info(f"Extracting hazy dataset from {hazy_zip}...")
+        HAZY_DIR.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(hazy_zip, 'r') as z:
+            for member in z.infolist():
+                if not member.is_dir():
+                    filename = Path(member.filename).name
+                    if filename:
+                        target = HAZY_DIR / filename
+                        with z.open(member) as source, open(target, "wb") as target_file:
+                            shutil.copyfileobj(source, target_file)
+
+    if gt_zip.exists():
+        logger.info(f"Extracting ground truth dataset from {gt_zip}...")
+        GT_DIR.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(gt_zip, 'r') as z:
+            for member in z.infolist():
+                if not member.is_dir():
+                    filename = Path(member.filename).name
+                    if filename:
+                        target = GT_DIR / filename
+                        with z.open(member) as source, open(target, "wb") as target_file:
+                            shutil.copyfileobj(source, target_file)
+
+
+def prepare_dataset(sample_limit: int | None = None):
     logger.info("Initializing License Plate dataset preparation...")
+
+    extract_zips_if_needed()
 
     # Find image paths
     image_paths = []
     if GT_DIR.exists():
-        image_paths.extend(list(GT_DIR.glob("*.jpg")) + list(GT_DIR.glob("*.png")))
+        for ext in ("*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG"):
+            image_paths.extend(GT_DIR.glob(ext))
     if HAZY_DIR.exists():
-        image_paths.extend(list(HAZY_DIR.glob("*.jpg")) + list(HAZY_DIR.glob("*.png")))
+        for ext in ("*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG"):
+            image_paths.extend(HAZY_DIR.glob(ext))
 
     if not image_paths:
         logger.error(f"No source images found in {GT_DIR} or {HAZY_DIR}")
@@ -102,10 +138,13 @@ def prepare_dataset(sample_limit: int = 500):
 
     logger.info(f"Found {len(image_paths)} total source images.")
 
-    # Limit samples for fast preparation if requested
+    # Limit samples for fast preparation if explicitly requested
     random.seed(42)
     random.shuffle(image_paths)
-    selected_paths = image_paths[:sample_limit]
+    if sample_limit:
+        selected_paths = image_paths[:sample_limit]
+    else:
+        selected_paths = image_paths
 
     # Setup dataset output directory structure
     img_train_dir = OUTPUT_DIR / "images" / "train"
@@ -171,3 +210,4 @@ names:
 
 if __name__ == "__main__":
     prepare_dataset()
+

@@ -46,7 +46,7 @@ class CameraAgent:
 
     def __init__(self, camera_id: str):
         self.camera_id = camera_id
-        self.tracker = VehicleTracker()
+        self.tracker = VehicleTracker(camera_id)
         self.plate_detector = PlateDetector()
         self.plate_preprocessor = PlatePreprocessor()
         self.ocr = OCRService()
