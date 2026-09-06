@@ -38,11 +38,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
         <!-- Production datasource - see application-postgres.yml. H2 stays the
              zero-config default so `mvn spring-boot:run` keeps working with
              no external services required. -->
