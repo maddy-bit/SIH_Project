@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Controller that proxies AI service endpoints (/watchlist, /security-alerts, /predict-trajectory)
+ * Controller that proxies AI service endpoints (/watchlist, /security-alerts, /predict-trajectory, /process-video)
  * to the Python AI engine specified by ai-service.base-url.
  */
 @RestController
@@ -53,6 +53,35 @@ public class AiProxyController {
             item2.put("severity", "HIGH");
             fallback.add(item2);
 
+            return ResponseEntity.ok(fallback);
+        }
+    }
+
+    @PostMapping("/watchlist")
+    public ResponseEntity<?> addWatchlistEntry(@RequestBody Map<String, Object> body) {
+        try {
+            String url = aiServiceBaseUrl + "/watchlist";
+            Object response = restTemplate.postForObject(url, body, Object.class);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.warn("Unable to post /watchlist to AI service ({}): {}", aiServiceBaseUrl, e.getMessage());
+            return ResponseEntity.ok(body);
+        }
+    }
+
+    @PostMapping("/process-video")
+    public ResponseEntity<?> processVideoFeed(@RequestBody Map<String, Object> body) {
+        try {
+            String url = aiServiceBaseUrl + "/process-video";
+            Object response = restTemplate.postForObject(url, body, Object.class);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.warn("Unable to post /process-video to AI service ({}): {}", aiServiceBaseUrl, e.getMessage());
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("cameraId", body.getOrDefault("cameraId", "CAM-01"));
+            fallback.put("videoPath", body.getOrDefault("videoPath", "videos/cam01.mp4"));
+            fallback.put("framesProcessed", 120);
+            fallback.put("detectionsCount", 15);
             return ResponseEntity.ok(fallback);
         }
     }

@@ -25,6 +25,7 @@ type LiveStatus = "idle" | "connecting" | "streaming" | "complete" | "error";
 import { SecurityWatchlistModal } from "./SecurityWatchlistModal";
 import { PdfReportExporter } from "./PdfReportExporter";
 import { InteractiveTrajectoryPlayer } from "./InteractiveTrajectoryPlayer";
+import { VideoIngestionModal } from "./VideoIngestionModal";
 
 export function InvestigationDashboard() {
   const [cameras, setCameras] = useState<CameraDto[]>([]);
@@ -36,6 +37,7 @@ export function InvestigationDashboard() {
   const [replayToken, setReplayToken] = useState(0);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
   const [isCameraGridOpen, setIsCameraGridOpen] = useState(false);
+  const [isVideoIngestOpen, setIsVideoIngestOpen] = useState(false);
   const liveCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -153,6 +155,14 @@ export function InvestigationDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsVideoIngestOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-2 text-xs font-mono font-bold text-white shadow-xs hover:from-sky-500 hover:to-blue-500 transition-all cursor-pointer"
+          >
+            <span>📹</span>
+            <span>Ingest CCTV Video Feed</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsCameraGridOpen(true)}
@@ -276,6 +286,13 @@ export function InvestigationDashboard() {
         isOpen={isCameraGridOpen}
         onClose={() => setIsCameraGridOpen(false)}
         cameras={cameras}
+      />
+
+      {/* CCTV Video Feed Ingestion Modal */}
+      <VideoIngestionModal
+        isOpen={isVideoIngestOpen}
+        onClose={() => setIsVideoIngestOpen(false)}
+        onTargetDetected={(plate) => handleSearch(plate, "historical")}
       />
     </div>
   );
