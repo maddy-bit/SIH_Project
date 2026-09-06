@@ -53,7 +53,7 @@ public class CameraController {
     }
 
     @GetMapping("/{cameraId}")
-    public CameraDto getCamera(@PathVariable String cameraId) {
+    public CameraDto getCamera(@PathVariable("cameraId") String cameraId) {
         Camera camera = cameraRepository.findById(cameraId)
                 .orElseThrow(() -> new NoSuchElementException("Unknown camera: " + cameraId));
         return CameraDto.from(camera);

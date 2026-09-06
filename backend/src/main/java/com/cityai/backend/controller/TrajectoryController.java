@@ -23,7 +23,7 @@ public class TrajectoryController {
     }
 
     @GetMapping("/{plate}/trajectory")
-    public TrajectoryResponseDto getTrajectory(@PathVariable String plate, HttpServletRequest request) {
+    public TrajectoryResponseDto getTrajectory(@PathVariable("plate") String plate, HttpServletRequest request) {
         String normalized = PlateNormalizer.normalize(plate);
         auditLogService.record("TRAJECTORY_VIEW", normalized, request);
         return trajectoryEngine.reconstructAsDto(normalized);
