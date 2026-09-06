@@ -1,82 +1,135 @@
 @import "tailwindcss";
 
-@layer base {
-  body {
-    background-color: #09090b;
-    color: #f4f4f5;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
+:root {
+  --background: #dce7f6;
+  --foreground: #0f172a;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-border: rgba(186, 215, 248, 0.85);
+  --accent-blue: #2563eb;
+  --accent-cyan: #0284c7;
+  --accent-emerald: #059669;
 }
 
-/* Glassmorphism & Glow Effects */
-.glass-panel {
-  background: rgba(18, 18, 23, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-.glow-emerald {
-  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
+body {
+  background-color: #dbeafe;
+  color: var(--foreground);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(99, 102, 241, 0.28) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(14, 165, 233, 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.18) 0%, transparent 40%),
+    linear-gradient(135deg, #e0eafc 0%, #cfdef3 50%, #d5e4f9 100%);
+  background-size: 100% 100%;
+  background-attachment: fixed;
+  overflow-x: hidden;
 }
 
-.glow-sky {
-  box-shadow: 0 0 20px -3px rgba(14, 165, 233, 0.35);
+/* 3D Elevated Cards on Tinted Background */
+.card-3d-light {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+  box-shadow: 
+    0 12px 30px -6px rgba(15, 23, 42, 0.12),
+    0 4px 10px -2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glow-rose {
-  box-shadow: 0 0 25px -2px rgba(244, 63, 94, 0.45);
+.card-3d-light:hover {
+  border-color: rgba(2, 132, 199, 0.7);
+  box-shadow: 
+    0 20px 40px -10px rgba(2, 132, 199, 0.22),
+    0 8px 16px -4px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
 }
 
-/* Radar & Pulse Animations */
-@keyframes radar-sweep {
+/* 3D Embossed Reflective Plate */
+.plate-3d-light {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  border: 2px solid #94a3b8;
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(15, 23, 42, 0.08),
+    0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+/* 3D Tactile Push Button */
+.btn-3d-light {
+  background: linear-gradient(to bottom, #0284c7, #0369a1);
+  box-shadow: 
+    0 4px 0 #075985,
+    0 8px 20px rgba(2, 132, 199, 0.4);
+  transition: all 0.12s ease;
+}
+
+.btn-3d-light:hover {
+  background: linear-gradient(to bottom, #0ea5e9, #0284c7);
+  box-shadow: 
+    0 4px 0 #075985,
+    0 10px 25px rgba(2, 132, 199, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-3d-light:active {
+  transform: translateY(3px);
+  box-shadow: 
+    0 1px 0 #075985,
+    0 4px 10px rgba(2, 132, 199, 0.3);
+}
+
+/* 3D Stamped Indian Plate Typography */
+.plate-text-3d {
+  text-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 -1px 0 rgba(0, 0, 0, 0.35),
+    1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 3D Holographic Shimmer */
+@keyframes hologram-shimmer {
   0% {
-    transform: rotate(0deg);
+    background-position: -200% 0;
   }
   100% {
-    transform: rotate(360deg);
+    background-position: 200% 0;
   }
 }
 
-.animate-radar {
-  animation: radar-sweep 4s linear infinite;
+.hologram-effect {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(56, 189, 248, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: hologram-shimmer 3s infinite linear;
 }
 
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(0.95);
-    opacity: 0.8;
-  }
-}
-
-.animate-pulse-ring {
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Custom Sleek Scrollbars */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: rgba(207, 222, 243, 0.5);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: rgba(2, 132, 199, 0.5);
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: rgba(2, 132, 199, 0.8);
 }
+

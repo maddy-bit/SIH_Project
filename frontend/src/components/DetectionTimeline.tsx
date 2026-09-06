@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { TrajectoryPointDto } from "@/lib/api";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { formatTimeOnly } from "@/lib/format";
+import { TiltCard3D } from "./TiltCard3D";
 
 interface DetectionTimelineProps {
   points: TrajectoryPointDto[];
@@ -22,49 +23,117 @@ export function DetectionTimeline({ points, selectedIndex, onSelect }: Detection
   if (points.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Detection Timeline</h2>
-      <div className="mt-3 flex flex-col">
-        {points.map((point, i) => (
-          <div key={`${point.cameraId}-${point.timestamp}`}>
-            {i > 0 && (
-              <div className="flex items-center gap-2 py-1 pl-[13px] text-[11px] text-zinc-600">
-                <span>↓</span>
-                <span>{gapLabel(points[i - 1].timestamp, point.timestamp)}</span>
-                {point.incomingTransitionConfidence != null && (
-                  <ConfidenceBadge value={point.incomingTransitionConfidence} label="match" />
-                )}
-              </div>
-            )}
-            <motion.button
-              type="button"
-              onClick={() => onSelect(i)}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`flex w-full items-start gap-3 rounded border px-2.5 py-2 text-left transition-colors ${
-                selectedIndex === i
-                  ? "border-sky-500 bg-sky-500/10"
-                  : "border-transparent hover:border-zinc-700 hover:bg-zinc-800/40"
-              }`}
-            >
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-[11px] font-semibold text-sky-300">
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium text-zinc-100">{point.cameraId}</span>
-                  <span className="shrink-0 font-mono text-xs text-zinc-500">{formatTimeOnly(point.timestamp)}</span>
-                </span>
-                <span className="mt-0.5 block truncate text-xs text-zinc-500">{point.cameraName}</span>
-                {point.transitionNote && (
-                  <span className="mt-1 block text-[11px] text-rose-300">⚠ {point.transitionNote}</span>
-                )}
-              </span>
-            </motion.button>
+    <TiltCard3D maxTilt={4} scale={1.01}>
+      <div className="card-3d-light relative rounded-2xl p-5 text-slate-900 overflow-hidden">
+        {/* Tactical HUD Corner Reticles */}
+        <div className="pointer-events-none absolute top-2 left-2 h-2.5 w-2.5 border-t-2 border-l-2 border-sky-400" />
+        <div className="pointer-events-none absolute top-2 right-2 h-2.5 w-2.5 border-t-2 border-r-2 border-sky-400" />
+        <div className="pointer-events-none absolute bottom-2 left-2 h-2.5 w-2.5 border-b-2 border-l-2 border-sky-400" />
+        <div className="pointer-events-none absolute bottom-2 right-2 h-2.5 w-2.5 border-b-2 border-r-2 border-sky-400" />
+
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-sky-500 shadow-xs animate-pulse" />
+            <h2 className="text-xs font-bold uppercase tracking-widest text-sky-800">
+              Detection Timeline
+            </h2>
           </div>
-        ))}
+          <span className="text-[10px] font-mono font-bold text-sky-800 bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-md shadow-xs">
+            {points.length} Checkpoints
+          </span>
+        </div>
+
+        <div className="mt-4 flex flex-col">
+          {points.map((point, i) => {
+            const isSelected = selectedIndex === i;
+
+            return (
+              <div key={`${point.cameraId}-${point.timestamp}`} className="relative">
+                {/* Inter-node connector track with travel delta */}
+                {i > 0 && (
+                  <div className="flex items-center gap-2.5 py-2 pl-4 text-[11px] text-slate-500 font-mono">
+                    <div className="h-5 w-0.5 bg-gradient-to-b from-sky-400 to-slate-200 shadow-xs" />
+                    <span className="text-sky-700 font-bold">
+                      ↓ {gapLabel(points[i - 1].timestamp, point.timestamp)}
+                    </span>
+                    {point.incomingTransitionConfidence != null && (
+                      <ConfidenceBadge value={point.incomingTransitionConfidence} label="Match" />
+                    )}
+                  </div>
+                )}
+
+                {/* Checkpoint Node Card */}
+                <motion.button
+                  type="button"
+                  onClick={() => onSelect(i)}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  whileHover={{ scale: 1.01 }}
+                  className={`group flex w-full items-start gap-3.5 rounded-2xl border p-3 text-left transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-sky-400 bg-sky-50/90 shadow-md ring-1 ring-sky-300"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {/* 3D Number Badge */}
+                  <div
+                    className={`relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border font-mono text-xs font-black shadow-xs ${
+                      isSelected
+                        ? "border-sky-500 bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/30"
+                        : "border-sky-200 bg-sky-50 text-sky-700"
+                    }`}
+                  >
+                    {i + 1}
+                  </div>
+
+                  {/* Node Details */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
+                        {point.cameraId}
+                      </span>
+                      <span className="font-mono text-[11px] font-bold text-slate-500">
+                        {formatTimeOnly(point.timestamp)}
+                      </span>
+                    </div>
+
+                    <div className="mt-0.5 truncate text-[11px] font-medium text-slate-600">
+                      {point.cameraName}
+                    </div>
+
+                    {/* Confidence pills */}
+                    <div className="mt-2 flex items-center gap-3">
+                      {point.plateConfidence != null && (
+                        <span className="text-[10px] font-mono text-slate-600">
+                          OCR:{" "}
+                          <span className="text-emerald-700 font-bold">
+                            {Math.round(point.plateConfidence * 100)}%
+                          </span>
+                        </span>
+                      )}
+                      {point.detectionConfidence != null && (
+                        <span className="text-[10px] font-mono text-slate-600">
+                          Det:{" "}
+                          <span className="text-sky-700 font-bold">
+                            {Math.round(point.detectionConfidence * 100)}%
+                          </span>
+                        </span>
+                      )}
+                    </div>
+
+                    {point.transitionNote && (
+                      <div className="mt-1.5 rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1 text-[10px] font-bold text-rose-700">
+                        ⚠ {point.transitionNote}
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </TiltCard3D>
   );
 }

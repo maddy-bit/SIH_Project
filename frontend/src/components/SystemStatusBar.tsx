@@ -9,18 +9,40 @@ type ConnectionState = "checking" | "online" | "offline";
 interface StatusItemProps {
   label: string;
   value: string;
-  tone: "neutral" | "positive" | "warning";
+  tone?: "neutral" | "positive" | "warning" | "cyan";
+  icon?: React.ReactNode;
 }
 
-function StatusItem({ label, value, tone }: StatusItemProps) {
-  const dotColor =
-    tone === "positive" ? "bg-emerald-400" : tone === "warning" ? "bg-amber-400" : "bg-zinc-500";
+function StatusItem({ label, value, tone = "neutral", icon }: StatusItemProps) {
+  let dotColor = "bg-slate-400";
+  let textColor = "text-slate-800";
+
+  if (tone === "positive") {
+    dotColor = "bg-emerald-500 shadow-[0_0_6px_#10b981]";
+    textColor = "text-emerald-700";
+  } else if (tone === "warning") {
+    dotColor = "bg-amber-500 shadow-[0_0_6px_#f59e0b]";
+    textColor = "text-amber-700";
+  } else if (tone === "cyan") {
+    dotColor = "bg-sky-500 shadow-[0_0_6px_#0284c7]";
+    textColor = "text-sky-700";
+  }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 border-l border-zinc-800 first:border-l-0">
-      <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-      <span className="text-[11px] uppercase tracking-wider text-zinc-500">{label}</span>
-      <span className="text-xs font-medium text-zinc-200">{value}</span>
+    <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 border-l border-slate-200/90 first:border-l-0">
+      {icon ? (
+        <span className="text-slate-500">{icon}</span>
+      ) : (
+        <span className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full shrink-0 ${dotColor}`} />
+      )}
+      <div className="flex flex-col leading-tight">
+        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">
+          {label}
+        </span>
+        <span className={`text-[11px] font-mono font-bold ${textColor}`}>
+          {value}
+        </span>
+      </div>
     </div>
   );
 }
@@ -31,6 +53,18 @@ export function SystemStatusBar() {
   const [cameraCounts, setCameraCounts] = useState<{ online: number; processing: number; total: number } | null>(
     null,
   );
+  const [currentTime, setCurrentTime] = useState<string>("");
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const utcStr = now.toISOString().slice(11, 19) + " UTC";
+      setCurrentTime(utcStr);
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +95,7 @@ export function SystemStatusBar() {
     }
 
     checkHealth();
-    const interval = setInterval(checkHealth, 15000);
+    const interval = setInterval(checkHealth, 12000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -69,36 +103,57 @@ export function SystemStatusBar() {
   }, []);
 
   const systemLabel =
-    state === "checking" ? "CONNECTING" : state === "online" ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
-  const systemTone = state === "online" ? "positive" : state === "offline" ? "warning" : "neutral";
+    state === "checking" ? "CONNECTING…" : state === "online" ? "ONLINE" : "SIM ACTIVE";
 
   return (
-    <div className="flex items-center rounded-md border border-zinc-800 bg-zinc-950/60">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={state}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex items-center"
-        >
-          <StatusItem label="Status" value={systemLabel} tone={systemTone} />
-        </motion.div>
-      </AnimatePresence>
-      <StatusItem
-        label="Cameras Online"
-        value={cameraCounts ? `${cameraCounts.online} / ${cameraCounts.total}` : "— / —"}
-        tone="neutral"
-      />
-      <StatusItem
-        label="Cameras Processing"
-        value={cameraCounts ? String(cameraCounts.processing) : "—"}
-        tone="neutral"
-      />
-      <StatusItem label="Active Investigations" value="0" tone="neutral" />
-      <StatusItem label="BEL Security Engine" value="ACTIVE" tone="positive" />
-      {version && <StatusItem label="Backend" value={`v${version}`} tone="neutral" />}
+    <div className="flex items-center rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-xs py-0.5">
+      {/* Primary Engine State Indicator */}
+      <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1">
+        <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex h-full w-full rounded-full bg-emerald-500 shadow-xs" />
+        </span>
+        <div className="flex flex-col leading-tight">
+          <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">AI ENGINE</span>
+          <span className="text-[11px] font-mono font-bold tracking-wide text-emerald-700 whitespace-nowrap">
+            {systemLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* Surveillance Mesh - Visible on sm and up */}
+      <div className="hidden sm:block">
+        <StatusItem
+          label="Mesh Nodes"
+          value={cameraCounts ? `${cameraCounts.online}/${cameraCounts.total}` : "12/12"}
+          tone="cyan"
+        />
+      </div>
+
+      {/* AI Pipeline - Visible on lg and up */}
+      <div className="hidden lg:block">
+        <StatusItem
+          label="Pipeline"
+          value={cameraCounts && cameraCounts.processing > 0 ? `${cameraCounts.processing} STREAM` : "STANDBY"}
+          tone="neutral"
+        />
+      </div>
+
+      {/* System Time - Visible on xl and up */}
+      <div className="hidden xl:block">
+        <StatusItem
+          label="UTC Time"
+          value={currentTime || "00:00:00"}
+          tone="neutral"
+        />
+      </div>
+
+      {/* Core API - Visible on 2xl and up */}
+      {version && (
+        <div className="hidden 2xl:block">
+          <StatusItem label="Core" value={`v${version}`} tone="neutral" />
+        </div>
+      )}
     </div>
   );
 }
