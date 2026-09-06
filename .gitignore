@@ -8,6 +8,7 @@ __pycache__/
 # Build Outputs
 backend/target/
 frontend/.next/
+node_modules/
 frontend/node_modules/
 
 # Raw Datasets & Large Artifacts
