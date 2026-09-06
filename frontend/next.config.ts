@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Standalone output for a lean Docker image (see frontend/Dockerfile) -
-  // bundles only the traced dependencies, not the whole node_modules tree.
-  output: "standalone",
+  // Only use standalone output when explicitly requested (e.g. for Docker)
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "true" ? { output: "standalone" } : {}),
 };
 
 export default nextConfig;
