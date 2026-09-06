@@ -4,7 +4,7 @@
  * pass paths like "/health", "/vehicles/MH12AB1234", etc.
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://sih-project-62k1.onrender.com";
 
 export interface HealthResponse {
   status: string;
