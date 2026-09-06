@@ -116,8 +116,7 @@ public class TrajectoryEngine {
                         Vehicle v = new Vehicle(r.plate(), r.vehicleType(), r.color(), r.make(), r.model());
                         return vehicleRepository.save(v);
                     }
-                    throw new org.springframework.web.server.ResponseStatusException(
-                            org.springframework.http.HttpStatus.NOT_FOUND, "No vehicle found for plate: " + normalizedPlate);
+                    throw new java.util.NoSuchElementException("No vehicle found for plate: " + normalizedPlate);
                 });
 
         List<VehicleDetection> detections =

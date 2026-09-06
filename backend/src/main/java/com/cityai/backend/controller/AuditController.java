@@ -26,7 +26,7 @@ public class AuditController {
     }
 
     @GetMapping("/recent")
-    public List<AuditLogEntryDto> recent(@RequestParam(defaultValue = "50") int limit) {
+    public List<AuditLogEntryDto> recent(@RequestParam(name = "limit", defaultValue = "50") int limit) {
         return auditLogRepository.findAllByOrderByTimestampDesc(PageRequest.of(0, Math.min(limit, 500))).stream()
                 .map(AuditLogEntryDto::from)
                 .toList();

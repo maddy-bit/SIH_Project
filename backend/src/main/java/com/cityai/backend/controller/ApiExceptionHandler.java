@@ -24,6 +24,12 @@ public class ApiExceptionHandler {
                 .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), Instant.now().toString()));
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new ErrorResponse(ex.getStatusCode().is4xxClientError() ? "NOT_FOUND" : "ERROR", ex.getReason() != null ? ex.getReason() : ex.getMessage(), Instant.now().toString()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

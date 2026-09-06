@@ -41,7 +41,7 @@ public class CameraController {
      */
     @GetMapping("/nearby")
     public List<CameraDto> nearbyCameras(
-            @RequestParam double lat, @RequestParam double lon, @RequestParam(defaultValue = "5") double radiusKm) {
+            @RequestParam("lat") double lat, @RequestParam("lon") double lon, @RequestParam(name = "radiusKm", defaultValue = "5") double radiusKm) {
         SpatialCameraService service = spatialCameraService.getIfAvailable();
         if (service == null) {
             throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
