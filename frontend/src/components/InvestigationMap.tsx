@@ -5,6 +5,7 @@ import * as maplibregl from "maplibre-gl";
 // NOTE: MapLibre CSS is imported in globals.css (not here) to avoid
 // lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
+import { fetchRoadRoute } from "@/lib/routing";
 
 // High-performance Google Maps raster tile styles.
 // Bypasses vector tile decoder issues in privacy browsers (e.g. Brave Shields)
@@ -99,7 +100,6 @@ const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", maplibregl.Style
 };
 
 const ROUTE_SOURCE_ID = "trajectory-route";
-const ROUTE_LAYER_ID = "trajectory-route-line";
 const MESH_LINKS_SOURCE_ID = "camera-mesh-links";
 
 interface InvestigationMapProps {
@@ -143,7 +143,54 @@ export function InvestigationMap({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
+    const setupLayers = () => {
+      try {
+        if (!map.getSource(ROUTE_SOURCE_ID)) {
+          map.addSource(ROUTE_SOURCE_ID, {
+            type: "geojson",
+            data: {
+              type: "FeatureCollection",
+              features: [],
+            },
+          });
+        }
+
+        if (!map.getLayer("trajectory-route-casing")) {
+          map.addLayer({
+            id: "trajectory-route-casing",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#091e42", "line-width": 10 },
+          });
+        }
+
+        if (!map.getLayer("trajectory-route-glow")) {
+          map.addLayer({
+            id: "trajectory-route-glow",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#0284c7", "line-width": 6 },
+          });
+        }
+
+        if (!map.getLayer("trajectory-route-laser")) {
+          map.addLayer({
+            id: "trajectory-route-laser",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#ffffff", "line-width": 2 },
+          });
+        }
+      } catch (err) {
+        console.error("Error setting up route layers:", err);
+      }
+    };
+
     const markReady = () => {
+      setupLayers();
       map.resize();
       setMapReady(true);
     };
@@ -186,6 +233,64 @@ export function InvestigationMap({
     const onStyleReady = () => {
       if (map.isStyleLoaded()) {
         map.off("styledata", onStyleReady);
+        try {
+          const validCoords =
+            roadCoordinatesRef.current && roadCoordinatesRef.current.length >= 2;
+          const initialData: GeoJSON.GeoJSON = validCoords
+            ? {
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature",
+                    geometry: {
+                      type: "LineString",
+                      coordinates: roadCoordinatesRef.current,
+                    },
+                    properties: {},
+                  },
+                ],
+              }
+            : {
+                type: "FeatureCollection",
+                features: [],
+              };
+
+          if (!map.getSource(ROUTE_SOURCE_ID)) {
+            map.addSource(ROUTE_SOURCE_ID, {
+              type: "geojson",
+              data: initialData,
+            });
+          }
+          if (!map.getLayer("trajectory-route-casing")) {
+            map.addLayer({
+              id: "trajectory-route-casing",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#091e42", "line-width": 10 },
+            });
+          }
+          if (!map.getLayer("trajectory-route-glow")) {
+            map.addLayer({
+              id: "trajectory-route-glow",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#0284c7", "line-width": 6 },
+            });
+          }
+          if (!map.getLayer("trajectory-route-laser")) {
+            map.addLayer({
+              id: "trajectory-route-laser",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#ffffff", "line-width": 2 },
+            });
+          }
+        } catch (err) {
+          console.error("Error restoring route layers after style switch:", err);
+        }
         map.resize();
         setMapReady(true);
       }
@@ -215,44 +320,32 @@ export function InvestigationMap({
 
   const cameraMarkersRef = useRef<maplibregl.Marker[]>([]);
   const checkpointElementsRef = useRef<{ el: HTMLElement; index: number }[]>([]);
+  const roadCoordinatesRef = useRef<[number, number][]>([]);
   const svgPathCasingRef = useRef<SVGPathElement | null>(null);
   const svgPathGlowRef = useRef<SVGPathElement | null>(null);
   const svgPathLaserRef = useRef<SVGPathElement | null>(null);
   const isInitialReconstructRef = useRef<boolean>(true);
 
-  // Sync SVG trajectory line overlay with MapLibre camera movements without React re-renders
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
+  const updateSvgTrajectory = () => {
+    const coords = roadCoordinatesRef.current;
+    if (!mapRef.current || coords.length < 2) {
+      svgPathCasingRef.current?.setAttribute("d", "");
+      svgPathGlowRef.current?.setAttribute("d", "");
+      svgPathLaserRef.current?.setAttribute("d", "");
+      return;
+    }
+    const d = coords
+      .map((pt, i) => {
+        const ptPos = mapRef.current?.project(pt);
+        if (!ptPos) return "";
+        return `${i === 0 ? "M" : "L"} ${ptPos.x.toFixed(1)} ${ptPos.y.toFixed(1)}`;
+      })
+      .join(" ");
+    svgPathCasingRef.current?.setAttribute("d", d);
+    svgPathGlowRef.current?.setAttribute("d", d);
+    svgPathLaserRef.current?.setAttribute("d", d);
+  };
 
-    const updateSvgTrajectory = () => {
-      if (!mapRef.current || points.length < 2) {
-        svgPathCasingRef.current?.setAttribute("d", "");
-        svgPathGlowRef.current?.setAttribute("d", "");
-        svgPathLaserRef.current?.setAttribute("d", "");
-        return;
-      }
-      const d = points
-        .map((pt, i) => {
-          const ptPos = mapRef.current?.project([pt.longitude, pt.latitude]);
-          if (!ptPos) return "";
-          return `${i === 0 ? "M" : "L"} ${ptPos.x.toFixed(1)} ${ptPos.y.toFixed(1)}`;
-        })
-        .join(" ");
-      svgPathCasingRef.current?.setAttribute("d", d);
-      svgPathGlowRef.current?.setAttribute("d", d);
-      svgPathLaserRef.current?.setAttribute("d", d);
-    };
-
-    updateSvgTrajectory();
-    map.on("move", updateSvgTrajectory);
-    map.on("render", updateSvgTrajectory);
-
-    return () => {
-      map.off("move", updateSvgTrajectory);
-      map.off("render", updateSvgTrajectory);
-    };
-  }, [points, mapReady]);
 
   // Render camera network mesh and tactical camera pins
   useEffect(() => {
@@ -300,8 +393,8 @@ export function InvestigationMap({
           },
         });
       }
-    } catch {
-      // Mesh layer fallback
+    } catch (err) {
+      console.error("FAILED TO ADD MESH LAYER:", err);
     }
 
     // 2. Render sleek tactical CCTV camera pins for cameras NOT in active trajectory
@@ -345,7 +438,7 @@ export function InvestigationMap({
     });
   }, [cameras, points, mapReady, activeLayer]);
 
-  // Render trajectory route line and numbered checkpoint badges
+  // Render trajectory route line along real roads and numbered checkpoint badges
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -355,6 +448,8 @@ export function InvestigationMap({
     checkpointElementsRef.current = [];
 
     if (points.length === 0) {
+      roadCoordinatesRef.current = [];
+      updateSvgTrajectory();
       if (map.getSource(ROUTE_SOURCE_ID)) {
         (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData({
           type: "FeatureCollection",
@@ -364,58 +459,78 @@ export function InvestigationMap({
       return;
     }
 
-    const coordinates = points.map((p) => [p.longitude, p.latitude]);
+    const rawWaypoints: [number, number][] = points.map((p) => [p.longitude, p.latitude]);
 
-    const routeGeojson: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          geometry: { type: "LineString", coordinates },
-          properties: {},
-        },
-      ],
-    };
-
-    try {
-      if (map.getSource(ROUTE_SOURCE_ID)) {
-        (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(routeGeojson);
+    const applyRouteGeojson = (coordinates: [number, number][]) => {
+      roadCoordinatesRef.current = coordinates;
+      updateSvgTrajectory();
+      if (coordinates.length < 2) return;
+      const data: GeoJSON.GeoJSON = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
+            properties: {},
+          },
+        ],
+      };
+      const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (source) {
+        source.setData(data);
       } else {
-        map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: routeGeojson });
-
-        if (!map.getLayer("trajectory-route-casing")) {
-          map.addLayer({
-            id: "trajectory-route-casing",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#091e42", "line-width": 8, "line-opacity": 0.85 },
-          });
-        }
-
-        if (!map.getLayer(ROUTE_LAYER_ID)) {
-          map.addLayer({
-            id: ROUTE_LAYER_ID,
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#0284c7", "line-width": 5, "line-opacity": 0.95 },
-          });
-        }
-
-        if (!map.getLayer("trajectory-route-laser")) {
-          map.addLayer({
-            id: "trajectory-route-laser",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#ffffff", "line-width": 2, "line-opacity": 1.0 },
-          });
+        try {
+          map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data });
+          if (!map.getLayer("trajectory-route-casing")) {
+            map.addLayer({
+              id: "trajectory-route-casing",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#091e42", "line-width": 10, "line-opacity": 0.85 },
+            });
+          }
+          if (!map.getLayer("trajectory-route-glow")) {
+            map.addLayer({
+              id: "trajectory-route-glow",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#0284c7", "line-width": 6, "line-opacity": 0.95 },
+            });
+          }
+          if (!map.getLayer("trajectory-route-laser")) {
+            map.addLayer({
+              id: "trajectory-route-laser",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 1.0 },
+            });
+          }
+        } catch (err) {
+          console.error("Error creating route source on demand:", err);
         }
       }
-    } catch {
-      // MapLibre WebGL layer fallback
-    }
+    };
+
+    // Immediately render initial route
+    applyRouteGeojson(
+      roadCoordinatesRef.current.length > 1 &&
+      roadCoordinatesRef.current[0][0] === rawWaypoints[0][0]
+        ? roadCoordinatesRef.current
+        : rawWaypoints
+    );
+
+    // Fetch real road routing asynchronously and update line to follow actual roads
+    let isCancelled = false;
+    fetchRoadRoute(rawWaypoints).then((roadCoords) => {
+      if (isCancelled || !mapRef.current) return;
+      applyRouteGeojson(roadCoords);
+    });
 
     // Numbered 3D floating checkpoint badges with camera name pills
     points.forEach((point, index) => {
@@ -464,7 +579,25 @@ export function InvestigationMap({
         duration: 900,
       });
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [points, mapReady, activeLayer, onSelectPoint]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    updateSvgTrajectory();
+    map.on("move", updateSvgTrajectory);
+    map.on("render", updateSvgTrajectory);
+
+    return () => {
+      map.off("move", updateSvgTrajectory);
+      map.off("render", updateSvgTrajectory);
+    };
+  }, [mapReady]);
 
   // Update checkpoint visual active state without re-creating DOM markers (zero jitter)
   useEffect(() => {
@@ -535,13 +668,18 @@ export function InvestigationMap({
       const elapsed = time - startTime;
       const progress = Math.min(elapsed / durationMs, 1);
 
-      const totalSegments = points.length - 1;
+      const pathCoords =
+        roadCoordinatesRef.current.length > 1
+          ? roadCoordinatesRef.current
+          : points.map((p) => [p.longitude, p.latitude] as [number, number]);
+
+      const totalSegments = pathCoords.length - 1;
       const currentSegmentFloat = progress * totalSegments;
       const segmentIndex = Math.min(Math.floor(currentSegmentFloat), totalSegments - 1);
       const segmentProgress = currentSegmentFloat - segmentIndex;
 
-      const p1 = points[segmentIndex];
-      const p2 = points[segmentIndex + 1];
+      const p1 = pathCoords[segmentIndex];
+      const p2 = pathCoords[segmentIndex + 1];
 
       if (!p1 || !p2) {
         vehicleMarkerRef.current?.remove();
@@ -549,8 +687,8 @@ export function InvestigationMap({
         return;
       }
 
-      const lng = p1.longitude + (p2.longitude - p1.longitude) * segmentProgress;
-      const lat = p1.latitude + (p2.latitude - p1.latitude) * segmentProgress;
+      const lng = p1[0] + (p2[0] - p1[0]) * segmentProgress;
+      const lat = p1[1] + (p2[1] - p1[1]) * segmentProgress;
 
       vehicleMarkerRef.current?.setLngLat([lng, lat]);
 
@@ -706,6 +844,7 @@ export function InvestigationMap({
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
         <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
 
+        {/* Real-road SVG Trajectory Overlay */}
         <svg className="pointer-events-none absolute inset-0 h-full w-full z-[5] overflow-visible">
           <defs>
             <filter id="route-glow-blur" x="-20%" y="-20%" width="140%" height="140%">
@@ -716,39 +855,38 @@ export function InvestigationMap({
               </feMerge>
             </filter>
           </defs>
-          {/* Deep Navy Casing for maximum contrast against any terrain/satellite/roads */}
           <path
             ref={svgPathCasingRef}
             d=""
             fill="none"
             stroke="#091e42"
-            strokeWidth="9"
+            strokeWidth="10"
             strokeLinecap="round"
             strokeLinejoin="round"
             opacity="0.85"
           />
-          {/* Electric Neon Sky Blue Trajectory Line */}
           <path
             ref={svgPathGlowRef}
             d=""
             fill="none"
             stroke="#0284c7"
-            strokeWidth="5"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeLinejoin="round"
             filter="url(#route-glow-blur)"
           />
-          {/* Glowing Center Laser Core */}
           <path
             ref={svgPathLaserRef}
             d=""
             fill="none"
             stroke="#ffffff"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
+
+
 
       {/* 3D Camera Hover Telemetry Card */}
       {hoveredCamera && (
