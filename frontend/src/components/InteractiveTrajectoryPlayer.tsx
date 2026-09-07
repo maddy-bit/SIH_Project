@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
+import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import type { TrajectoryPointDto } from "@/lib/api";
 
 export interface Waypoint {
@@ -37,48 +37,43 @@ export function InteractiveTrajectoryPlayer({
   const [internalIndex, setInternalIndex] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
 
-  // Derive active index during render to avoid cascading renders / setState-in-effect
   const activeIndex =
     selectedIndex != null && selectedIndex >= 0 && selectedIndex < items.length
       ? selectedIndex
       : internalIndex;
 
-  const notifyIndexChange = (index: number) => {
-    setInternalIndex(index);
-    if (onSelectPoint) {
-      (onSelectPoint as (idx: number) => void)(index);
-    }
-    if (onActiveIndexChange) {
-      onActiveIndexChange(index);
-    }
-  };
+  const activeIndexRef = useRef(activeIndex);
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  const notifyIndexChange = useCallback(
+    (index: number) => {
+      setInternalIndex(index);
+      if (onSelectPoint) {
+        (onSelectPoint as (idx: number) => void)(index);
+      }
+      if (onActiveIndexChange) {
+        onActiveIndexChange(index);
+      }
+    },
+    [onSelectPoint, onActiveIndexChange],
+  );
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isPlaying && items.length > 0) {
       timer = setInterval(() => {
-        setInternalIndex((prev) => {
-          const current =
-            selectedIndex != null && selectedIndex >= 0 && selectedIndex < items.length
-              ? selectedIndex
-              : prev;
-          const next = current + 1;
-          if (next >= items.length) {
-            setIsPlaying(false);
-            return current;
-          }
-          if (onSelectPoint) {
-            (onSelectPoint as (idx: number) => void)(next);
-          }
-          if (onActiveIndexChange) {
-            onActiveIndexChange(next);
-          }
-          return next;
-        });
+        const next = activeIndexRef.current + 1;
+        if (next >= items.length) {
+          setIsPlaying(false);
+          return;
+        }
+        notifyIndexChange(next);
       }, 1500 / playbackSpeed);
     }
     return () => clearInterval(timer);
-  }, [isPlaying, items.length, playbackSpeed, selectedIndex, onSelectPoint, onActiveIndexChange]);
+  }, [isPlaying, items.length, playbackSpeed, notifyIndexChange]);
 
   if (items.length === 0) return null;
 
