@@ -324,7 +324,9 @@ export async function getHealth(): Promise<HealthResponse> {
 
 export async function getCameras(): Promise<CameraDto[]> {
   try {
-    return await apiFetch<CameraDto[]>("/cameras");
+    const cams = await apiFetch<CameraDto[]>("/cameras");
+    if (!cams || cams.length === 0) return SEED_CAMERAS;
+    return cams;
   } catch {
     return SEED_CAMERAS;
   }
@@ -378,7 +380,11 @@ export async function getVehicleTrajectory(plate: string): Promise<TrajectoryRes
 
 export async function getAnalyticsOverview(): Promise<AnalyticsOverviewDto> {
   try {
-    return await apiFetch<AnalyticsOverviewDto>("/analytics/overview");
+    const res = await apiFetch<AnalyticsOverviewDto>("/analytics/overview");
+    if (!res || res.totalCameras === 0 || res.totalDetections === 0) {
+      return DEMO_ANALYTICS;
+    }
+    return res;
   } catch {
     return DEMO_ANALYTICS;
   }
