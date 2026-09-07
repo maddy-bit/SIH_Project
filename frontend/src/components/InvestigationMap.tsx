@@ -11,7 +11,7 @@ const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? "YNlAc2R6pThUIZrd2o
 // Maptiler vector tile style URLs — these include glyphs, sprites, and
 // proper font PBFs so camera labels render correctly with no extra config.
 const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", string> = {
-  streets:   `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
+  streets:   `https://api.maptiler.com/maps/openstreetmap/style.json?key=${MAPTILER_KEY}`,
   satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`,
   light:     `https://api.maptiler.com/maps/dataviz-light/style.json?key=${MAPTILER_KEY}`,
 };
@@ -63,13 +63,19 @@ export function InvestigationMap({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
-    const markReady = () => setMapReady(true);
+    const markReady = () => {
+      map.resize();
+      setMapReady(true);
+    };
 
-    map.on("load", () => {
-      map.resize(); // ensure canvas matches container size after dynamic load
-      markReady();
-    });
-    map.on("style.load", markReady);
+    map.on("load", markReady);
+    const onInitialStyle = () => {
+      if (map.isStyleLoaded()) {
+        map.off("styledata", onInitialStyle);
+        markReady();
+      }
+    };
+    map.on("styledata", onInitialStyle);
 
     mapRef.current = map;
 
@@ -86,16 +92,22 @@ export function InvestigationMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle layer switch
+  // Handle layer switch with proper styledata lifecycle in MapLibre
   const handleLayerSwitch = (styleKey: "light" | "streets" | "satellite") => {
     setActiveLayer(styleKey);
     setMapReady(false);
     const map = mapRef.current;
     if (!map) return;
     map.setStyle(BASEMAP_STYLES[styleKey]);
-    map.once("style.load", () => {
-      setMapReady(true);
-    });
+    
+    const onStyleReady = () => {
+      if (map.isStyleLoaded()) {
+        map.off("styledata", onStyleReady);
+        map.resize();
+        setMapReady(true);
+      }
+    };
+    map.on("styledata", onStyleReady);
   };
 
   // 3D Pitch presets
