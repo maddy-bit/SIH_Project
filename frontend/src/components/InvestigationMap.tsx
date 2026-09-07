@@ -214,17 +214,22 @@ export function InvestigationMap({
   };
 
   const cameraMarkersRef = useRef<maplibregl.Marker[]>([]);
-  const [svgPathData, setSvgPathData] = useState<string>("");
+  const checkpointElementsRef = useRef<{ el: HTMLElement; index: number }[]>([]);
+  const svgPathCasingRef = useRef<SVGPathElement | null>(null);
+  const svgPathGlowRef = useRef<SVGPathElement | null>(null);
+  const svgPathLaserRef = useRef<SVGPathElement | null>(null);
   const isInitialReconstructRef = useRef<boolean>(true);
 
-  // Sync SVG trajectory line overlay with MapLibre camera movements
+  // Sync SVG trajectory line overlay with MapLibre camera movements without React re-renders
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
     const updateSvgTrajectory = () => {
       if (!mapRef.current || points.length < 2) {
-        setSvgPathData("");
+        svgPathCasingRef.current?.setAttribute("d", "");
+        svgPathGlowRef.current?.setAttribute("d", "");
+        svgPathLaserRef.current?.setAttribute("d", "");
         return;
       }
       const d = points
@@ -234,7 +239,9 @@ export function InvestigationMap({
           return `${i === 0 ? "M" : "L"} ${ptPos.x.toFixed(1)} ${ptPos.y.toFixed(1)}`;
         })
         .join(" ");
-      setSvgPathData(d);
+      svgPathCasingRef.current?.setAttribute("d", d);
+      svgPathGlowRef.current?.setAttribute("d", d);
+      svgPathLaserRef.current?.setAttribute("d", d);
     };
 
     updateSvgTrajectory();
@@ -324,7 +331,11 @@ export function InvestigationMap({
 
       el.addEventListener("mouseenter", () => setHoveredCamera(camera));
       el.addEventListener("mouseleave", () => setHoveredCamera(null));
-      el.addEventListener("click", () => setHoveredCamera(camera));
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setHoveredCamera(camera);
+      });
 
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat([camera.longitude, camera.latitude])
@@ -341,6 +352,7 @@ export function InvestigationMap({
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
+    checkpointElementsRef.current = [];
 
     if (points.length === 0) {
       if (map.getSource(ROUTE_SOURCE_ID)) {
@@ -409,16 +421,11 @@ export function InvestigationMap({
     points.forEach((point, index) => {
       const el = document.createElement("div");
       el.className = "cursor-pointer transition-transform hover:scale-125 z-20 select-none";
-      const isSelected = selectedIndex === index;
 
       el.innerHTML = `
         <div class="relative flex flex-col items-center justify-center">
-          ${isSelected ? '<span class="absolute -top-2 h-14 w-14 rounded-full bg-sky-400 opacity-60 animate-ping pointer-events-none"></span>' : ""}
-          <div class="flex items-center gap-1.5 rounded-2xl border-2 border-white px-2.5 py-1 shadow-xl ${
-            isSelected
-              ? "bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white scale-110 shadow-sky-500/50 ring-2 ring-sky-300"
-              : "bg-gradient-to-r from-blue-700 to-sky-700 text-white shadow-blue-500/40"
-          }">
+          <span class="radar-ping absolute -top-2 h-14 w-14 rounded-full bg-sky-400 opacity-60 animate-ping pointer-events-none hidden"></span>
+          <div class="checkpoint-badge flex items-center gap-1.5 rounded-2xl border-2 border-white px-2.5 py-1 shadow-xl transition-all duration-200 bg-gradient-to-r from-blue-700 to-sky-700 text-white shadow-blue-500/40">
             <span class="flex h-5 w-5 items-center justify-center rounded-full bg-white text-blue-900 font-mono text-xs font-black shadow-xs">
               ${index + 1}
             </span>
@@ -433,6 +440,7 @@ export function InvestigationMap({
 
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        e.preventDefault();
         isInitialReconstructRef.current = false;
         onSelectPoint(index);
       });
@@ -442,10 +450,12 @@ export function InvestigationMap({
         .addTo(map);
 
       markersRef.current.push(marker);
+      checkpointElementsRef.current.push({ el, index });
     });
 
-    // Auto-fit bounds to encompass all checkpoints cleanly across Pune
+    // Auto-fit bounds to encompass all checkpoints cleanly across Pune on points change
     if (points.length > 1) {
+      isInitialReconstructRef.current = true;
       const bounds = new maplibregl.LngLatBounds();
       points.forEach((p) => bounds.extend([p.longitude, p.latitude]));
       map.fitBounds(bounds, {
@@ -454,21 +464,42 @@ export function InvestigationMap({
         duration: 900,
       });
     }
-  }, [points, selectedIndex, mapReady, activeLayer, onSelectPoint]);
+  }, [points, mapReady, activeLayer, onSelectPoint]);
 
-  // Pan to selected checkpoint only on user interaction (not overriding initial reconstruction fit)
+  // Update checkpoint visual active state without re-creating DOM markers (zero jitter)
+  useEffect(() => {
+    checkpointElementsRef.current.forEach(({ el, index }) => {
+      const isSelected = selectedIndex === index;
+      const ping = el.querySelector(".radar-ping");
+      const badge = el.querySelector(".checkpoint-badge");
+      if (ping) {
+        if (isSelected) {
+          ping.classList.remove("hidden");
+        } else {
+          ping.classList.add("hidden");
+        }
+      }
+      if (badge) {
+        if (isSelected) {
+          badge.className =
+            "checkpoint-badge flex items-center gap-1.5 rounded-2xl border-2 border-white px-2.5 py-1 shadow-xl transition-all duration-200 bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white scale-110 shadow-sky-500/50 ring-2 ring-sky-300";
+        } else {
+          badge.className =
+            "checkpoint-badge flex items-center gap-1.5 rounded-2xl border-2 border-white px-2.5 py-1 shadow-xl transition-all duration-200 bg-gradient-to-r from-blue-700 to-sky-700 text-white shadow-blue-500/40";
+        }
+      }
+    });
+  }, [selectedIndex]);
+
+  // Pan to selected checkpoint smoothly on deliberate user interaction
   useEffect(() => {
     const map = mapRef.current;
     if (!map || selectedIndex === null || !points[selectedIndex]) return;
-    if (isInitialReconstructRef.current) {
-      // First render of trajectory already performed optimal fitBounds
-      return;
-    }
+    if (isInitialReconstructRef.current) return;
     const target = points[selectedIndex];
     map.easeTo({
       center: [target.longitude, target.latitude],
-      zoom: Math.max(map.getZoom(), 13.5),
-      duration: 800,
+      duration: 500,
     });
   }, [selectedIndex, points]);
 
@@ -564,8 +595,6 @@ export function InvestigationMap({
       <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
       <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
 
-      {/* High-Visibility Vector Trajectory Route SVG Overlay (Dual Redundancy) */}
-      {svgPathData && (
         <svg className="pointer-events-none absolute inset-0 h-full w-full z-[5] overflow-visible">
           <defs>
             <filter id="route-glow-blur" x="-20%" y="-20%" width="140%" height="140%">
@@ -578,7 +607,8 @@ export function InvestigationMap({
           </defs>
           {/* Deep Navy Casing for maximum contrast against any terrain/satellite/roads */}
           <path
-            d={svgPathData}
+            ref={svgPathCasingRef}
+            d=""
             fill="none"
             stroke="#091e42"
             strokeWidth="9"
@@ -588,7 +618,8 @@ export function InvestigationMap({
           />
           {/* Electric Neon Sky Blue Trajectory Line */}
           <path
-            d={svgPathData}
+            ref={svgPathGlowRef}
+            d=""
             fill="none"
             stroke="#0284c7"
             strokeWidth="5"
@@ -598,7 +629,8 @@ export function InvestigationMap({
           />
           {/* Glowing Center Laser Core */}
           <path
-            d={svgPathData}
+            ref={svgPathLaserRef}
+            d=""
             fill="none"
             stroke="#ffffff"
             strokeWidth="2"
@@ -606,7 +638,6 @@ export function InvestigationMap({
             strokeLinejoin="round"
           />
         </svg>
-      )}
 
       {/* Layer Controls & 3D Tilt (Top Right) */}
       <div className="absolute top-3 right-12 z-10 flex items-center gap-1 rounded-xl border border-slate-200/90 bg-white/95 p-1 backdrop-blur-xl shadow-md">
