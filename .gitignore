@@ -10,6 +10,10 @@ backend/target/
 frontend/.next/
 node_modules/
 frontend/node_modules/
+BOOT-INF/
+backend/BOOT-INF/
+*.jar
+*.war
 
 # Raw Datasets & Large Artifacts
 data/foggy_hazy_raw/

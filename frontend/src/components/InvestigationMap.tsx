@@ -2,64 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+// NOTE: MapLibre CSS is imported in globals.css (not here) to avoid
+// lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
 
-const BASEMAP_STYLES: Record<string, maplibregl.StyleSpecification> = {
-  light: {
-    version: 8,
-    sources: {
-      "esri-light": {
-        type: "raster",
-        tiles: [
-          "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-        ],
-        tileSize: 256,
-        attribution: "© Esri, HERE, Garmin, © OpenStreetMap",
-      },
-      "esri-light-reference": {
-        type: "raster",
-        tiles: [
-          "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
-        ],
-        tileSize: 256,
-      },
-    },
-    layers: [
-      { id: "esri-light-base", type: "raster", source: "esri-light", minzoom: 0, maxzoom: 19 },
-      { id: "esri-light-ref", type: "raster", source: "esri-light-reference", minzoom: 0, maxzoom: 19 },
-    ],
-  },
-  streets: {
-    version: 8,
-    sources: {
-      "osm-streets": {
-        type: "raster",
-        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors",
-      },
-    },
-    layers: [
-      { id: "osm-streets-layer", type: "raster", source: "osm-streets", minzoom: 0, maxzoom: 19 },
-    ],
-  },
-  satellite: {
-    version: 8,
-    sources: {
-      "esri-satellite": {
-        type: "raster",
-        tiles: [
-          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        ],
-        tileSize: 256,
-        attribution: "© Esri, Maxar, Earthstar Geographics",
-      },
-    },
-    layers: [
-      { id: "esri-sat-layer", type: "raster", source: "esri-satellite", minzoom: 0, maxzoom: 19 },
-    ],
-  },
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? "YNlAc2R6pThUIZrd2o5m";
+
+// Maptiler vector tile style URLs — these include glyphs, sprites, and
+// proper font PBFs so camera labels render correctly with no extra config.
+const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", string> = {
+  streets:   `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
+  satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`,
+  light:     `https://api.maptiler.com/maps/dataviz-light/style.json?key=${MAPTILER_KEY}`,
 };
 
 const ROUTE_SOURCE_ID = "trajectory-route";
@@ -88,12 +42,12 @@ export function InvestigationMap({
   const vehicleMarkerRef = useRef<maplibregl.Marker | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const animationFrameRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [activeLayer, setActiveLayer] = useState<"light" | "streets" | "satellite">("streets");
   const [hoveredCamera, setHoveredCamera] = useState<CameraDto | null>(null);
-  const [is3D, setIs3D] = useState(true);
 
-  // Initialize map in 3D Isometric View by default
+  // Initialize map with Maptiler vector tiles
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -102,31 +56,40 @@ export function InvestigationMap({
       style: BASEMAP_STYLES[activeLayer],
       center: [73.8350, 18.5350], // Pune City Camera Network
       zoom: 12.5,
-      pitch: 50, // 3D Isometric View
+      pitch: 50,   // 3D Isometric View by default
       bearing: -18,
       attributionControl: { compact: true },
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
-    const markReady = () => {
-      setMapReady(true);
-    };
+    const markReady = () => setMapReady(true);
 
-    map.on("load", markReady);
+    map.on("load", () => {
+      map.resize(); // ensure canvas matches container size after dynamic load
+      markReady();
+    });
     map.on("style.load", markReady);
 
     mapRef.current = map;
 
+    // ResizeObserver so map canvas redraws if the container size changes
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+    resizeObserverRef.current = ro;
+
     return () => {
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle layer switch
   const handleLayerSwitch = (styleKey: "light" | "streets" | "satellite") => {
     setActiveLayer(styleKey);
+    setMapReady(false);
     const map = mapRef.current;
     if (!map) return;
     map.setStyle(BASEMAP_STYLES[styleKey]);
@@ -137,6 +100,7 @@ export function InvestigationMap({
 
   // 3D Pitch presets
   const [pitchMode, setPitchMode] = useState<"2D" | "3D" | "DRONE">("3D");
+  const [is3D, setIs3D] = useState(true);
 
   const handlePitchPreset = (mode: "2D" | "3D" | "DRONE") => {
     const map = mapRef.current;
@@ -154,12 +118,12 @@ export function InvestigationMap({
     });
   };
 
-  // Render camera network mesh and 3D nodes
+  // Render camera network mesh and nodes
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady || cameras.length === 0) return;
 
-    // 1. Mesh links
+    // 1. Mesh links between adjacent cameras
     const meshFeatures: GeoJSON.Feature[] = [];
     for (let i = 0; i < cameras.length - 1; i++) {
       meshFeatures.push({
@@ -196,7 +160,7 @@ export function InvestigationMap({
       });
     }
 
-    // 2. Camera Nodes
+    // 2. Camera node GeoJSON
     const geojson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
       features: cameras.map((camera) => ({
@@ -229,10 +193,8 @@ export function InvestigationMap({
           "circle-color": [
             "match",
             ["get", "status"],
-            "ONLINE",
-            "rgba(16, 185, 129, 0.25)",
-            "PROCESSING",
-            "rgba(245, 158, 11, 0.3)",
+            "ONLINE",    "rgba(16, 185, 129, 0.25)",
+            "PROCESSING","rgba(245, 158, 11, 0.3)",
             "rgba(148, 163, 184, 0.2)",
           ],
           "circle-stroke-width": 1.5,
@@ -250,10 +212,8 @@ export function InvestigationMap({
           "circle-color": [
             "match",
             ["get", "status"],
-            "ONLINE",
-            "#059669",
-            "PROCESSING",
-            "#d97706",
+            "ONLINE",    "#059669",
+            "PROCESSING","#d97706",
             "#64748b",
           ],
           "circle-stroke-width": 2,
@@ -261,7 +221,7 @@ export function InvestigationMap({
         },
       });
 
-      // Labels
+      // Camera ID Labels (glyphs come from Maptiler's style JSON)
       map.addLayer({
         id: "all-cameras-labels",
         type: "symbol",
@@ -271,7 +231,7 @@ export function InvestigationMap({
           "text-size": 11,
           "text-offset": [0, 1.4],
           "text-anchor": "top",
-          "text-font": ["Open Sans Bold", "Arial Unicode MS Regular"],
+          "text-font": ["Open Sans Bold"],
         },
         paint: {
           "text-color": "#0f172a",
@@ -296,7 +256,7 @@ export function InvestigationMap({
     }
   }, [cameras, mapReady, activeLayer]);
 
-  // Render Trajectory Polyline
+  // Render trajectory polyline and numbered checkpoint markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -321,10 +281,7 @@ export function InvestigationMap({
       features: [
         {
           type: "Feature",
-          geometry: {
-            type: "LineString",
-            coordinates,
-          },
+          geometry: { type: "LineString", coordinates },
           properties: {},
         },
       ],
@@ -340,11 +297,7 @@ export function InvestigationMap({
         type: "line",
         source: ROUTE_SOURCE_ID,
         layout: { "line-join": "round", "line-cap": "round" },
-        paint: {
-          "line-color": "#0284c7",
-          "line-width": 12,
-          "line-opacity": 0.3,
-        },
+        paint: { "line-color": "#0284c7", "line-width": 12, "line-opacity": 0.3 },
       });
 
       map.addLayer({
@@ -352,14 +305,11 @@ export function InvestigationMap({
         type: "line",
         source: ROUTE_SOURCE_ID,
         layout: { "line-join": "round", "line-cap": "round" },
-        paint: {
-          "line-color": "#0284c7",
-          "line-width": 5,
-        },
+        paint: { "line-color": "#0284c7", "line-width": 5 },
       });
     }
 
-    // Numbered 3D Floating Checkpoint Badges
+    // Numbered 3D floating checkpoint badges
     points.forEach((point, index) => {
       const el = document.createElement("div");
       el.className = "cursor-pointer transition-transform hover:scale-125";
@@ -396,9 +346,9 @@ export function InvestigationMap({
       points.forEach((p) => bounds.extend([p.longitude, p.latitude]));
       map.fitBounds(bounds, { padding: 75, maxZoom: 14.5, duration: 1000 });
     }
-  }, [points, selectedIndex, mapReady, activeLayer]);
+  }, [points, selectedIndex, mapReady, activeLayer, onSelectPoint]);
 
-  // Center on selected point
+  // Pan to selected checkpoint
   useEffect(() => {
     const map = mapRef.current;
     if (!map || selectedIndex === null || !points[selectedIndex]) return;
@@ -410,7 +360,7 @@ export function InvestigationMap({
     });
   }, [selectedIndex, points]);
 
-  // 3D Animated Replay
+  // 3D animated vehicle replay along trajectory
   useEffect(() => {
     if (replayToken === 0 || points.length < 2) return;
     const map = mapRef.current;
@@ -493,9 +443,10 @@ export function InvestigationMap({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full min-h-[480px] overflow-hidden rounded-3xl border border-slate-300/80 bg-slate-100 shadow-xl"
+      className="relative w-full overflow-hidden rounded-3xl border border-slate-300/80 bg-slate-100 shadow-xl"
+      style={{ height: "560px" }}
     >
-      {/* Tactical HUD Corner Reticles on Map */}
+      {/* Tactical HUD Corner Reticles */}
       <div className="pointer-events-none absolute top-2 left-2 z-10 h-3.5 w-3.5 border-t-2 border-l-2 border-sky-500" />
       <div className="pointer-events-none absolute top-2 right-2 z-10 h-3.5 w-3.5 border-t-2 border-r-2 border-sky-500" />
       <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />

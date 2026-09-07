@@ -1,4 +1,4 @@
-import { API_BASE_URL, type TrajectoryPointDto } from "@/lib/api";
+import { getApiBaseUrl, type TrajectoryPointDto } from "@/lib/api";
 
 export interface LiveConnectedMessage {
   type: "connected";
@@ -25,7 +25,11 @@ export interface LiveErrorMessage {
   message: string;
 }
 
-export type LiveMessage = LiveConnectedMessage | LiveDetectionMessage | LiveCompleteMessage | LiveErrorMessage;
+export type LiveMessage =
+  | LiveConnectedMessage
+  | LiveDetectionMessage
+  | LiveCompleteMessage
+  | LiveErrorMessage;
 
 interface LiveTrackingHandlers {
   onMessage: (message: LiveMessage) => void;
@@ -35,13 +39,37 @@ interface LiveTrackingHandlers {
 
 /**
  * Opens a WebSocket to the backend's live-simulation endpoint
- * (GET /ws/live/{plate} - see LiveTrackingWebSocketHandler) which replays
- * the vehicle's reconstructed trajectory as a paced stream of detection
- * events. Returns a cleanup function that closes the connection.
+ * (GET /ws/live/{plate}) which replays the vehicle's reconstructed
+ * trajectory as a paced stream of detection events.
+ *
+ * Uses getApiBaseUrl() at invocation time (not module-level constant) so
+ * the correct runtime URL is used on Vercel (https → wss).
+ *
+ * Returns a cleanup function that closes the connection.
  */
-export function connectLiveTracking(plate: string, handlers: LiveTrackingHandlers): () => void {
-  const wsBase = API_BASE_URL.replace(/^http/, "ws");
+export function connectLiveTracking(
+  plate: string,
+  handlers: LiveTrackingHandlers,
+): () => void {
+  // Evaluate at call time — picks up runtime env on Vercel correctly
+  const apiBase = getApiBaseUrl();
+  const wsBase = apiBase
+    .replace(/^https:\/\//, "wss://")
+    .replace(/^http:\/\//, "ws://");
+
   const socket = new WebSocket(`${wsBase}/ws/live/${encodeURIComponent(plate)}`);
+
+  // 8-second connection timeout — fires onError if backend is cold-sleeping
+  const timeoutId = window.setTimeout(() => {
+    if (socket.readyState !== WebSocket.OPEN) {
+      socket.close();
+      handlers.onError?.();
+    }
+  }, 8000);
+
+  socket.onopen = () => {
+    window.clearTimeout(timeoutId);
+  };
 
   socket.onmessage = (event) => {
     try {
@@ -50,8 +78,19 @@ export function connectLiveTracking(plate: string, handlers: LiveTrackingHandler
       // ignore malformed frames
     }
   };
-  socket.onclose = () => handlers.onClose?.();
-  socket.onerror = () => handlers.onError?.();
 
-  return () => socket.close();
+  socket.onclose = () => {
+    window.clearTimeout(timeoutId);
+    handlers.onClose?.();
+  };
+
+  socket.onerror = () => {
+    window.clearTimeout(timeoutId);
+    handlers.onError?.();
+  };
+
+  return () => {
+    window.clearTimeout(timeoutId);
+    socket.close();
+  };
 }

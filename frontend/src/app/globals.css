@@ -1,3 +1,8 @@
+/* MapLibre GL CSS must be imported as CSS (not via JS/TSX import) to avoid
+   lightningcss native-binding errors on Linux CI runners (npm bug #4828).
+   This is the canonical fix for "Cannot find module" map style errors. */
+@import "maplibre-gl/dist/maplibre-gl.css";
+
 @import "tailwindcss";
 
 :root {
@@ -133,3 +138,48 @@ body {
   background: rgba(2, 132, 199, 0.8);
 }
 
+/* ============================================================
+   PRINT MEDIA — PDF Dossier Export
+   Isolates the .print-dossier overlay so only it is visible
+   when the user triggers window.print().
+   ============================================================ */
+@media print {
+  /* Hide everything on the page */
+  body > * {
+    visibility: hidden;
+  }
+
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+
+  /* Make only the dossier and its children visible */
+  .print-dossier {
+    visibility: visible !important;
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: white !important;
+    z-index: 99999 !important;
+    padding: 2.5rem !important;
+    color: black !important;
+    overflow: visible !important;
+  }
+
+  .print-dossier * {
+    visibility: visible !important;
+    color: black !important;
+  }
+
+  /* Remove backgrounds on print */
+  .print-dossier table {
+    border-collapse: collapse !important;
+  }
+
+  .print-dossier td,
+  .print-dossier th {
+    border: 1px solid #555 !important;
+    padding: 4px 8px !important;
+  }
+}
