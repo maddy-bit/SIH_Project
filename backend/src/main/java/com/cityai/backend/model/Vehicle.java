@@ -38,6 +38,14 @@ public class Vehicle {
         this.plate = plate;
     }
 
+    public Vehicle(String plate, String vehicleType, String color, String make, String model) {
+        this.plate = plate;
+        this.vehicleType = vehicleType;
+        this.color = color;
+        this.make = make;
+        this.model = model;
+    }
+
     public Long getId() {
         return id;
     }

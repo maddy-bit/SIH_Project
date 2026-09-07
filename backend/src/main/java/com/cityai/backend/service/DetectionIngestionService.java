@@ -39,8 +39,12 @@ public class DetectionIngestionService {
 
     @Transactional
     public VehicleDetection ingest(DetectionIngestRequest request) {
-        Camera camera = cameraRepository.findById(request.cameraId())
-                .orElseThrow(() -> new NoSuchElementException("Unknown camera: " + request.cameraId()));
+        String cameraId = request.cameraId();
+        if (cameraId == null) {
+            throw new NoSuchElementException("Unknown camera: null");
+        }
+        Camera camera = cameraRepository.findById(cameraId)
+                .orElseThrow(() -> new NoSuchElementException("Unknown camera: " + cameraId));
 
         Vehicle vehicle = null;
         if (request.plateTextNormalized() != null && !request.plateTextNormalized().isBlank()) {

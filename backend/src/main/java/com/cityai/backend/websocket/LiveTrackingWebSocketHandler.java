@@ -49,7 +49,7 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
+    public void afterConnectionEstablished(@org.springframework.lang.NonNull WebSocketSession session) {
         String plate = extractPlate(session);
         if (plate == null || plate.isBlank()) {
             sendAndClose(session, errorMessage("No plate specified. Connect to /ws/live/{plate}."));
@@ -98,7 +98,7 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
             if (index == points.size() - 1) {
                 Map<String, Object> complete = Map.of(
                         "type", "complete",
-                        "overallConfidence", trajectory.overallConfidence(),
+                        "overallConfidence", trajectory.overallConfidence() != null ? trajectory.overallConfidence() : 1.0,
                         "estimatedDistanceKm", trajectory.estimatedDistanceKm(),
                         "estimatedDurationMinutes", trajectory.estimatedDurationMinutes()
                 );
@@ -111,7 +111,7 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+    public void afterConnectionClosed(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull CloseStatus status) {
         List<ScheduledFuture<?>> tasks = sessionTasks.remove(session.getId());
         if (tasks != null) {
             tasks.forEach(t -> t.cancel(false));
@@ -119,7 +119,8 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
     }
 
     private String extractPlate(WebSocketSession session) {
-        String path = session.getUri() != null ? session.getUri().getPath() : null;
+        java.net.URI uri = session.getUri();
+        String path = uri != null ? uri.getPath() : null;
         if (path == null) return null;
         String[] segments = path.split("/");
         return segments.length > 0 ? segments[segments.length - 1] : null;

@@ -176,6 +176,7 @@ public class TrajectoryEngine {
 
         for (int i = 0; i < targetIds.size(); i++) {
             String camId = targetIds.get(i);
+            if (camId == null) continue;
             Camera cam = cameraRepository.findById(camId)
                     .orElse(new Camera(camId, "Junction " + camId, 18.5308 + (i * 0.01), 73.8474 + (i * 0.01), "SE", "ONLINE", "videos/cam01.mp4"));
             Instant seen = baseTime.plusSeconds(i * 600L);
@@ -203,7 +204,7 @@ public class TrajectoryEngine {
             Camera camera = detections.get(i).getCamera();
             int j = i;
             List<VehicleDetection> group = new ArrayList<>();
-            while (j < detections.size() && detections.get(j).getCamera().getId().equals(camera.getId())) {
+            while (j < detections.size() && detections.get(j).getCamera() != null && detections.get(j).getCamera().getId().equals(camera.getId())) {
                 group.add(detections.get(j));
                 j++;
             }
@@ -211,19 +212,19 @@ public class TrajectoryEngine {
             Instant firstSeen = group.get(0).getTimestamp();
             Instant lastSeen = group.get(group.size() - 1).getTimestamp();
             Double bestPlateConfidence = group.stream()
-                    .map(VehicleDetection::getPlateConfidence)
+                    .map(d -> d.getPlateConfidence())
                     .filter(java.util.Objects::nonNull)
                     .max(Comparator.naturalOrder())
                     .orElse(null);
             Double bestDetectionConfidence = group.stream()
-                    .map(VehicleDetection::getDetectionConfidence)
+                    .map(d -> d.getDetectionConfidence())
                     .filter(java.util.Objects::nonNull)
                     .max(Comparator.naturalOrder())
                     .orElse(null);
             String bestImagePath = group.stream()
-                    .filter(d -> d.getPlateConfidence() != null)
-                    .max(Comparator.comparingDouble(VehicleDetection::getPlateConfidence))
-                    .map(VehicleDetection::getImagePath)
+                    .filter(d -> d != null && d.getPlateConfidence() != null)
+                    .max(Comparator.comparingDouble(d -> d.getPlateConfidence() != null ? d.getPlateConfidence() : 0.0))
+                    .map(d -> d.getImagePath())
                     .orElse(group.get(0).getImagePath());
 
             visits.add(new CameraVisit(camera, firstSeen, lastSeen, bestPlateConfidence,

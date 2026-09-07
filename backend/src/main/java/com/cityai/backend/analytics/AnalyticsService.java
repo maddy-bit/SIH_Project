@@ -56,32 +56,36 @@ public class AnalyticsService {
         List<Camera> cameras = cameraRepository.findAll();
         List<Vehicle> vehicles = vehicleRepository.findAll();
         List<VehicleDetection> detections = detectionRepository.findAll();
-        Map<String, Camera> camerasById = cameras.stream().collect(Collectors.toMap(Camera::getId, c -> c));
+        Map<String, Camera> camerasById = cameras.stream()
+                .filter(c -> c != null && c.getId() != null)
+                .collect(Collectors.toMap(c -> c.getId(), c -> c));
 
-        int camerasOnline = (int) cameras.stream().filter(c -> "ONLINE".equals(c.getStatus())).count();
-        int camerasProcessing = (int) cameras.stream().filter(c -> "PROCESSING".equals(c.getStatus())).count();
-        int camerasOffline = (int) cameras.stream().filter(c -> "OFFLINE".equals(c.getStatus())).count();
+        int camerasOnline = (int) cameras.stream().filter(c -> c != null && "ONLINE".equals(c.getStatus())).count();
+        int camerasProcessing = (int) cameras.stream().filter(c -> c != null && "PROCESSING".equals(c.getStatus())).count();
+        int camerasOffline = (int) cameras.stream().filter(c -> c != null && "OFFLINE".equals(c.getStatus())).count();
 
         List<TypeCountDto> vehicleTypeDistribution = vehicles.stream()
-                .filter(v -> v.getVehicleType() != null)
-                .collect(Collectors.groupingBy(Vehicle::getVehicleType, Collectors.counting()))
+                .filter(v -> v != null && v.getVehicleType() != null)
+                .collect(Collectors.groupingBy(v -> v.getVehicleType(), Collectors.counting()))
                 .entrySet().stream()
                 .map(e -> new TypeCountDto(e.getKey(), e.getValue()))
-                .sorted(Comparator.comparingLong(TypeCountDto::count).reversed())
+                .sorted(Comparator.comparingLong((TypeCountDto t) -> t.count()).reversed())
                 .toList();
 
         List<HourCountDto> detectionsByHour = detections.stream()
+                .filter(d -> d != null && d.getTimestamp() != null)
                 .collect(Collectors.groupingBy(d -> d.getTimestamp().atZone(ZoneOffset.UTC).getHour(), Collectors.counting()))
                 .entrySet().stream()
                 .map(e -> new HourCountDto(e.getKey(), e.getValue()))
-                .sorted(Comparator.comparingInt(HourCountDto::hour))
+                .sorted(Comparator.comparingInt((HourCountDto h) -> h.hour()))
                 .toList();
 
         List<CameraCountDto> busiestCameras = detections.stream()
+                .filter(d -> d != null && d.getCamera() != null && d.getCamera().getId() != null)
                 .collect(Collectors.groupingBy(d -> d.getCamera().getId(), Collectors.counting()))
                 .entrySet().stream()
                 .map(e -> toCameraCount(e.getKey(), e.getValue(), camerasById))
-                .sorted(Comparator.comparingLong(CameraCountDto::count).reversed())
+                .sorted(Comparator.comparingLong((CameraCountDto c) -> c.count()).reversed())
                 .limit(TOP_N)
                 .toList();
 
@@ -94,31 +98,34 @@ public class AnalyticsService {
         List<Double> impliedSpeeds = new ArrayList<>();
 
         for (Vehicle vehicle : vehicles) {
+            if (vehicle == null || vehicle.getPlate() == null) continue;
             TrajectoryEngine.TrajectoryResult result;
             try {
                 result = trajectoryEngine.reconstruct(vehicle.getPlate());
             } catch (NoSuchElementException e) {
                 continue;
             }
-            if (result.visits().isEmpty()) continue;
+            if (result == null || result.visits().isEmpty()) continue;
 
-            originCounts.merge(result.visits().get(0).camera().getId(), 1L, Long::sum);
-            destinationCounts.merge(result.visits().get(result.visits().size() - 1).camera().getId(), 1L, Long::sum);
+            originCounts.merge(result.visits().get(0).camera().getId(), 1L, (Long a, Long b) -> a + b);
+            destinationCounts.merge(result.visits().get(result.visits().size() - 1).camera().getId(), 1L, (Long a, Long b) -> a + b);
 
             for (TrajectoryEngine.Transition transition : result.transitions()) {
-                routeCounts.merge(transition.fromCameraId() + "->" + transition.toCameraId(), 1L, Long::sum);
-                impliedSpeeds.add(transition.score().impliedSpeedKmh());
+                routeCounts.merge(transition.fromCameraId() + "->" + transition.toCameraId(), 1L, (Long a, Long b) -> a + b);
+                if (transition.score() != null) {
+                    impliedSpeeds.add(transition.score().impliedSpeedKmh());
+                }
             }
         }
 
         List<CameraCountDto> commonOrigins = originCounts.entrySet().stream()
                 .map(e -> toCameraCount(e.getKey(), e.getValue(), camerasById))
-                .sorted(Comparator.comparingLong(CameraCountDto::count).reversed())
+                .sorted(Comparator.comparingLong((CameraCountDto c) -> c.count()).reversed())
                 .limit(TOP_N)
                 .toList();
         List<CameraCountDto> commonDestinations = destinationCounts.entrySet().stream()
                 .map(e -> toCameraCount(e.getKey(), e.getValue(), camerasById))
-                .sorted(Comparator.comparingLong(CameraCountDto::count).reversed())
+                .sorted(Comparator.comparingLong((CameraCountDto c) -> c.count()).reversed())
                 .limit(TOP_N)
                 .toList();
         List<RouteCountDto> topRoutes = routeCounts.entrySet().stream()
@@ -131,13 +138,13 @@ public class AnalyticsService {
                             parts[1], to != null ? to.getName() : parts[1],
                             e.getValue());
                 })
-                .sorted(Comparator.comparingLong(RouteCountDto::count).reversed())
+                .sorted(Comparator.comparingLong((RouteCountDto r) -> r.count()).reversed())
                 .limit(TOP_N)
                 .toList();
 
         Double averageTransitionSpeedKmh = impliedSpeeds.isEmpty()
                 ? null
-                : impliedSpeeds.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+                : impliedSpeeds.stream().mapToDouble(d -> d != null ? d.doubleValue() : 0.0).average().orElse(0);
 
         return new AnalyticsOverviewDto(
                 cameras.size(), camerasOnline, camerasProcessing, camerasOffline,

@@ -21,7 +21,7 @@ public class EvidenceResourceConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(@org.springframework.lang.NonNull ResourceHandlerRegistry registry) {
         String location = "file:" + new File(evidenceDir).getAbsolutePath() + File.separator;
         registry.addResourceHandler("/evidence/**").addResourceLocations(location);
     }
