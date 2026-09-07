@@ -39,7 +39,7 @@ public class PostGisMigrationRunner implements ApplicationRunner {
     }
 
     @Override
-    public void run(@org.springframework.lang.NonNull ApplicationArguments args) {
+    public void run(ApplicationArguments args) {
         jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS postgis");
         addSpatialColumn("cameras");
         addSpatialColumn("vehicle_detections");
@@ -51,8 +51,8 @@ public class PostGisMigrationRunner implements ApplicationRunner {
                 ALTER TABLE %s ADD COLUMN IF NOT EXISTS location geography(Point,4326)
                     GENERATED ALWAYS AS (ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography) STORED
                 """.formatted(table);
-        jdbcTemplate.execute(sql1);
+        jdbcTemplate.execute(java.util.Objects.requireNonNull(sql1));
         String sql2 = "CREATE INDEX IF NOT EXISTS idx_%s_location ON %s USING GIST(location)".formatted(table, table);
-        jdbcTemplate.execute(sql2);
+        jdbcTemplate.execute(java.util.Objects.requireNonNull(sql2));
     }
 }

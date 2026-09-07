@@ -24,7 +24,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(@org.springframework.lang.NonNull WebSocketHandlerRegistry registry) {
         if (liveTrackingWebSocketHandler != null && allowedOrigins != null) {
             registry.addHandler(liveTrackingWebSocketHandler, "/ws/live/{plate}")
-                    .setAllowedOrigins(allowedOrigins);
+                    .setAllowedOrigins(java.util.Objects.requireNonNull(allowedOrigins));
         }
     }
 }

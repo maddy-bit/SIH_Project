@@ -93,7 +93,7 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
                     "total", points.size(),
                     "point", points.get(index)
             );
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+            session.sendMessage(new TextMessage(java.util.Objects.requireNonNull(objectMapper.writeValueAsString(message))));
 
             if (index == points.size() - 1) {
                 Map<String, Object> complete = Map.of(
@@ -102,8 +102,8 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
                         "estimatedDistanceKm", trajectory.estimatedDistanceKm(),
                         "estimatedDurationMinutes", trajectory.estimatedDurationMinutes()
                 );
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(complete)));
-                session.close(CloseStatus.NORMAL);
+                session.sendMessage(new TextMessage(java.util.Objects.requireNonNull(objectMapper.writeValueAsString(complete))));
+                session.close(java.util.Objects.requireNonNull(CloseStatus.NORMAL));
             }
         } catch (IOException e) {
             log.debug("Failed to send live detection event (client likely disconnected): {}", e.getMessage());
@@ -128,7 +128,7 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
 
     private void send(WebSocketSession session, Map<String, Object> message) {
         try {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+            session.sendMessage(new TextMessage(java.util.Objects.requireNonNull(objectMapper.writeValueAsString(message))));
         } catch (IOException e) {
             log.debug("Failed to send live tracking message: {}", e.getMessage());
         }
@@ -137,7 +137,7 @@ public class LiveTrackingWebSocketHandler extends TextWebSocketHandler {
     private void sendAndClose(WebSocketSession session, Map<String, Object> message) {
         send(session, message);
         try {
-            session.close(CloseStatus.NORMAL);
+            session.close(java.util.Objects.requireNonNull(CloseStatus.NORMAL));
         } catch (IOException ignored) {
             // session already closing
         }
