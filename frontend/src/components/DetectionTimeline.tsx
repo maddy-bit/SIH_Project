@@ -72,16 +72,16 @@ export function DetectionTimeline({ points, selectedIndex, onSelect }: Detection
                   whileHover={{ scale: 1.01 }}
                   className={`group flex w-full items-start gap-3.5 rounded-2xl border p-3 text-left transition-all cursor-pointer ${
                     isSelected
-                      ? "border-sky-400 bg-sky-50/90 shadow-md ring-1 ring-sky-300"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      ? "border-sky-500 bg-sky-50 shadow-md ring-1 ring-sky-300"
+                      : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50"
                   }`}
                 >
-                  {/* 3D Number Badge */}
+                  {/* Number Badge */}
                   <div
                     className={`relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border font-mono text-xs font-black shadow-xs ${
                       isSelected
-                        ? "border-sky-500 bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/30"
-                        : "border-sky-200 bg-sky-50 text-sky-700"
+                        ? "border-sky-600 bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/25"
+                        : "border-sky-300 bg-sky-50 text-sky-800"
                     }`}
                   >
                     {i + 1}
@@ -90,32 +90,32 @@ export function DetectionTimeline({ points, selectedIndex, onSelect }: Detection
                   {/* Node Details */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
+                      <span className="font-mono text-xs font-black text-slate-950 group-hover:text-sky-700 transition-colors">
                         {point.cameraId}
                       </span>
-                      <span className="font-mono text-[11px] font-bold text-slate-500">
+                      <span className="font-mono text-[11px] font-extrabold text-slate-700">
                         {formatTimeOnly(point.timestamp)}
                       </span>
                     </div>
 
-                    <div className="mt-0.5 truncate text-[11px] font-medium text-slate-600">
+                    <div className="mt-0.5 truncate text-[11px] font-semibold text-slate-800">
                       {point.cameraName}
                     </div>
 
                     {/* Confidence pills */}
                     <div className="mt-2 flex items-center gap-3">
                       {point.plateConfidence != null && (
-                        <span className="text-[10px] font-mono text-slate-600">
+                        <span className="text-[10px] font-mono text-slate-700 font-medium">
                           OCR:{" "}
-                          <span className="text-emerald-700 font-bold">
+                          <span className="text-emerald-800 font-extrabold">
                             {Math.round(point.plateConfidence * 100)}%
                           </span>
                         </span>
                       )}
                       {point.detectionConfidence != null && (
-                        <span className="text-[10px] font-mono text-slate-600">
+                        <span className="text-[10px] font-mono text-slate-700 font-medium">
                           Det:{" "}
-                          <span className="text-sky-700 font-bold">
+                          <span className="text-sky-800 font-extrabold">
                             {Math.round(point.detectionConfidence * 100)}%
                           </span>
                         </span>

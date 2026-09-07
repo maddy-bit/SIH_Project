@@ -155,14 +155,14 @@ export function InvestigationDashboard() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      {/* 3D Elevated Action Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/90 bg-white/90 px-5 py-3 backdrop-blur-xl shadow-sm">
+      {/* Crisp High-Contrast Action Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 shadow-xs">
         <div className="flex items-center gap-3">
           <span className="flex h-3 w-3 rounded-full bg-sky-500 shadow-xs animate-pulse" />
           <span className="text-xs font-mono font-extrabold text-sky-800 tracking-wider">
             3D CITY AI SURVEILLANCE MATRIX
           </span>
-          <span className="hidden sm:inline text-xs text-slate-500 font-medium">
+          <span className="hidden sm:inline text-xs text-slate-600 font-semibold">
             • 12 Real-Time 4K Video Feeds • YOLOv8 Vehicle Classifiers • EasyOCR Neural Core
           </span>
         </div>

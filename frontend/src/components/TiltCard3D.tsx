@@ -10,12 +10,16 @@ interface TiltCard3DProps {
   scale?: number;
 }
 
+/**
+ * High-performance 3D card wrapper engineered to keep text razor-sharp.
+ * Avoids constant perspective/rotate/preserve-3d when idle so the browser
+ * uses full native subpixel ClearType rendering without texture blur.
+ */
 export function TiltCard3D({
   children,
   className = "",
-  maxTilt = 7,
-  glare = true,
-  scale = 1.01,
+  maxTilt = 5,
+  glare = false,
 }: TiltCard3DProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rotateX, setRotateX] = useState(0);
@@ -30,7 +34,7 @@ export function TiltCard3D({
       const width = rect.width;
       const height = rect.height;
 
-      // Mouse position from -1 to 1 relative to center
+      // Subtle tilt delta
       const mouseX = (e.clientX - rect.left - width / 2) / (width / 2);
       const mouseY = (e.clientY - rect.top - height / 2) / (height / 2);
 
@@ -40,12 +44,13 @@ export function TiltCard3D({
       setRotateX(rX);
       setRotateY(rY);
 
-      // Glare position percentage
-      const gX = ((e.clientX - rect.left) / width) * 100;
-      const gY = ((e.clientY - rect.top) / height) * 100;
-      setGlarePos({ x: gX, y: gY, opacity: 0.35 });
+      if (glare) {
+        const gX = ((e.clientX - rect.left) / width) * 100;
+        const gY = ((e.clientY - rect.top) / height) * 100;
+        setGlarePos({ x: gX, y: gY, opacity: 0.15 });
+      }
     },
-    [maxTilt],
+    [maxTilt, glare],
   );
 
   const handleMouseEnter = () => {
@@ -56,7 +61,9 @@ export function TiltCard3D({
     setIsHovered(false);
     setRotateX(0);
     setRotateY(0);
-    setGlarePos((prev) => ({ ...prev, opacity: 0 }));
+    if (glare) {
+      setGlarePos((prev) => ({ ...prev, opacity: 0 }));
+    }
   };
 
   return (
@@ -66,32 +73,35 @@ export function TiltCard3D({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        perspective: "1200px",
+        // Only apply perspective when hovering to avoid rasterizing text when idle
+        perspective: isHovered ? "1000px" : undefined,
       }}
       className="relative"
     >
       <div
         style={{
+          // Use clean translate and subtle tilt only on active hover; zero transform when idle
           transform: isHovered
-            ? `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale3d(${scale}, ${scale}, 1)`
-            : "rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
-          transformStyle: "preserve-3d",
+            ? `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-2px)`
+            : "none",
+          transformStyle: isHovered ? "preserve-3d" : "flat",
           transition: isHovered
             ? "transform 0.08s ease-out"
-            : "transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+            : "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          backfaceVisibility: "hidden",
+          WebkitFontSmoothing: "antialiased",
         }}
         className={`relative ${className}`}
       >
         {children}
 
-        {/* Dynamic Specular 3D Glare Sheen */}
-        {glare && (
+        {/* Subtle non-blurring specular sheen on hover */}
+        {glare && isHovered && (
           <div
-            className="pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300 overflow-hidden"
+            className="pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-200 overflow-hidden"
             style={{
               opacity: glarePos.opacity,
-              background: `radial-gradient(circle 320px at ${glarePos.x}% ${glarePos.y}%, rgba(255, 255, 255, 0.55), transparent 70%)`,
-              mixBlendMode: "overlay",
+              background: `radial-gradient(circle 280px at ${glarePos.x}% ${glarePos.y}%, rgba(255, 255, 255, 0.25), transparent 75%)`,
             }}
           />
         )}

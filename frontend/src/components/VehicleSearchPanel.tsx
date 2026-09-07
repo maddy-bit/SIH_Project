@@ -83,13 +83,13 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
               <span className="text-[7px] font-mono text-sky-200/90 leading-none">HSRP</span>
             </div>
 
-            {/* Input with 3D Embossed Font styling */}
+            {/* Input with crisp high-contrast typography */}
             <input
               value={plate}
               onChange={(e) => setPlate(e.target.value.toUpperCase())}
               placeholder="MH12AB1234"
               spellCheck={false}
-              className="w-full bg-transparent px-3.5 py-2.5 font-mono text-xl font-black tracking-widest text-slate-900 placeholder-slate-400 outline-none uppercase drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
+              className="w-full bg-transparent px-3.5 py-2.5 font-mono text-xl font-black tracking-widest text-slate-950 placeholder-slate-400 outline-none uppercase"
             />
 
             {/* Security Hologram Chip & Clear Button */}
@@ -104,7 +104,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
                 <button
                   type="button"
                   onClick={() => setPlate("")}
-                  className="rounded-full p-1 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+                  className="rounded-full p-1 text-xs text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   ✕
                 </button>
@@ -118,7 +118,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
 
         {/* Preset Target Pills */}
         <div className="mt-4">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-2">
+          <div className="text-[10px] uppercase font-extrabold tracking-wider text-slate-700 mb-2">
             Target Scenarios:
           </div>
           <div className="flex flex-col gap-2">
@@ -126,26 +126,26 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
               <motion.button
                 key={preset.plate}
                 type="button"
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handlePresetClick(preset.plate)}
                 className={`group flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all cursor-pointer ${
                   plate === preset.plate
-                    ? "border-sky-400 bg-sky-50 text-sky-900 shadow-xs font-semibold"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    ? "border-sky-500 bg-sky-50 text-sky-950 shadow-xs font-bold ring-1 ring-sky-300"
+                    : "border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-50"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="font-mono font-black text-slate-900 group-hover:text-sky-700 transition-colors">
+                  <span className="font-mono font-black text-slate-950 group-hover:text-sky-700 transition-colors">
                     {preset.plate}
                   </span>
-                  <span className="text-[11px] text-slate-500 font-medium">{preset.desc}</span>
+                  <span className="text-[11px] text-slate-600 font-semibold">{preset.desc}</span>
                 </div>
                 <span
                   className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold ${
                     preset.tag === "DEMO TARGET"
-                      ? "bg-sky-100 text-sky-800 border border-sky-200"
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-sky-100 text-sky-900 border border-sky-300"
+                      : "bg-slate-100 text-slate-700 border border-slate-200"
                   }`}
                 >
                   {preset.tag}
@@ -157,7 +157,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
 
         {/* Mode Selection */}
         <div className="mt-4">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-2">
+          <div className="text-[10px] uppercase font-extrabold tracking-wider text-slate-700 mb-2">
             Tracking Mode:
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -168,12 +168,12 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
                 onClick={() => setMode(m.value)}
                 className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all cursor-pointer ${
                   mode === m.value
-                    ? "border-sky-400 bg-sky-50 text-sky-800 shadow-xs font-bold ring-1 ring-sky-300"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    ? "border-sky-500 bg-sky-50 text-sky-950 shadow-xs font-bold ring-1 ring-sky-300"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 font-medium"
                 }`}
               >
-                <span className="text-xs">{m.label}</span>
-                <span className="text-[9px] opacity-75 font-mono">{m.desc}</span>
+                <span className="text-xs font-bold">{m.label}</span>
+                <span className="text-[9px] text-slate-500 font-mono font-medium">{m.desc}</span>
               </button>
             ))}
           </div>

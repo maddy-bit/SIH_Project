@@ -35,20 +35,20 @@ function StatTile({
     <div
       className={`rounded-2xl border p-3 transition-all ${
         highlight
-          ? "border-sky-300 bg-sky-50/80 shadow-xs"
-          : "border-slate-200/90 bg-slate-50/80 shadow-inner"
+          ? "border-sky-300 bg-sky-50 shadow-xs"
+          : "border-slate-300 bg-slate-50/90 shadow-xs"
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">
           {label}
         </span>
         {icon && <span className="text-sm">{icon}</span>}
       </div>
-      <div className="mt-1 text-sm font-mono font-black text-slate-900 truncate">
+      <div className="mt-1 text-sm font-mono font-black text-slate-950 truncate">
         {value ?? "—"}
       </div>
-      {subtext && <div className="mt-0.5 text-[9px] font-mono text-slate-500">{subtext}</div>}
+      {subtext && <div className="mt-0.5 text-[9px] font-mono font-semibold text-slate-600">{subtext}</div>}
     </div>
   );
 }
@@ -71,15 +71,15 @@ export function VehicleIntelligencePanel({ summary, trajectory }: VehicleIntelli
           {/* Target Plate Header */}
           <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="flex items-center rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 font-mono text-sm font-black tracking-widest text-slate-900 shadow-xs">
-                <span className="mr-1.5 text-[9px] text-blue-600 font-black">IND</span>
+              <div className="flex items-center rounded-xl border-2 border-slate-300 bg-white px-3 py-1.5 font-mono text-sm font-black tracking-widest text-slate-950 shadow-xs">
+                <span className="mr-1.5 text-[9px] text-blue-700 font-black">IND</span>
                 {vehicle.plate}
               </div>
               <div>
-                <div className="text-xs font-black text-slate-900">
+                <div className="text-xs font-black text-slate-950">
                   {vehicle.make ? `${vehicle.make} ${vehicle.model ?? ""}` : "Unclassified Vehicle"}
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono">
+                <div className="text-[10px] text-slate-600 font-mono font-semibold">
                   {vehicle.color ?? "Unknown"} • {vehicle.vehicleType ?? "Vehicle"}
                 </div>
               </div>
