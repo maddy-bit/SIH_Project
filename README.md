@@ -575,4 +575,4 @@ it, move to the next. Roughly in the order they unblock each other:
    real deploy pipeline (CD, monitoring, container orchestration) all
    depend on infrastructure/access this prototype has no way to obtain on
    its own - these are the ones that need an organizational decision, not
-   just more code.
+   just more code..
