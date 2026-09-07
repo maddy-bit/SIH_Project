@@ -10,79 +10,87 @@ import { fetchRoadRoute } from "@/lib/routing";
 // High-performance Google Maps raster tile styles.
 // Bypasses vector tile decoder issues in privacy browsers (e.g. Brave Shields)
 // and delivers full street grids, highway markers, terrain, and satellite imagery.
+const GOOGLE_GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+
 const STREETS_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "carto-streets": {
+    "google-streets": {
       type: "raster",
       tiles: [
-        "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
       ],
       tileSize: 256,
-      attribution: "© OpenStreetMap, © CARTO | City AI Surveillance Matrix",
+      attribution: "© Google Maps | City AI Surveillance Matrix",
     },
   },
   layers: [
     {
-      id: "carto-streets-layer",
+      id: "google-streets-layer",
       type: "raster",
-      source: "carto-streets",
+      source: "google-streets",
       minzoom: 0,
       maxzoom: 22,
     },
   ],
+  glyphs: GOOGLE_GLYPHS,
 };
 
 const SATELLITE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "esri-satellite": {
+    "google-satellite": {
       type: "raster",
       tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
       ],
       tileSize: 256,
-      attribution: "© Esri | City AI Surveillance Matrix",
+      attribution: "© Google Maps | City AI Surveillance Matrix",
     },
   },
   layers: [
     {
-      id: "esri-satellite-layer",
+      id: "google-satellite-layer",
       type: "raster",
-      source: "esri-satellite",
+      source: "google-satellite",
       minzoom: 0,
       maxzoom: 22,
     },
   ],
+  glyphs: GOOGLE_GLYPHS,
 };
 
 const LIGHT_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "carto-light": {
+    "google-terrain": {
       type: "raster",
       tiles: [
-        "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
       ],
       tileSize: 256,
-      attribution: "© OpenStreetMap, © CARTO | City AI Surveillance Matrix",
+      attribution: "© Google Maps | City AI Surveillance Matrix",
     },
   },
   layers: [
     {
-      id: "carto-light-layer",
+      id: "google-terrain-layer",
       type: "raster",
-      source: "carto-light",
+      source: "google-terrain",
       minzoom: 0,
       maxzoom: 22,
     },
   ],
+  glyphs: GOOGLE_GLYPHS,
 };
 
 const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", maplibregl.StyleSpecification> = {
@@ -221,6 +229,7 @@ export function InvestigationMap({
     resizeObserverRef.current = ro;
 
     return () => {
+      clearTimeout(safetyTimer);
       ro.disconnect();
       map.remove();
       mapRef.current = null;

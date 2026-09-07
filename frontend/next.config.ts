@@ -4,12 +4,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Expose Maptiler API key to the browser — falls back to the default key
-  // if the environment variable is not set (e.g. on fresh CI runners).
-  env: {
-    NEXT_PUBLIC_MAPTILER_KEY:
-      process.env.NEXT_PUBLIC_MAPTILER_KEY ?? "YNlAc2R6pThUIZrd2o5m",
-  },
   ...(process.env.NEXT_OUTPUT_STANDALONE === "true" ? { output: "standalone" } : {}),
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
