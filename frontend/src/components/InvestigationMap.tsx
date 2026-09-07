@@ -100,8 +100,6 @@ const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", maplibregl.Style
 
 const ROUTE_SOURCE_ID = "trajectory-route";
 const ROUTE_LAYER_ID = "trajectory-route-line";
-const ROUTE_GLOW_LAYER_ID = "trajectory-route-glow";
-const CAMERAS_SOURCE_ID = "all-cameras";
 const MESH_LINKS_SOURCE_ID = "camera-mesh-links";
 
 interface InvestigationMapProps {
@@ -160,6 +158,9 @@ export function InvestigationMap({
     map.on("styledata", onInitialStyle);
 
     mapRef.current = map;
+    if (typeof window !== "undefined") {
+      (window as unknown as { __MAP__?: maplibregl.Map }).__MAP__ = map;
+    }
 
     // ResizeObserver so map canvas redraws if the container size changes
     const ro = new ResizeObserver(() => map.resize());
@@ -212,10 +213,48 @@ export function InvestigationMap({
     });
   };
 
-  // Render camera network mesh and nodes
+  const cameraMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const [svgPathData, setSvgPathData] = useState<string>("");
+  const isInitialReconstructRef = useRef<boolean>(true);
+
+  // Sync SVG trajectory line overlay with MapLibre camera movements
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const updateSvgTrajectory = () => {
+      if (!mapRef.current || points.length < 2) {
+        setSvgPathData("");
+        return;
+      }
+      const d = points
+        .map((pt, i) => {
+          const ptPos = mapRef.current?.project([pt.longitude, pt.latitude]);
+          if (!ptPos) return "";
+          return `${i === 0 ? "M" : "L"} ${ptPos.x.toFixed(1)} ${ptPos.y.toFixed(1)}`;
+        })
+        .join(" ");
+      setSvgPathData(d);
+    };
+
+    updateSvgTrajectory();
+    map.on("move", updateSvgTrajectory);
+    map.on("render", updateSvgTrajectory);
+
+    return () => {
+      map.off("move", updateSvgTrajectory);
+      map.off("render", updateSvgTrajectory);
+    };
+  }, [points, mapReady]);
+
+  // Render camera network mesh and tactical camera pins
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady || cameras.length === 0) return;
+
+    // Clear old camera markers
+    cameraMarkersRef.current.forEach((m) => m.remove());
+    cameraMarkersRef.current = [];
 
     // 1. Mesh links between adjacent cameras
     const meshFeatures: GeoJSON.Feature[] = [];
@@ -238,119 +277,64 @@ export function InvestigationMap({
       features: meshFeatures,
     };
 
-    if (map.getSource(MESH_LINKS_SOURCE_ID)) {
-      (map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource).setData(meshGeojson);
-    } else {
-      map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
-      map.addLayer({
-        id: "camera-mesh-layer",
-        type: "line",
-        source: MESH_LINKS_SOURCE_ID,
-        paint: {
-          "line-color": "rgba(2, 132, 199, 0.35)",
-          "line-width": 1.5,
-          "line-dasharray": [3, 2],
-        },
-      });
+    try {
+      if (map.getSource(MESH_LINKS_SOURCE_ID)) {
+        (map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource).setData(meshGeojson);
+      } else {
+        map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
+        map.addLayer({
+          id: "camera-mesh-layer",
+          type: "line",
+          source: MESH_LINKS_SOURCE_ID,
+          paint: {
+            "line-color": "#0284c7",
+            "line-width": 1.5,
+            "line-opacity": 0.35,
+          },
+        });
+      }
+    } catch {
+      // Mesh layer fallback
     }
 
-    // 2. Camera node GeoJSON
-    const geojson: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: cameras.map((camera) => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [camera.longitude, camera.latitude],
-        },
-        properties: {
-          id: camera.id,
-          name: camera.name,
-          status: camera.status,
-          direction: camera.direction,
-        },
-      })),
-    };
+    // 2. Render sleek tactical CCTV camera pins for cameras NOT in active trajectory
+    const activeCameraIds = new Set(points.map((p) => p.cameraId));
 
-    if (map.getSource(CAMERAS_SOURCE_ID)) {
-      (map.getSource(CAMERAS_SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
-    } else {
-      map.addSource(CAMERAS_SOURCE_ID, { type: "geojson", data: geojson });
+    cameras.forEach((camera) => {
+      if (activeCameraIds.has(camera.id)) return; // Checkpoint badge rendered separately
 
-      // Radar Pulse Rings
-      map.addLayer({
-        id: "all-cameras-glow",
-        type: "circle",
-        source: CAMERAS_SOURCE_ID,
-        paint: {
-          "circle-radius": 15,
-          "circle-color": [
-            "match",
-            ["get", "status"],
-            "ONLINE",    "rgba(16, 185, 129, 0.25)",
-            "PROCESSING","rgba(245, 158, 11, 0.3)",
-            "rgba(148, 163, 184, 0.2)",
-          ],
-          "circle-stroke-width": 1.5,
-          "circle-stroke-color": "rgba(2, 132, 199, 0.5)",
-        },
-      });
+      const el = document.createElement("div");
+      el.className = "cursor-pointer transition-transform hover:scale-125 z-10 select-none";
+      const statusColor =
+        camera.status === "ONLINE"
+          ? "bg-emerald-400 animate-pulse"
+          : camera.status === "PROCESSING"
+            ? "bg-amber-400"
+            : "bg-slate-400";
 
-      // Core Camera Point
-      map.addLayer({
-        id: "all-cameras-core",
-        type: "circle",
-        source: CAMERAS_SOURCE_ID,
-        paint: {
-          "circle-radius": 7,
-          "circle-color": [
-            "match",
-            ["get", "status"],
-            "ONLINE",    "#059669",
-            "PROCESSING","#d97706",
-            "#64748b",
-          ],
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
+      el.innerHTML = `
+        <div class="flex flex-col items-center">
+          <div class="flex items-center gap-1.5 rounded-full border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 text-[10px] font-mono font-black text-white shadow-md backdrop-blur-md transition-colors hover:border-sky-400 hover:bg-slate-900">
+            <span class="h-2 w-2 rounded-full ${statusColor}"></span>
+            <span class="tracking-wider">${camera.id}</span>
+          </div>
+          <div class="h-1.5 w-0.5 bg-slate-800 shadow-sm mt-0.5"></div>
+        </div>
+      `;
 
-      // Camera ID Labels (glyphs come from Maptiler's style JSON)
-      map.addLayer({
-        id: "all-cameras-labels",
-        type: "symbol",
-        source: CAMERAS_SOURCE_ID,
-        layout: {
-          "text-field": ["get", "id"],
-          "text-size": 11,
-          "text-offset": [0, 1.4],
-          "text-anchor": "top",
-          "text-font": ["Open Sans Bold"],
-        },
-        paint: {
-          "text-color": "#0f172a",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 2.5,
-        },
-      });
+      el.addEventListener("mouseenter", () => setHoveredCamera(camera));
+      el.addEventListener("mouseleave", () => setHoveredCamera(null));
+      el.addEventListener("click", () => setHoveredCamera(camera));
 
-      map.on("mouseenter", "all-cameras-core", (e) => {
-        map.getCanvas().style.cursor = "pointer";
-        if (e.features && e.features[0]) {
-          const props = e.features[0].properties;
-          const matched = cameras.find((c) => c.id === props.id);
-          if (matched) setHoveredCamera(matched);
-        }
-      });
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([camera.longitude, camera.latitude])
+        .addTo(map);
 
-      map.on("mouseleave", "all-cameras-core", () => {
-        map.getCanvas().style.cursor = "";
-        setHoveredCamera(null);
-      });
-    }
-  }, [cameras, mapReady, activeLayer]);
+      cameraMarkersRef.current.push(marker);
+    });
+  }, [cameras, points, mapReady, activeLayer]);
 
-  // Render trajectory polyline and numbered checkpoint markers
+  // Render trajectory route line and numbered checkpoint badges
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -381,50 +365,75 @@ export function InvestigationMap({
       ],
     };
 
-    if (map.getSource(ROUTE_SOURCE_ID)) {
-      (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(routeGeojson);
-    } else {
-      map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: routeGeojson });
+    try {
+      if (map.getSource(ROUTE_SOURCE_ID)) {
+        (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(routeGeojson);
+      } else {
+        map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: routeGeojson });
 
-      map.addLayer({
-        id: ROUTE_GLOW_LAYER_ID,
-        type: "line",
-        source: ROUTE_SOURCE_ID,
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#0284c7", "line-width": 12, "line-opacity": 0.3 },
-      });
+        if (!map.getLayer("trajectory-route-casing")) {
+          map.addLayer({
+            id: "trajectory-route-casing",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#091e42", "line-width": 8, "line-opacity": 0.85 },
+          });
+        }
 
-      map.addLayer({
-        id: ROUTE_LAYER_ID,
-        type: "line",
-        source: ROUTE_SOURCE_ID,
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#0284c7", "line-width": 5 },
-      });
+        if (!map.getLayer(ROUTE_LAYER_ID)) {
+          map.addLayer({
+            id: ROUTE_LAYER_ID,
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#0284c7", "line-width": 5, "line-opacity": 0.95 },
+          });
+        }
+
+        if (!map.getLayer("trajectory-route-laser")) {
+          map.addLayer({
+            id: "trajectory-route-laser",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#ffffff", "line-width": 2, "line-opacity": 1.0 },
+          });
+        }
+      }
+    } catch {
+      // MapLibre WebGL layer fallback
     }
 
-    // Numbered 3D floating checkpoint badges
+    // Numbered 3D floating checkpoint badges with camera name pills
     points.forEach((point, index) => {
       const el = document.createElement("div");
-      el.className = "cursor-pointer transition-transform hover:scale-125";
+      el.className = "cursor-pointer transition-transform hover:scale-125 z-20 select-none";
       const isSelected = selectedIndex === index;
 
       el.innerHTML = `
         <div class="relative flex flex-col items-center justify-center">
-          ${isSelected ? '<span class="absolute -top-1 h-12 w-12 rounded-full bg-sky-400 opacity-60 animate-ping"></span>' : ""}
-          <div class="flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-white ${
+          ${isSelected ? '<span class="absolute -top-2 h-14 w-14 rounded-full bg-sky-400 opacity-60 animate-ping pointer-events-none"></span>' : ""}
+          <div class="flex items-center gap-1.5 rounded-2xl border-2 border-white px-2.5 py-1 shadow-xl ${
             isSelected
-              ? "bg-gradient-to-tr from-sky-600 to-blue-600 text-white shadow-xl shadow-sky-500/50 scale-110"
-              : "bg-blue-600 text-white shadow-md shadow-blue-500/30"
-          } font-mono text-sm font-black">
-            ${index + 1}
+              ? "bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white scale-110 shadow-sky-500/50 ring-2 ring-sky-300"
+              : "bg-gradient-to-r from-blue-700 to-sky-700 text-white shadow-blue-500/40"
+          }">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-white text-blue-900 font-mono text-xs font-black shadow-xs">
+              ${index + 1}
+            </span>
+            <div class="flex flex-col text-left leading-none">
+              <span class="font-mono text-[10px] font-black tracking-wider text-white">${point.cameraId}</span>
+              <span class="text-[8px] font-bold text-sky-100 max-w-[85px] truncate">${point.cameraName.split(" - ")[0]}</span>
+            </div>
           </div>
-          <div class="h-2 w-0.5 bg-blue-600 shadow-sm mt-0.5"></div>
+          <div class="h-2.5 w-1 bg-blue-700 shadow-sm mt-0.5 rounded-full"></div>
         </div>
       `;
 
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        isInitialReconstructRef.current = false;
         onSelectPoint(index);
       });
 
@@ -435,17 +444,26 @@ export function InvestigationMap({
       markersRef.current.push(marker);
     });
 
+    // Auto-fit bounds to encompass all checkpoints cleanly across Pune
     if (points.length > 1) {
       const bounds = new maplibregl.LngLatBounds();
       points.forEach((p) => bounds.extend([p.longitude, p.latitude]));
-      map.fitBounds(bounds, { padding: 75, maxZoom: 14.5, duration: 1000 });
+      map.fitBounds(bounds, {
+        padding: { top: 85, bottom: 85, left: 75, right: 75 },
+        maxZoom: 13.2,
+        duration: 900,
+      });
     }
   }, [points, selectedIndex, mapReady, activeLayer, onSelectPoint]);
 
-  // Pan to selected checkpoint
+  // Pan to selected checkpoint only on user interaction (not overriding initial reconstruction fit)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || selectedIndex === null || !points[selectedIndex]) return;
+    if (isInitialReconstructRef.current) {
+      // First render of trajectory already performed optimal fitBounds
+      return;
+    }
     const target = points[selectedIndex];
     map.easeTo({
       center: [target.longitude, target.latitude],
@@ -545,6 +563,50 @@ export function InvestigationMap({
       <div className="pointer-events-none absolute top-2 right-2 z-10 h-3.5 w-3.5 border-t-2 border-r-2 border-sky-500" />
       <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
       <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
+
+      {/* High-Visibility Vector Trajectory Route SVG Overlay (Dual Redundancy) */}
+      {svgPathData && (
+        <svg className="pointer-events-none absolute inset-0 h-full w-full z-[5] overflow-visible">
+          <defs>
+            <filter id="route-glow-blur" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Deep Navy Casing for maximum contrast against any terrain/satellite/roads */}
+          <path
+            d={svgPathData}
+            fill="none"
+            stroke="#091e42"
+            strokeWidth="9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.85"
+          />
+          {/* Electric Neon Sky Blue Trajectory Line */}
+          <path
+            d={svgPathData}
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#route-glow-blur)"
+          />
+          {/* Glowing Center Laser Core */}
+          <path
+            d={svgPathData}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
 
       {/* Layer Controls & 3D Tilt (Top Right) */}
       <div className="absolute top-3 right-12 z-10 flex items-center gap-1 rounded-xl border border-slate-200/90 bg-white/95 p-1 backdrop-blur-xl shadow-md">
