@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { VehicleSummaryDto, TrajectoryResponseDto } from "@/lib/api";
 
 interface PdfReportExporterProps {
@@ -8,18 +9,25 @@ interface PdfReportExporterProps {
 }
 
 export function PdfReportExporter({ summary, trajectory }: PdfReportExporterProps) {
+  const [dossierMeta, setDossierMeta] = useState<{ generatedAt: string; dossierId: string }>({
+    generatedAt: "",
+    dossierId: "",
+  });
+
   if (!summary || !trajectory) return null;
 
   const handleExportPrint = () => {
+    const printDate = new Date();
+    setDossierMeta({
+      generatedAt: printDate.toLocaleString("en-IN", {
+        dateStyle: "full",
+        timeStyle: "long",
+        timeZone: "Asia/Kolkata",
+      }),
+      dossierId: `BEL-${summary.vehicle.plate}-${printDate.getTime().toString(36).toUpperCase()}`,
+    });
     window.print();
   };
-
-  const now = new Date();
-  const generatedAt = now.toLocaleString("en-IN", {
-    dateStyle: "full",
-    timeStyle: "long",
-    timeZone: "Asia/Kolkata",
-  });
 
   return (
     <>
@@ -52,9 +60,9 @@ export function PdfReportExporter({ summary, trajectory }: PdfReportExporterProp
             </div>
           </div>
           <div style={{ textAlign: "right", fontSize: "11px", color: "#6b7280" }}>
-            <div><strong>Generated:</strong> {generatedAt}</div>
+            <div><strong>Generated:</strong> {dossierMeta.generatedAt || summary.lastSeen || "OFFICIAL RECORD"}</div>
             <div><strong>Classification:</strong> CONFIDENTIAL / LAW ENFORCEMENT</div>
-            <div><strong>Dossier ID:</strong> BEL-{summary.vehicle.plate}-{Date.now().toString(36).toUpperCase()}</div>
+            <div><strong>Dossier ID:</strong> {dossierMeta.dossierId || `BEL-${summary.vehicle.plate}`}</div>
           </div>
         </div>
 

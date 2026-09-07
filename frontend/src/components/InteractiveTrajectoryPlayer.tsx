@@ -34,18 +34,17 @@ export function InteractiveTrajectoryPlayer({
     : (waypoints ?? []);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(selectedIndex ?? 0);
+  const [internalIndex, setInternalIndex] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
 
-  // Sync internal index if selectedIndex changes externally
-  useEffect(() => {
-    if (selectedIndex != null && selectedIndex >= 0 && selectedIndex < items.length) {
-      setCurrentIndex(selectedIndex);
-    }
-  }, [selectedIndex, items.length]);
+  // Derive active index during render to avoid cascading renders / setState-in-effect
+  const activeIndex =
+    selectedIndex != null && selectedIndex >= 0 && selectedIndex < items.length
+      ? selectedIndex
+      : internalIndex;
 
   const notifyIndexChange = (index: number) => {
-    setCurrentIndex(index);
+    setInternalIndex(index);
     if (onSelectPoint) {
       (onSelectPoint as (idx: number) => void)(index);
     }
@@ -58,11 +57,15 @@ export function InteractiveTrajectoryPlayer({
     let timer: NodeJS.Timeout;
     if (isPlaying && items.length > 0) {
       timer = setInterval(() => {
-        setCurrentIndex((prev) => {
-          const next = prev + 1;
+        setInternalIndex((prev) => {
+          const current =
+            selectedIndex != null && selectedIndex >= 0 && selectedIndex < items.length
+              ? selectedIndex
+              : prev;
+          const next = current + 1;
           if (next >= items.length) {
             setIsPlaying(false);
-            return prev;
+            return current;
           }
           if (onSelectPoint) {
             (onSelectPoint as (idx: number) => void)(next);
@@ -75,11 +78,11 @@ export function InteractiveTrajectoryPlayer({
       }, 1500 / playbackSpeed);
     }
     return () => clearInterval(timer);
-  }, [isPlaying, items.length, playbackSpeed, onSelectPoint, onActiveIndexChange]);
+  }, [isPlaying, items.length, playbackSpeed, selectedIndex, onSelectPoint, onActiveIndexChange]);
 
   if (items.length === 0) return null;
 
-  const currentWp = items[currentIndex] ?? items[0];
+  const currentWp = items[activeIndex] ?? items[0];
 
   return (
     <div className="rounded-2xl border border-slate-200/90 bg-white/95 p-3.5 backdrop-blur-xl shadow-md transition-all">
@@ -110,14 +113,14 @@ export function InteractiveTrajectoryPlayer({
         {/* Timeline Slider & Checkpoint Indicator */}
         <div className="flex flex-1 items-center gap-3">
           <span className="text-xs font-mono font-bold text-slate-700 whitespace-nowrap">
-            Step {currentIndex + 1}/{items.length}:{" "}
+            Step {activeIndex + 1}/{items.length}:{" "}
             <span className="font-extrabold text-sky-700">{currentWp?.cameraId}</span>
           </span>
           <input
             type="range"
             min={0}
             max={items.length - 1}
-            value={currentIndex}
+            value={activeIndex}
             onChange={(e) => {
               const val = Number(e.target.value);
               notifyIndexChange(val);
