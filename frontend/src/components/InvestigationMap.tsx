@@ -584,16 +584,127 @@ export function InvestigationMap({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full overflow-hidden rounded-3xl border border-slate-300/80 bg-slate-100 shadow-xl"
-      style={{ height: "560px" }}
-    >
-      {/* Tactical HUD Corner Reticles */}
-      <div className="pointer-events-none absolute top-2 left-2 z-10 h-3.5 w-3.5 border-t-2 border-l-2 border-sky-500" />
-      <div className="pointer-events-none absolute top-2 right-2 z-10 h-3.5 w-3.5 border-t-2 border-r-2 border-sky-500" />
-      <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
-      <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
+    <div className="flex flex-col gap-2.5 w-full">
+      {/* Dedicated Map Top Control Bar (Above Map Box / Section) */}
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white/95 px-3.5 py-2 backdrop-blur-xl shadow-xs">
+        {/* Left: 3D Smart City Mesh Badge */}
+        <div className="flex items-center gap-2">
+          <span className="flex h-2.5 w-2.5 rounded-full bg-sky-500 shadow-xs animate-pulse" />
+          <div className="flex items-center gap-1.5 font-mono leading-none">
+            <span className="text-[11px] font-extrabold tracking-wider text-slate-900">
+              PUNE 3D MESH
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 font-bold">
+              {cameras.length} NODES
+            </span>
+          </div>
+        </div>
+
+        {/* Right: Map Layers, 3D Tilt Presets & Fit */}
+        <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+          {/* Basemap Styles */}
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => handleLayerSwitch("streets")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                activeLayer === "streets"
+                  ? "bg-sky-600 text-white shadow-xs font-black"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+              }`}
+            >
+              Street
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayerSwitch("satellite")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                activeLayer === "satellite"
+                  ? "bg-sky-600 text-white shadow-xs font-black"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+              }`}
+            >
+              Satellite
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayerSwitch("light")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                activeLayer === "light"
+                  ? "bg-sky-600 text-white shadow-xs font-black"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+              }`}
+            >
+              Canvas
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-slate-200 mx-0.5" />
+
+          {/* 3D Angle Presets */}
+          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => handlePitchPreset("2D")}
+              title="2D Top-Down View"
+              className={`rounded-lg px-2 py-1 text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                pitchMode === "2D"
+                  ? "bg-sky-100 text-sky-800 border border-sky-300 shadow-xs font-black"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+              }`}
+            >
+              2D
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePitchPreset("3D")}
+              title="3D Isometric 50° View"
+              className={`rounded-lg px-2 py-1 text-[11px] font-mono font-black transition-all cursor-pointer ${
+                pitchMode === "3D"
+                  ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+              }`}
+            >
+              3D Iso
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePitchPreset("DRONE")}
+              title="3D Drone Angle 65° View"
+              className={`rounded-lg px-2 py-1 text-[11px] font-mono font-black transition-all cursor-pointer ${
+                pitchMode === "DRONE"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+              }`}
+            >
+              Drone
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-slate-200 mx-0.5" />
+
+          <button
+            type="button"
+            onClick={handleResetView}
+            title="Fit Route to Bounds"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700 hover:text-sky-700 hover:bg-slate-100 transition-all cursor-pointer shadow-xs"
+          >
+            🎯 Fit
+          </button>
+        </div>
+      </div>
+
+      {/* Main Map Box / Square Section */}
+      <div
+        ref={containerRef}
+        className="relative w-full overflow-hidden rounded-3xl border border-slate-300/80 bg-slate-100 shadow-xl"
+        style={{ height: "560px" }}
+      >
+        {/* Tactical HUD Corner Reticles */}
+        <div className="pointer-events-none absolute top-2 left-2 z-10 h-3.5 w-3.5 border-t-2 border-l-2 border-sky-500" />
+        <div className="pointer-events-none absolute top-2 right-2 z-10 h-3.5 w-3.5 border-t-2 border-r-2 border-sky-500" />
+        <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
+        <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
 
         <svg className="pointer-events-none absolute inset-0 h-full w-full z-[5] overflow-visible">
           <defs>
@@ -639,109 +750,6 @@ export function InvestigationMap({
           />
         </svg>
 
-      {/* Layer Controls & 3D Tilt (Top Right) */}
-      <div className="absolute top-3 right-12 z-10 flex items-center gap-1 rounded-xl border border-slate-200/90 bg-white/95 p-1 backdrop-blur-xl shadow-md">
-        <button
-          type="button"
-          onClick={() => handleLayerSwitch("streets")}
-          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
-            activeLayer === "streets"
-              ? "bg-sky-50 text-sky-700 border border-sky-300 shadow-xs font-black"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          Street
-        </button>
-        <button
-          type="button"
-          onClick={() => handleLayerSwitch("satellite")}
-          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
-            activeLayer === "satellite"
-              ? "bg-sky-50 text-sky-700 border border-sky-300 shadow-xs font-black"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          Satellite
-        </button>
-        <button
-          type="button"
-          onClick={() => handleLayerSwitch("light")}
-          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
-            activeLayer === "light"
-              ? "bg-sky-50 text-sky-700 border border-sky-300 shadow-xs font-black"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          Canvas
-        </button>
-
-        <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
-
-        {/* 3D Angle Presets */}
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => handlePitchPreset("2D")}
-            title="2D Top-Down View"
-            className={`rounded-lg px-2 py-1 text-[11px] font-mono font-bold transition-all cursor-pointer ${
-              pitchMode === "2D"
-                ? "bg-sky-100 text-sky-800 border border-sky-300 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            2D
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePitchPreset("3D")}
-            title="3D Isometric 50° View"
-            className={`rounded-lg px-2 py-1 text-[11px] font-mono font-black transition-all cursor-pointer ${
-              pitchMode === "3D"
-                ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            3D Iso
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePitchPreset("DRONE")}
-            title="3D Drone Angle 65° View"
-            className={`rounded-lg px-2 py-1 text-[11px] font-mono font-black transition-all cursor-pointer ${
-              pitchMode === "DRONE"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Drone
-          </button>
-        </div>
-
-        <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
-
-        <button
-          type="button"
-          onClick={handleResetView}
-          title="Fit Route to Bounds"
-          className="rounded-lg px-2 py-1 text-xs font-bold text-slate-600 hover:text-sky-700 transition-colors cursor-pointer"
-        >
-          🎯 Fit
-        </button>
-      </div>
-
-      {/* 3D Smart City Mesh Badge (Bottom Left) */}
-      <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/95 px-3 py-1.5 backdrop-blur-xl shadow-xs">
-        <span className="flex h-2 w-2 rounded-full bg-sky-500 shadow-xs animate-pulse" />
-        <div className="flex items-center gap-1.5 font-mono leading-none">
-          <span className="text-[10px] font-extrabold tracking-wider text-slate-900">
-            PUNE 3D MESH
-          </span>
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 font-bold">
-            {cameras.length} NODES
-          </span>
-        </div>
-      </div>
-
       {/* 3D Camera Hover Telemetry Card */}
       {hoveredCamera && (
         <div className="absolute bottom-5 left-5 z-20 w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur-2xl shadow-xl">
@@ -773,6 +781,7 @@ export function InvestigationMap({
           <span className="font-extrabold text-sky-700">{points.length} Checkpoints Connected</span>
         </div>
       )}
+      </div>
     </div>
   );
 }
