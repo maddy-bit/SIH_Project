@@ -20,7 +20,27 @@ function gapLabel(fromIso: string, toIso: string): string {
 }
 
 export function DetectionTimeline({ points, selectedIndex, onSelect }: DetectionTimelineProps) {
-  if (points.length === 0) return null;
+  if (points.length === 0) {
+    return (
+      <TiltCard3D maxTilt={4} scale={1.01}>
+        <div className="card-3d-light relative rounded-2xl p-5 text-slate-900 overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-sky-500 shadow-xs animate-pulse" />
+            <h2 className="text-xs font-bold uppercase tracking-widest text-sky-800">
+              Detection Timeline
+            </h2>
+          </div>
+          <div className="flex flex-col items-center justify-center p-6 text-center text-xs text-slate-500 font-mono">
+            <span className="text-2xl mb-1.5">📡</span>
+            <span className="font-bold text-slate-800 uppercase tracking-wider">CHRONOLOGICAL TIMELINE STANDBY</span>
+            <span className="mt-1 text-[11px] text-slate-500">
+              Select target plate to populate cross-camera arrival timestamps and transit durations.
+            </span>
+          </div>
+        </div>
+      </TiltCard3D>
+    );
+  }
 
   return (
     <TiltCard3D maxTilt={4} scale={1.01}>

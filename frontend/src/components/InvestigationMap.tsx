@@ -10,93 +10,85 @@ import { fetchRoadRoute } from "@/lib/routing";
 // High-performance Google Maps raster tile styles.
 // Bypasses vector tile decoder issues in privacy browsers (e.g. Brave Shields)
 // and delivers full street grids, highway markers, terrain, and satellite imagery.
-const GOOGLE_GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
-
-const GOOGLE_STREETS_STYLE: maplibregl.StyleSpecification = {
+const STREETS_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "google-streets": {
+    "carto-streets": {
       type: "raster",
       tiles: [
-        "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       ],
       tileSize: 256,
-      attribution: "© Google Maps | City AI Surveillance Matrix",
+      attribution: "© OpenStreetMap, © CARTO | City AI Surveillance Matrix",
     },
   },
   layers: [
     {
-      id: "google-streets-layer",
+      id: "carto-streets-layer",
       type: "raster",
-      source: "google-streets",
+      source: "carto-streets",
       minzoom: 0,
       maxzoom: 22,
     },
   ],
-  glyphs: GOOGLE_GLYPHS,
 };
 
-const GOOGLE_SATELLITE_STYLE: maplibregl.StyleSpecification = {
+const SATELLITE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "google-satellite": {
+    "esri-satellite": {
       type: "raster",
       tiles: [
-        "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
-      attribution: "© Google Maps | City AI Surveillance Matrix",
+      attribution: "© Esri | City AI Surveillance Matrix",
     },
   },
   layers: [
     {
-      id: "google-satellite-layer",
+      id: "esri-satellite-layer",
       type: "raster",
-      source: "google-satellite",
+      source: "esri-satellite",
       minzoom: 0,
       maxzoom: 22,
     },
   ],
-  glyphs: GOOGLE_GLYPHS,
 };
 
-const GOOGLE_TERRAIN_STYLE: maplibregl.StyleSpecification = {
+const LIGHT_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "google-terrain": {
+    "carto-light": {
       type: "raster",
       tiles: [
-        "https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
       ],
       tileSize: 256,
-      attribution: "© Google Maps | City AI Surveillance Matrix",
+      attribution: "© OpenStreetMap, © CARTO | City AI Surveillance Matrix",
     },
   },
   layers: [
     {
-      id: "google-terrain-layer",
+      id: "carto-light-layer",
       type: "raster",
-      source: "google-terrain",
+      source: "carto-light",
       minzoom: 0,
       maxzoom: 22,
     },
   ],
-  glyphs: GOOGLE_GLYPHS,
 };
 
 const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", maplibregl.StyleSpecification> = {
-  streets: GOOGLE_STREETS_STYLE,
-  satellite: GOOGLE_SATELLITE_STYLE,
-  light: GOOGLE_TERRAIN_STYLE,
+  streets: STREETS_STYLE,
+  satellite: SATELLITE_STYLE,
+  light: LIGHT_STYLE,
 };
 
 const ROUTE_SOURCE_ID = "trajectory-route";
@@ -121,13 +113,21 @@ export function InvestigationMap({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const vehicleMarkerRef = useRef<maplibregl.Marker | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const cameraMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const checkpointElementsRef = useRef<{ el: HTMLDivElement; index: number }[]>([]);
+  const isInitialReconstructRef = useRef<boolean>(true);
+  const roadCoordinatesRef = useRef<[number, number][]>([]);
+  const svgPathCasingRef = useRef<SVGPathElement>(null);
+  const svgPathGlowRef = useRef<SVGPathElement>(null);
+  const svgPathLaserRef = useRef<SVGPathElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [activeLayer, setActiveLayer] = useState<"light" | "streets" | "satellite">("streets");
+  const [pitchMode, setPitchMode] = useState<"2D" | "3D" | "DRONE">("3D");
   const [hoveredCamera, setHoveredCamera] = useState<CameraDto | null>(null);
 
-  // Initialize map with Maptiler vector tiles
+  // Initialize map with bulletproof raster tile config
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -189,20 +189,26 @@ export function InvestigationMap({
       }
     };
 
+    let isReadyFired = false;
     const markReady = () => {
+      if (isReadyFired) return;
+      isReadyFired = true;
       setupLayers();
       map.resize();
       setMapReady(true);
     };
 
     map.on("load", markReady);
-    const onInitialStyle = () => {
-      if (map.isStyleLoaded()) {
-        map.off("styledata", onInitialStyle);
-        markReady();
-      }
-    };
-    map.on("styledata", onInitialStyle);
+    map.on("style.load", markReady);
+    map.on("styledata", () => {
+      if (map.isStyleLoaded()) markReady();
+    });
+    map.on("error", (e) => {
+      console.warn("MapLibre load note:", e);
+      markReady();
+    });
+
+    const safetyTimer = setTimeout(markReady, 100);
 
     mapRef.current = map;
     if (typeof window !== "undefined") {
@@ -230,76 +236,89 @@ export function InvestigationMap({
     if (!map) return;
     map.setStyle(BASEMAP_STYLES[styleKey]);
     
+    const restoreRouteAndMesh = () => {
+      try {
+        const validCoords =
+          roadCoordinatesRef.current && roadCoordinatesRef.current.length >= 2;
+        const initialData: GeoJSON.GeoJSON = validCoords
+          ? {
+              type: "FeatureCollection",
+              features: [
+                {
+                  type: "Feature",
+                  geometry: {
+                    type: "LineString",
+                    coordinates: roadCoordinatesRef.current,
+                  },
+                  properties: {},
+                },
+              ],
+            }
+          : {
+              type: "FeatureCollection",
+              features: [],
+            };
+
+        if (!map.getSource(ROUTE_SOURCE_ID)) {
+          map.addSource(ROUTE_SOURCE_ID, {
+            type: "geojson",
+            data: initialData,
+          });
+        } else {
+          (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(initialData);
+        }
+
+        if (!map.getLayer("trajectory-route-casing")) {
+          map.addLayer({
+            id: "trajectory-route-casing",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#091e42", "line-width": 10, "line-opacity": 0.85 },
+          });
+        }
+        if (!map.getLayer("trajectory-route-glow")) {
+          map.addLayer({
+            id: "trajectory-route-glow",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#0284c7", "line-width": 6, "line-opacity": 0.95 },
+          });
+        }
+        if (!map.getLayer("trajectory-route-laser")) {
+          map.addLayer({
+            id: "trajectory-route-laser",
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 1.0 },
+          });
+        }
+      } catch (err) {
+        console.error("Error restoring route layers after style switch:", err);
+      }
+      map.resize();
+      setMapReady(true);
+      requestAnimationFrame(() => {
+        updateSvgTrajectory();
+      });
+    };
+
     const onStyleReady = () => {
       if (map.isStyleLoaded()) {
         map.off("styledata", onStyleReady);
-        try {
-          const validCoords =
-            roadCoordinatesRef.current && roadCoordinatesRef.current.length >= 2;
-          const initialData: GeoJSON.GeoJSON = validCoords
-            ? {
-                type: "FeatureCollection",
-                features: [
-                  {
-                    type: "Feature",
-                    geometry: {
-                      type: "LineString",
-                      coordinates: roadCoordinatesRef.current,
-                    },
-                    properties: {},
-                  },
-                ],
-              }
-            : {
-                type: "FeatureCollection",
-                features: [],
-              };
-
-          if (!map.getSource(ROUTE_SOURCE_ID)) {
-            map.addSource(ROUTE_SOURCE_ID, {
-              type: "geojson",
-              data: initialData,
-            });
-          }
-          if (!map.getLayer("trajectory-route-casing")) {
-            map.addLayer({
-              id: "trajectory-route-casing",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#091e42", "line-width": 10 },
-            });
-          }
-          if (!map.getLayer("trajectory-route-glow")) {
-            map.addLayer({
-              id: "trajectory-route-glow",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#0284c7", "line-width": 6 },
-            });
-          }
-          if (!map.getLayer("trajectory-route-laser")) {
-            map.addLayer({
-              id: "trajectory-route-laser",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#ffffff", "line-width": 2 },
-            });
-          }
-        } catch (err) {
-          console.error("Error restoring route layers after style switch:", err);
-        }
-        map.resize();
-        setMapReady(true);
+        restoreRouteAndMesh();
       }
     };
-    map.on("styledata", onStyleReady);
+
+    if (map.isStyleLoaded()) {
+      restoreRouteAndMesh();
+    } else {
+      map.on("styledata", onStyleReady);
+    }
   };
 
-  // 3D Pitch presets
-  const [pitchMode, setPitchMode] = useState<"2D" | "3D" | "DRONE">("3D");
   const [is3D, setIs3D] = useState(true);
 
   const handlePitchPreset = (mode: "2D" | "3D" | "DRONE") => {
@@ -317,14 +336,6 @@ export function InvestigationMap({
       duration: 900,
     });
   };
-
-  const cameraMarkersRef = useRef<maplibregl.Marker[]>([]);
-  const checkpointElementsRef = useRef<{ el: HTMLElement; index: number }[]>([]);
-  const roadCoordinatesRef = useRef<[number, number][]>([]);
-  const svgPathCasingRef = useRef<SVGPathElement | null>(null);
-  const svgPathGlowRef = useRef<SVGPathElement | null>(null);
-  const svgPathLaserRef = useRef<SVGPathElement | null>(null);
-  const isInitialReconstructRef = useRef<boolean>(true);
 
   const updateSvgTrajectory = () => {
     const coords = roadCoordinatesRef.current;
@@ -404,17 +415,17 @@ export function InvestigationMap({
       if (activeCameraIds.has(camera.id)) return; // Checkpoint badge rendered separately
 
       const el = document.createElement("div");
-      el.className = "cursor-pointer transition-transform hover:scale-125 z-10 select-none";
+      el.className = "cursor-pointer z-10 select-none";
       const statusColor =
         camera.status === "ONLINE"
-          ? "bg-emerald-400 animate-pulse"
+          ? "bg-emerald-400 shadow-xs shadow-emerald-400/50"
           : camera.status === "PROCESSING"
             ? "bg-amber-400"
             : "bg-slate-400";
 
       el.innerHTML = `
-        <div class="flex flex-col items-center">
-          <div class="flex items-center gap-1.5 rounded-full border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 text-[10px] font-mono font-black text-white shadow-md backdrop-blur-md transition-colors hover:border-sky-400 hover:bg-slate-900">
+        <div class="group flex flex-col items-center transform-gpu transition-transform duration-150 ease-out hover:scale-115">
+          <div class="flex items-center gap-1.5 rounded-full border border-slate-700/90 bg-slate-950/95 px-2.5 py-1 text-[10px] font-mono font-black text-white shadow-md transition-colors group-hover:border-sky-400 group-hover:bg-slate-900 group-hover:shadow-sky-500/30">
             <span class="h-2 w-2 rounded-full ${statusColor}"></span>
             <span class="tracking-wider">${camera.id}</span>
           </div>
@@ -422,8 +433,12 @@ export function InvestigationMap({
         </div>
       `;
 
-      el.addEventListener("mouseenter", () => setHoveredCamera(camera));
-      el.addEventListener("mouseleave", () => setHoveredCamera(null));
+      el.addEventListener("mouseenter", () => {
+        setHoveredCamera((prev) => (prev?.id === camera.id ? prev : camera));
+      });
+      el.addEventListener("mouseleave", () => {
+        setHoveredCamera((prev) => (prev?.id === camera.id ? null : prev));
+      });
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -535,10 +550,10 @@ export function InvestigationMap({
     // Numbered 3D floating checkpoint badges with camera name pills
     points.forEach((point, index) => {
       const el = document.createElement("div");
-      el.className = "cursor-pointer transition-transform hover:scale-125 z-20 select-none";
+      el.className = "cursor-pointer z-20 select-none";
 
       el.innerHTML = `
-        <div class="relative flex flex-col items-center justify-center">
+        <div class="relative flex flex-col items-center justify-center transform-gpu transition-transform duration-150 ease-out hover:scale-110">
           <span class="radar-ping absolute -top-2 h-14 w-14 rounded-full bg-sky-400 opacity-60 animate-ping pointer-events-none hidden"></span>
           <div class="checkpoint-badge flex items-center gap-1.5 rounded-2xl border-2 border-white px-2.5 py-1 shadow-xl transition-all duration-200 bg-gradient-to-r from-blue-700 to-sky-700 text-white shadow-blue-500/40">
             <span class="flex h-5 w-5 items-center justify-center rounded-full bg-white text-blue-900 font-mono text-xs font-black shadow-xs">
@@ -591,11 +606,19 @@ export function InvestigationMap({
 
     updateSvgTrajectory();
     map.on("move", updateSvgTrajectory);
-    map.on("render", updateSvgTrajectory);
+    map.on("moveend", updateSvgTrajectory);
+    map.on("zoom", updateSvgTrajectory);
+    map.on("pitch", updateSvgTrajectory);
+    map.on("rotate", updateSvgTrajectory);
+    map.on("idle", updateSvgTrajectory);
 
     return () => {
       map.off("move", updateSvgTrajectory);
-      map.off("render", updateSvgTrajectory);
+      map.off("moveend", updateSvgTrajectory);
+      map.off("zoom", updateSvgTrajectory);
+      map.off("pitch", updateSvgTrajectory);
+      map.off("rotate", updateSvgTrajectory);
+      map.off("idle", updateSvgTrajectory);
     };
   }, [mapReady]);
 
@@ -890,7 +913,7 @@ export function InvestigationMap({
 
       {/* 3D Camera Hover Telemetry Card */}
       {hoveredCamera && (
-        <div className="absolute bottom-5 left-5 z-20 w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur-2xl shadow-xl">
+        <div className="pointer-events-none absolute bottom-5 left-5 z-20 w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur-2xl shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-xs" />

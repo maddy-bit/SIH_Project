@@ -57,6 +57,9 @@ export function InvestigationDashboard() {
     getCameras()
       .then(setCameras)
       .catch(() => {});
+
+    // Automatically load default demo target MH12AB1234 on mount so UI is pre-populated
+    handleSearch("MH12AB1234", "historical");
   }, []);
 
   useEffect(() => {
