@@ -1,12 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { TrajectoryResponseDto, VehicleSummaryDto } from "@/lib/api";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { formatDistanceKm, formatDurationMinutes, formatTimestamp } from "@/lib/format";
 import { TiltCard3D } from "./TiltCard3D";
-import { VehicleHologram3D } from "./VehicleHologram3D";
 import { TrajectoryPredictionCard } from "./TrajectoryPredictionCard";
+
+const VehicleHologram3D = dynamic(
+  () => import("./VehicleHologram3D").then((mod) => mod.VehicleHologram3D),
+  { ssr: false }
+);
 
 interface VehicleIntelligencePanelProps {
   summary: VehicleSummaryDto;

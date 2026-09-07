@@ -12,12 +12,25 @@ import {
   type VehicleSummaryDto,
 } from "@/lib/api";
 import { connectLiveTracking } from "@/lib/liveClient";
+import dynamic from "next/dynamic";
 import { VehicleSearchPanel, type SearchMode } from "./VehicleSearchPanel";
 import { VehicleIntelligencePanel } from "./VehicleIntelligencePanel";
 import { DetectionTimeline } from "./DetectionTimeline";
 import { EvidenceViewer } from "./EvidenceViewer";
-import { InvestigationMap } from "./InvestigationMap";
 import { LiveCameraGridModal } from "./LiveCameraGridModal";
+
+const InvestigationMap = dynamic(
+  () => import("./InvestigationMap").then((mod) => mod.InvestigationMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-slate-950 p-6 font-mono text-xs text-sky-400">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-sky-400 border-t-transparent mb-3" />
+        INITIALIZING VECTOR MAP ENGINE...
+      </div>
+    ),
+  }
+);
 
 type SearchState = "idle" | "searching" | "found" | "not-found" | "error";
 type LiveStatus = "idle" | "connecting" | "streaming" | "complete" | "error";
