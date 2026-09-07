@@ -6,14 +6,96 @@ import * as maplibregl from "maplibre-gl";
 // lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
 
-const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? "YNlAc2R6pThUIZrd2o5m";
+// High-performance Google Maps raster tile styles.
+// Bypasses vector tile decoder issues in privacy browsers (e.g. Brave Shields)
+// and delivers full street grids, highway markers, terrain, and satellite imagery.
+const GOOGLE_GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
 
-// Maptiler vector tile style URLs — these include glyphs, sprites, and
-// proper font PBFs so camera labels render correctly with no extra config.
-const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", string> = {
-  streets:   `https://api.maptiler.com/maps/openstreetmap/style.json?key=${MAPTILER_KEY}`,
-  satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`,
-  light:     `https://api.maptiler.com/maps/dataviz-light/style.json?key=${MAPTILER_KEY}`,
+const GOOGLE_STREETS_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "google-streets": {
+      type: "raster",
+      tiles: [
+        "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+      ],
+      tileSize: 256,
+      attribution: "© Google Maps | City AI Surveillance Matrix",
+    },
+  },
+  layers: [
+    {
+      id: "google-streets-layer",
+      type: "raster",
+      source: "google-streets",
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+  glyphs: GOOGLE_GLYPHS,
+};
+
+const GOOGLE_SATELLITE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "google-satellite": {
+      type: "raster",
+      tiles: [
+        "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+      ],
+      tileSize: 256,
+      attribution: "© Google Maps | City AI Surveillance Matrix",
+    },
+  },
+  layers: [
+    {
+      id: "google-satellite-layer",
+      type: "raster",
+      source: "google-satellite",
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+  glyphs: GOOGLE_GLYPHS,
+};
+
+const GOOGLE_TERRAIN_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "google-terrain": {
+      type: "raster",
+      tiles: [
+        "https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+      ],
+      tileSize: 256,
+      attribution: "© Google Maps | City AI Surveillance Matrix",
+    },
+  },
+  layers: [
+    {
+      id: "google-terrain-layer",
+      type: "raster",
+      source: "google-terrain",
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+  glyphs: GOOGLE_GLYPHS,
+};
+
+const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", maplibregl.StyleSpecification> = {
+  streets: GOOGLE_STREETS_STYLE,
+  satellite: GOOGLE_SATELLITE_STYLE,
+  light: GOOGLE_TERRAIN_STYLE,
 };
 
 const ROUTE_SOURCE_ID = "trajectory-route";
