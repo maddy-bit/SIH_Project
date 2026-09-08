@@ -60,7 +60,7 @@ export function EvidenceViewer({ point }: EvidenceViewerProps) {
                 </div>
 
                 <div className="absolute top-2.5 right-2.5 z-20 rounded-lg bg-black/85 px-2.5 py-1 text-[10px] font-mono text-slate-300 backdrop-blur-md border border-slate-700">
-                  {visionMode.toUpperCase()} FILTER
+                  STANDARD FILTER
                 </div>
 
                 {/* CCTV Snapshot Image with 3D Depth Shaders */}
