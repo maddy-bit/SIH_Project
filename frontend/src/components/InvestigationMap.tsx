@@ -239,12 +239,14 @@ export function InvestigationMap({
 
   // Handle layer switch with proper styledata lifecycle in MapLibre
   const handleLayerSwitch = (styleKey: "light" | "streets" | "satellite") => {
+    if (styleKey === activeLayer) return;
+    isInitialReconstructRef.current = false;
     setActiveLayer(styleKey);
     setMapReady(false);
     const map = mapRef.current;
     if (!map) return;
     map.setStyle(BASEMAP_STYLES[styleKey]);
-    
+
     const restoreRouteAndMesh = () => {
       try {
         const validCoords =
@@ -304,14 +306,55 @@ export function InvestigationMap({
             paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 1.0 },
           });
         }
+
+        // Restore mesh links if available
+        if (cameras.length > 0) {
+          const meshFeatures: GeoJSON.Feature[] = [];
+          for (let i = 0; i < cameras.length - 1; i++) {
+            meshFeatures.push({
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [cameras[i].longitude, cameras[i].latitude],
+                  [cameras[i + 1].longitude, cameras[i + 1].latitude],
+                ],
+              },
+              properties: {},
+            });
+          }
+          const meshGeojson: GeoJSON.FeatureCollection = {
+            type: "FeatureCollection",
+            features: meshFeatures,
+          };
+
+          if (!map.getSource(MESH_LINKS_SOURCE_ID)) {
+            map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
+          } else {
+            (map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource).setData(meshGeojson);
+          }
+
+          if (!map.getLayer("camera-mesh-layer")) {
+            map.addLayer({
+              id: "camera-mesh-layer",
+              type: "line",
+              source: MESH_LINKS_SOURCE_ID,
+              paint: {
+                "line-color": "#0284c7",
+                "line-width": 1.5,
+                "line-opacity": 0.35,
+              },
+            });
+          }
+        }
       } catch (err) {
         console.error("Error restoring route layers after style switch:", err);
       }
       map.resize();
       setMapReady(true);
-      requestAnimationFrame(() => {
-        updateSvgTrajectory();
-      });
+      requestAnimationFrame(() => updateSvgTrajectory());
+      setTimeout(() => updateSvgTrajectory(), 100);
+      setTimeout(() => updateSvgTrajectory(), 300);
     };
 
     const onStyleReady = () => {
@@ -587,15 +630,15 @@ export function InvestigationMap({
       checkpointElementsRef.current.push({ el, index });
     });
 
-    // Auto-fit bounds to encompass all checkpoints cleanly across Pune on points change
-    if (points.length > 1) {
-      isInitialReconstructRef.current = true;
+    // Auto-fit bounds to encompass all checkpoints cleanly on initial target reconstruct
+    if (points.length > 1 && isInitialReconstructRef.current) {
+      isInitialReconstructRef.current = false;
       const bounds = new maplibregl.LngLatBounds();
       points.forEach((p) => bounds.extend([p.longitude, p.latitude]));
       map.fitBounds(bounds, {
         padding: { top: 85, bottom: 85, left: 75, right: 75 },
         maxZoom: 13.2,
-        duration: 900,
+        duration: 700,
       });
     }
 
