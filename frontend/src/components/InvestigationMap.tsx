@@ -163,6 +163,12 @@ export function InvestigationMap({
   const [pitchMode, setPitchMode] = useState<"2D" | "3D" | "DRONE">("3D");
   const [hoveredCamera, setHoveredCamera] = useState<CameraDto | null>(null);
 
+  const svgMeshRef = useRef<SVGPathElement | null>(null);
+  const svgCasingRef = useRef<SVGPathElement | null>(null);
+  const svgGlowRef = useRef<SVGPathElement | null>(null);
+  const svgPathRef = useRef<SVGPathElement | null>(null);
+  const updateSvgRouteRef = useRef<(() => void) | null>(null);
+
   // Dynamically resolve points coordinates against active cameras array
   // so that moving or updating any camera immediately updates trajectory points & route
   const effectivePoints = useMemo(() => {
@@ -195,12 +201,23 @@ export function InvestigationMap({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
+    const onMapRenderOrMove = () => {
+      updateSvgRouteRef.current?.();
+    };
+
+    map.on("render", onMapRenderOrMove);
+    map.on("move", onMapRenderOrMove);
+    map.on("zoom", onMapRenderOrMove);
+    map.on("pitch", onMapRenderOrMove);
+    map.on("rotate", onMapRenderOrMove);
+
     let isReadyFired = false;
     const markReady = () => {
       if (isReadyFired) return;
       isReadyFired = true;
       map.resize();
       setMapReady(true);
+      updateSvgRouteRef.current?.();
     };
 
     map.on("load", markReady);
@@ -219,7 +236,10 @@ export function InvestigationMap({
     }
 
     // ResizeObserver so map canvas redraws if the container size changes
-    const ro = new ResizeObserver(() => map.resize());
+    const ro = new ResizeObserver(() => {
+      map.resize();
+      updateSvgRouteRef.current?.();
+    });
     ro.observe(containerRef.current);
     resizeObserverRef.current = ro;
 
@@ -531,8 +551,45 @@ export function InvestigationMap({
 
     const rawWaypoints: [number, number][] = effectivePoints.map((p) => [p.longitude, p.latitude]);
 
+    const updateSvg = () => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      const pathCoords =
+        roadCoordinatesRef.current.length >= 2
+          ? roadCoordinatesRef.current
+          : rawWaypoints;
+
+      if (pathCoords.length >= 2) {
+        const pts = pathCoords.map(([lng, lat]) => map.project([lng, lat]));
+        const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+        if (svgCasingRef.current) svgCasingRef.current.setAttribute("d", d);
+        if (svgGlowRef.current) svgGlowRef.current.setAttribute("d", d);
+        if (svgPathRef.current) svgPathRef.current.setAttribute("d", d);
+      } else {
+        if (svgCasingRef.current) svgCasingRef.current.setAttribute("d", "");
+        if (svgGlowRef.current) svgGlowRef.current.setAttribute("d", "");
+        if (svgPathRef.current) svgPathRef.current.setAttribute("d", "");
+      }
+
+      if (cameras.length > 1 && svgMeshRef.current) {
+        let meshD = "";
+        for (let i = 0; i < cameras.length - 1; i++) {
+          const p1 = map.project([cameras[i].longitude, cameras[i].latitude]);
+          const p2 = map.project([cameras[i + 1].longitude, cameras[i + 1].latitude]);
+          meshD += `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)} `;
+        }
+        svgMeshRef.current.setAttribute("d", meshD);
+      }
+    };
+
+    updateSvgRouteRef.current = updateSvg;
+    updateSvg();
+
     const applyRouteGeojson = (coordinates: [number, number][]) => {
       roadCoordinatesRef.current = coordinates;
+      updateSvgRouteRef.current?.();
       if (coordinates.length < 2) return;
       const data: GeoJSON.GeoJSON = {
         type: "FeatureCollection",
@@ -613,6 +670,7 @@ export function InvestigationMap({
     fetchRoadRoute(rawWaypoints).then((roadCoords) => {
       if (isCancelled || !mapRef.current) return;
       applyRouteGeojson(roadCoords);
+      updateSvgRouteRef.current?.();
     });
 
     // Numbered 3D floating checkpoint badges with camera name pills
@@ -922,8 +980,57 @@ export function InvestigationMap({
         <div className="pointer-events-none absolute top-2 right-2 z-10 h-3.5 w-3.5 border-t-2 border-r-2 border-sky-500" />
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
         <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
-
-        {/* MapLibre WebGL canvas renders the real-road trajectory natively locked to map coordinates */}
+        {/* Real-time Google Maps Navigation Route SVG Overlay */}
+        <svg
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+        >
+          <defs>
+            <filter id="route-glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1" stdDeviation="3" floodColor="#0284c7" floodOpacity="0.75" />
+            </filter>
+          </defs>
+          {/* Camera network mesh links */}
+          <path
+            ref={svgMeshRef}
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="1.5"
+            strokeOpacity="0.3"
+            strokeDasharray="4 4"
+          />
+          {/* Trajectory Route - Deep Navy Casing */}
+          <path
+            ref={svgCasingRef}
+            fill="none"
+            stroke="#021533"
+            strokeWidth="11"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeOpacity="0.9"
+          />
+          {/* Trajectory Route - Vibrant Google Navigation Blue */}
+          <path
+            ref={svgGlowRef}
+            fill="none"
+            stroke="#2563eb"
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeOpacity="1"
+            filter="url(#route-glow-filter)"
+          />
+          {/* Trajectory Route - Laser Cyan Core */}
+          <path
+            ref={svgPathRef}
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeOpacity="1"
+          />
+        </svg>
 
 
 
