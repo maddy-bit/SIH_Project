@@ -371,10 +371,6 @@ export function InvestigationMap({
       // Re-attach DOM markers to map after style swap
       markersRef.current.forEach((m) => m.addTo(map));
       cameraMarkersRef.current.forEach((m) => m.addTo(map));
-
-      requestAnimationFrame(() => updateSvgTrajectory());
-      setTimeout(() => updateSvgTrajectory(), 100);
-      setTimeout(() => updateSvgTrajectory(), 300);
     };
 
     const onStyleReady = () => {
@@ -515,7 +511,6 @@ export function InvestigationMap({
 
     if (effectivePoints.length === 0) {
       roadCoordinatesRef.current = [];
-      updateSvgTrajectory();
       if (map.getSource(ROUTE_SOURCE_ID)) {
         (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData({
           type: "FeatureCollection",
@@ -529,7 +524,6 @@ export function InvestigationMap({
 
     const applyRouteGeojson = (coordinates: [number, number][]) => {
       roadCoordinatesRef.current = coordinates;
-      updateSvgTrajectory();
       if (coordinates.length < 2) return;
       const data: GeoJSON.GeoJSON = {
         type: "FeatureCollection",
