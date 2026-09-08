@@ -1,106 +1,137 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 // NOTE: MapLibre CSS is imported in globals.css (not here) to avoid
 // lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
 import { fetchRoadRoute } from "@/lib/routing";
 
-// High-performance Google Maps raster tile styles.
-// Bypasses vector tile decoder issues in privacy browsers (e.g. Brave Shields)
-// and delivers full street grids, highway markers, terrain, and satellite imagery.
+// High-performance Google Maps raster tile styles with pre-baked WebGL vector route layers.
+// Pre-baking route and mesh sources directly inside the style specification guarantees
+// that real-road trajectory lines render flawlessly without style-load race conditions.
 const GOOGLE_GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
 
-const STREETS_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    "google-streets": {
-      type: "raster",
-      tiles: [
-        "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-      ],
-      tileSize: 256,
-      attribution: "© Google Maps | City AI Surveillance Matrix",
-    },
-  },
-  layers: [
-    {
-      id: "google-streets-layer",
-      type: "raster",
-      source: "google-streets",
-      minzoom: 0,
-      maxzoom: 22,
-    },
-  ],
-  glyphs: GOOGLE_GLYPHS,
-};
+const ROUTE_SOURCE_ID = "trajectory-route";
+const MESH_LINKS_SOURCE_ID = "camera-mesh-links";
 
-const SATELLITE_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    "google-satellite": {
-      type: "raster",
-      tiles: [
-        "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      ],
-      tileSize: 256,
-      attribution: "© Google Maps | City AI Surveillance Matrix",
+function createBasemapStyle(
+  sourceKey: string,
+  tiles: string[],
+  layerKey: string,
+): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      [sourceKey]: {
+        type: "raster",
+        tiles,
+        tileSize: 256,
+        attribution: "© Google Maps | City Surveillance Matrix",
+      },
+      [MESH_LINKS_SOURCE_ID]: {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      },
+      [ROUTE_SOURCE_ID]: {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      },
     },
-  },
-  layers: [
-    {
-      id: "google-satellite-layer",
-      type: "raster",
-      source: "google-satellite",
-      minzoom: 0,
-      maxzoom: 22,
-    },
-  ],
-  glyphs: GOOGLE_GLYPHS,
-};
+    layers: [
+      {
+        id: layerKey,
+        type: "raster",
+        source: sourceKey,
+        minzoom: 0,
+        maxzoom: 22,
+      },
+      {
+        id: "camera-mesh-layer",
+        type: "line",
+        source: MESH_LINKS_SOURCE_ID,
+        paint: {
+          "line-color": "#0284c7",
+          "line-width": 1.5,
+          "line-opacity": 0.35,
+        },
+      },
+      {
+        id: "trajectory-route-casing",
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: {
+          "line-color": "#021533",
+          "line-width": 12,
+          "line-opacity": 0.95,
+        },
+      },
+      {
+        id: "trajectory-route-glow",
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: {
+          "line-color": "#0284c7",
+          "line-width": 7,
+          "line-opacity": 1.0,
+        },
+      },
+      {
+        id: "trajectory-route-laser",
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: {
+          "line-color": "#38bdf8",
+          "line-width": 3,
+          "line-opacity": 1.0,
+        },
+      },
+    ],
+    glyphs: GOOGLE_GLYPHS,
+  };
+}
 
-const LIGHT_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    "google-terrain": {
-      type: "raster",
-      tiles: [
-        "https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-      ],
-      tileSize: 256,
-      attribution: "© Google Maps | City AI Surveillance Matrix",
-    },
-  },
-  layers: [
-    {
-      id: "google-terrain-layer",
-      type: "raster",
-      source: "google-terrain",
-      minzoom: 0,
-      maxzoom: 22,
-    },
+const STREETS_STYLE = createBasemapStyle(
+  "google-streets",
+  [
+    "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+    "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+    "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+    "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
   ],
-  glyphs: GOOGLE_GLYPHS,
-};
+  "google-streets-layer",
+);
+
+const SATELLITE_STYLE = createBasemapStyle(
+  "google-satellite",
+  [
+    "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+  ],
+  "google-satellite-layer",
+);
+
+const LIGHT_STYLE = createBasemapStyle(
+  "google-terrain",
+  [
+    "https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+    "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+    "https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+    "https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+  ],
+  "google-terrain-layer",
+);
 
 const BASEMAP_STYLES: Record<"light" | "streets" | "satellite", maplibregl.StyleSpecification> = {
   streets: STREETS_STYLE,
   satellite: SATELLITE_STYLE,
   light: LIGHT_STYLE,
 };
-
-const ROUTE_SOURCE_ID = "trajectory-route";
-const MESH_LINKS_SOURCE_ID = "camera-mesh-links";
 
 interface InvestigationMapProps {
   cameras: CameraDto[];
@@ -134,19 +165,21 @@ export function InvestigationMap({
 
   // Dynamically resolve points coordinates against active cameras array
   // so that moving or updating any camera immediately updates trajectory points & route
-  const effectivePoints = points.map((p) => {
-    const matchingCam = cameras.find((c) => c.id === p.cameraId);
-    if (matchingCam) {
-      return {
-        ...p,
-        latitude: matchingCam.latitude,
-        longitude: matchingCam.longitude,
-      };
-    }
-    return p;
-  });
+  const effectivePoints = useMemo(() => {
+    return points.map((p) => {
+      const matchingCam = cameras.find((c) => c.id === p.cameraId);
+      if (matchingCam) {
+        return {
+          ...p,
+          latitude: matchingCam.latitude,
+          longitude: matchingCam.longitude,
+        };
+      }
+      return p;
+    });
+  }, [points, cameras]);
 
-  // Initialize map with bulletproof raster tile config & 3D pitch capability
+  // Initialize map with robust raster tile config & 3D pitch capability
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -155,65 +188,15 @@ export function InvestigationMap({
       style: BASEMAP_STYLES[activeLayer],
       center: [73.8350, 18.5350], // Pune City Camera Network
       zoom: 12.5,
-      pitch: 50,   // 3D Isometric View by default
-      maxPitch: 85, // Enable full 3D tilt up to 85°
+      pitch: 50, // 3D Isometric View by default
       bearing: -18,
       attributionControl: { compact: true },
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
-    const setupLayers = () => {
-      try {
-        if (!map.getSource(ROUTE_SOURCE_ID)) {
-          map.addSource(ROUTE_SOURCE_ID, {
-            type: "geojson",
-            data: {
-              type: "FeatureCollection",
-              features: [],
-            },
-          });
-        }
-
-        if (!map.getLayer("trajectory-route-casing")) {
-          map.addLayer({
-            id: "trajectory-route-casing",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#031738", "line-width": 12, "line-opacity": 0.95 },
-          });
-        }
-
-        if (!map.getLayer("trajectory-route-glow")) {
-          map.addLayer({
-            id: "trajectory-route-glow",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
-          });
-        }
-
-        if (!map.getLayer("trajectory-route-laser")) {
-          map.addLayer({
-            id: "trajectory-route-laser",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
-          });
-        }
-      } catch (err) {
-        console.error("Error setting up route layers:", err);
-      }
-    };
-
-    let isReadyFired = false;
     const markReady = () => {
-      if (isReadyFired) return;
-      isReadyFired = true;
-      setupLayers();
+      if (!map.isStyleLoaded()) return;
       map.resize();
       setMapReady(true);
     };
@@ -225,10 +208,11 @@ export function InvestigationMap({
     });
     map.on("error", (e) => {
       console.warn("MapLibre load note:", e);
-      markReady();
     });
 
-    const safetyTimer = setTimeout(markReady, 100);
+    if (map.isStyleLoaded()) {
+      markReady();
+    }
 
     mapRef.current = map;
     if (typeof window !== "undefined") {
@@ -241,7 +225,6 @@ export function InvestigationMap({
     resizeObserverRef.current = ro;
 
     return () => {
-      clearTimeout(safetyTimer);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -260,6 +243,7 @@ export function InvestigationMap({
     map.setStyle(BASEMAP_STYLES[styleKey]);
 
     const restoreRouteAndMesh = () => {
+      if (!map.isStyleLoaded()) return;
       try {
         const currentWaypoints: [number, number][] = effectivePoints.map((p) => [p.longitude, p.latitude]);
         const validCoords =
@@ -267,60 +251,58 @@ export function InvestigationMap({
             ? roadCoordinatesRef.current
             : currentWaypoints;
 
-        const initialData: GeoJSON.GeoJSON = validCoords.length >= 2
-          ? {
-              type: "FeatureCollection",
-              features: [
-                {
-                  type: "Feature",
-                  geometry: {
-                    type: "LineString",
-                    coordinates: validCoords,
+        const initialData: GeoJSON.GeoJSON =
+          validCoords.length >= 2
+            ? {
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature",
+                    geometry: {
+                      type: "LineString",
+                      coordinates: validCoords,
+                    },
+                    properties: {},
                   },
-                  properties: {},
-                },
-              ],
-            }
-          : {
-              type: "FeatureCollection",
-              features: [],
-            };
+                ],
+              }
+            : {
+                type: "FeatureCollection",
+                features: [],
+              };
 
-        if (!map.getSource(ROUTE_SOURCE_ID)) {
-          map.addSource(ROUTE_SOURCE_ID, {
-            type: "geojson",
-            data: initialData,
-          });
+        const routeSrc = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+        if (routeSrc) {
+          routeSrc.setData(initialData);
         } else {
-          (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(initialData);
-        }
-
-        if (!map.getLayer("trajectory-route-casing")) {
-          map.addLayer({
-            id: "trajectory-route-casing",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#031738", "line-width": 12, "line-opacity": 0.95 },
-          });
-        }
-        if (!map.getLayer("trajectory-route-glow")) {
-          map.addLayer({
-            id: "trajectory-route-glow",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
-          });
-        }
-        if (!map.getLayer("trajectory-route-laser")) {
-          map.addLayer({
-            id: "trajectory-route-laser",
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
-          });
+          map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: initialData });
+          if (!map.getLayer("trajectory-route-casing")) {
+            map.addLayer({
+              id: "trajectory-route-casing",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#021533", "line-width": 12, "line-opacity": 0.95 },
+            });
+          }
+          if (!map.getLayer("trajectory-route-glow")) {
+            map.addLayer({
+              id: "trajectory-route-glow",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
+            });
+          }
+          if (!map.getLayer("trajectory-route-laser")) {
+            map.addLayer({
+              id: "trajectory-route-laser",
+              type: "line",
+              source: ROUTE_SOURCE_ID,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
+            });
+          }
         }
 
         // Restore mesh links if available
@@ -344,23 +326,23 @@ export function InvestigationMap({
             features: meshFeatures,
           };
 
-          if (!map.getSource(MESH_LINKS_SOURCE_ID)) {
-            map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
+          const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+          if (meshSrc) {
+            meshSrc.setData(meshGeojson);
           } else {
-            (map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource).setData(meshGeojson);
-          }
-
-          if (!map.getLayer("camera-mesh-layer")) {
-            map.addLayer({
-              id: "camera-mesh-layer",
-              type: "line",
-              source: MESH_LINKS_SOURCE_ID,
-              paint: {
-                "line-color": "#0284c7",
-                "line-width": 1.5,
-                "line-opacity": 0.35,
-              },
-            });
+            map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
+            if (!map.getLayer("camera-mesh-layer")) {
+              map.addLayer({
+                id: "camera-mesh-layer",
+                type: "line",
+                source: MESH_LINKS_SOURCE_ID,
+                paint: {
+                  "line-color": "#0284c7",
+                  "line-width": 1.5,
+                  "line-opacity": 0.35,
+                },
+              });
+            }
           }
         }
       } catch (err) {
@@ -388,33 +370,19 @@ export function InvestigationMap({
     }
   };
 
-  const [is3D, setIs3D] = useState(true);
-
   const handlePitchPreset = (mode: "2D" | "3D" | "DRONE") => {
     const map = mapRef.current;
     if (!map) return;
     setPitchMode(mode);
-    setIs3D(mode !== "2D");
 
-    if (mode === "2D") {
-      map.easeTo({
-        pitch: 0,
-        bearing: 0,
-        duration: 800,
-      });
-    } else if (mode === "3D") {
-      map.easeTo({
-        pitch: 55,
-        bearing: -25,
-        duration: 800,
-      });
-    } else if (mode === "DRONE") {
-      map.easeTo({
-        pitch: 75,
-        bearing: 45,
-        duration: 800,
-      });
-    }
+    const targetPitch = mode === "2D" ? 0 : mode === "3D" ? 50 : 65;
+    const targetBearing = mode === "2D" ? 0 : -18;
+
+    map.easeTo({
+      pitch: targetPitch,
+      bearing: targetBearing,
+      duration: 900,
+    });
   };
 
   // Render camera network mesh and tactical camera pins
@@ -768,9 +736,19 @@ export function InvestigationMap({
     if (effectivePoints.length > 1) {
       const bounds = new maplibregl.LngLatBounds();
       effectivePoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
-      map.fitBounds(bounds, { padding: 65, duration: 800 });
+      map.fitBounds(bounds, {
+        padding: { top: 85, bottom: 85, left: 75, right: 75 },
+        maxZoom: 13.5,
+        duration: 900,
+      });
     } else {
-      map.flyTo({ center: [73.8350, 18.5350], zoom: 12.5, pitch: is3D ? 50 : 0, bearing: is3D ? -18 : 0, duration: 800 });
+      map.easeTo({
+        center: [73.8350, 18.5350],
+        zoom: 12.5,
+        pitch: pitchMode === "2D" ? 0 : pitchMode === "3D" ? 50 : 65,
+        bearing: pitchMode === "2D" ? 0 : -18,
+        duration: 900,
+      });
     }
   };
 
