@@ -541,13 +541,8 @@ export function InvestigationMap({
       }
     };
 
-    // Immediately render initial route
-    applyRouteGeojson(
-      roadCoordinatesRef.current.length > 1 &&
-      roadCoordinatesRef.current[0][0] === rawWaypoints[0][0]
-        ? roadCoordinatesRef.current
-        : rawWaypoints
-    );
+    // Immediately render initial route using current camera waypoints
+    applyRouteGeojson(rawWaypoints);
 
     // Fetch real road routing asynchronously and update line to follow actual roads
     let isCancelled = false;
