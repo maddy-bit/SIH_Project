@@ -135,6 +135,20 @@ export function InvestigationMap({
   const [pitchMode, setPitchMode] = useState<"2D" | "3D" | "DRONE">("3D");
   const [hoveredCamera, setHoveredCamera] = useState<CameraDto | null>(null);
 
+  // Dynamically resolve points coordinates against active cameras array
+  // so that moving or updating any camera immediately updates trajectory points & route
+  const effectivePoints = points.map((p) => {
+    const matchingCam = cameras.find((c) => c.id === p.cameraId);
+    if (matchingCam) {
+      return {
+        ...p,
+        latitude: matchingCam.latitude,
+        longitude: matchingCam.longitude,
+      };
+    }
+    return p;
+  });
+
   // Initialize map with bulletproof raster tile config
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -249,9 +263,13 @@ export function InvestigationMap({
 
     const restoreRouteAndMesh = () => {
       try {
+        const currentWaypoints: [number, number][] = effectivePoints.map((p) => [p.longitude, p.latitude]);
         const validCoords =
-          roadCoordinatesRef.current && roadCoordinatesRef.current.length >= 2;
-        const initialData: GeoJSON.GeoJSON = validCoords
+          roadCoordinatesRef.current && roadCoordinatesRef.current.length >= 2
+            ? roadCoordinatesRef.current
+            : currentWaypoints;
+
+        const initialData: GeoJSON.GeoJSON = validCoords.length >= 2
           ? {
               type: "FeatureCollection",
               features: [
@@ -259,7 +277,7 @@ export function InvestigationMap({
                   type: "Feature",
                   geometry: {
                     type: "LineString",
-                    coordinates: roadCoordinatesRef.current,
+                    coordinates: validCoords,
                   },
                   properties: {},
                 },
@@ -352,6 +370,11 @@ export function InvestigationMap({
       }
       map.resize();
       setMapReady(true);
+
+      // Re-attach DOM markers to map after style swap
+      markersRef.current.forEach((m) => m.addTo(map));
+      cameraMarkersRef.current.forEach((m) => m.addTo(map));
+
       requestAnimationFrame(() => updateSvgTrajectory());
       setTimeout(() => updateSvgTrajectory(), 100);
       setTimeout(() => updateSvgTrajectory(), 300);
@@ -409,7 +432,6 @@ export function InvestigationMap({
     svgPathLaserRef.current?.setAttribute("d", d);
   };
 
-
   // Render camera network mesh and tactical camera pins
   useEffect(() => {
     const map = mapRef.current;
@@ -461,7 +483,7 @@ export function InvestigationMap({
     }
 
     // 2. Render sleek tactical CCTV camera pins for cameras NOT in active trajectory
-    const activeCameraIds = new Set(points.map((p) => p.cameraId));
+    const activeCameraIds = new Set(effectivePoints.map((p) => p.cameraId));
 
     cameras.forEach((camera) => {
       if (activeCameraIds.has(camera.id)) return; // Checkpoint badge rendered separately
@@ -503,7 +525,7 @@ export function InvestigationMap({
 
       cameraMarkersRef.current.push(marker);
     });
-  }, [cameras, points, mapReady, activeLayer]);
+  }, [cameras, effectivePoints, mapReady, activeLayer]);
 
   // Render trajectory route line along real roads and numbered checkpoint badges
   useEffect(() => {
@@ -514,7 +536,7 @@ export function InvestigationMap({
     markersRef.current = [];
     checkpointElementsRef.current = [];
 
-    if (points.length === 0) {
+    if (effectivePoints.length === 0) {
       roadCoordinatesRef.current = [];
       updateSvgTrajectory();
       if (map.getSource(ROUTE_SOURCE_ID)) {
@@ -526,7 +548,7 @@ export function InvestigationMap({
       return;
     }
 
-    const rawWaypoints: [number, number][] = points.map((p) => [p.longitude, p.latitude]);
+    const rawWaypoints: [number, number][] = effectivePoints.map((p) => [p.longitude, p.latitude]);
 
     const applyRouteGeojson = (coordinates: [number, number][]) => {
       roadCoordinatesRef.current = coordinates;
@@ -595,7 +617,7 @@ export function InvestigationMap({
     });
 
     // Numbered 3D floating checkpoint badges with camera name pills
-    points.forEach((point, index) => {
+    effectivePoints.forEach((point, index) => {
       const el = document.createElement("div");
       el.className = "cursor-pointer z-20 select-none";
 
@@ -631,10 +653,10 @@ export function InvestigationMap({
     });
 
     // Auto-fit bounds to encompass all checkpoints cleanly on initial target reconstruct
-    if (points.length > 1 && isInitialReconstructRef.current) {
+    if (effectivePoints.length > 1 && isInitialReconstructRef.current) {
       isInitialReconstructRef.current = false;
       const bounds = new maplibregl.LngLatBounds();
-      points.forEach((p) => bounds.extend([p.longitude, p.latitude]));
+      effectivePoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
       map.fitBounds(bounds, {
         padding: { top: 85, bottom: 85, left: 75, right: 75 },
         maxZoom: 13.2,
@@ -645,7 +667,7 @@ export function InvestigationMap({
     return () => {
       isCancelled = true;
     };
-  }, [points, mapReady, activeLayer, onSelectPoint]);
+  }, [effectivePoints, mapReady, activeLayer, onSelectPoint]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -697,18 +719,18 @@ export function InvestigationMap({
   // Pan to selected checkpoint smoothly on deliberate user interaction
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || selectedIndex === null || !points[selectedIndex]) return;
+    if (!map || selectedIndex === null || !effectivePoints[selectedIndex]) return;
     if (isInitialReconstructRef.current) return;
-    const target = points[selectedIndex];
+    const target = effectivePoints[selectedIndex];
     map.easeTo({
       center: [target.longitude, target.latitude],
       duration: 500,
     });
-  }, [selectedIndex, points]);
+  }, [selectedIndex, effectivePoints]);
 
   // 3D animated vehicle replay along trajectory
   useEffect(() => {
-    if (replayToken === 0 || points.length < 2) return;
+    if (replayToken === 0 || effectivePoints.length < 2) return;
     const map = mapRef.current;
     if (!map) return;
 
@@ -727,7 +749,7 @@ export function InvestigationMap({
         </div>
       `;
       vehicleMarkerRef.current = new maplibregl.Marker({ element: el })
-        .setLngLat([points[0].longitude, points[0].latitude])
+        .setLngLat([effectivePoints[0].longitude, effectivePoints[0].latitude])
         .addTo(map);
     }
 
@@ -741,7 +763,7 @@ export function InvestigationMap({
       const pathCoords =
         roadCoordinatesRef.current.length > 1
           ? roadCoordinatesRef.current
-          : points.map((p) => [p.longitude, p.latitude] as [number, number]);
+          : effectivePoints.map((p) => [p.longitude, p.latitude] as [number, number]);
 
       const totalSegments = pathCoords.length - 1;
       const currentSegmentFloat = progress * totalSegments;
@@ -777,14 +799,14 @@ export function InvestigationMap({
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [replayToken, points]);
+  }, [replayToken, effectivePoints]);
 
   const handleResetView = () => {
     const map = mapRef.current;
     if (!map) return;
-    if (points.length > 1) {
+    if (effectivePoints.length > 1) {
       const bounds = new maplibregl.LngLatBounds();
-      points.forEach((p) => bounds.extend([p.longitude, p.latitude]));
+      effectivePoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
       map.fitBounds(bounds, { padding: 65, duration: 800 });
     } else {
       map.flyTo({ center: [73.8350, 18.5350], zoom: 12.5, pitch: is3D ? 50 : 0, bearing: is3D ? -18 : 0, duration: 800 });
