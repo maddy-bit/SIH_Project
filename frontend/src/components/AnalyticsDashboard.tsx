@@ -145,7 +145,6 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Camera Nodes"
             value={`${data.camerasOnline}/${data.totalCameras}`}
-            sublabel="Active Network"
             accent="text-emerald-700"
           />
         </StatCard>
@@ -154,7 +153,6 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Processing Feeds"
             value={data.camerasProcessing}
-            sublabel="Live Camera Streams"
             accent="text-sky-800"
           />
         </StatCard>
@@ -163,7 +161,6 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Attention Required"
             value={data.camerasOffline}
-            sublabel="No Feed Signal"
             accent={data.camerasOffline > 0 ? "text-amber-700" : "text-slate-400"}
           />
         </StatCard>
@@ -172,7 +169,6 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Unique Plates"
             value={data.totalVehicles.toLocaleString()}
-            sublabel="Registered Records"
             accent="text-purple-700"
           />
         </StatCard>
@@ -181,7 +177,6 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Inference Logs"
             value={data.totalDetections.toLocaleString()}
-            sublabel="Detection Logs"
             accent="text-blue-700"
           />
         </StatCard>
@@ -194,7 +189,6 @@ export function AnalyticsDashboard() {
                 ? `${data.averageTransitionSpeedKmh.toFixed(0)} km/h`
                 : "—"
             }
-            sublabel="Corridor Transit"
             accent="text-emerald-700"
           />
         </StatCard>

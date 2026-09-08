@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { TrajectoryPointDto } from "@/lib/api";
 import { evidenceImageUrl } from "@/lib/api";
@@ -12,11 +11,10 @@ interface EvidenceViewerProps {
   point: TrajectoryPointDto | null;
 }
 
-type VisionMode = "standard" | "thermal" | "edge";
+
 
 export function EvidenceViewer({ point }: EvidenceViewerProps) {
   const imageUrl = evidenceImageUrl(point?.imagePath);
-  const [visionMode, setVisionMode] = useState<VisionMode>("standard");
 
   return (
     <TiltCard3D maxTilt={4} scale={1.01}>
@@ -42,36 +40,7 @@ export function EvidenceViewer({ point }: EvidenceViewerProps) {
           )}
         </div>
 
-        {/* Vision Filter Switcher */}
-        {point && (
-          <div className="mt-3 flex items-center justify-between gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/80">
-            <span className="pl-2 text-[9px] font-mono font-bold text-slate-500 uppercase">
-              Vision Mode:
-            </span>
-            <div className="flex items-center gap-1">
-              {(
-                [
-                  { id: "standard", label: "Standard" },
-                  { id: "thermal", label: "Infrared" },
-                  { id: "edge", label: "High Contrast" },
-                ] as const
-              ).map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => setVisionMode(mode.id)}
-                  className={`rounded-lg px-2 py-0.5 text-[9px] font-mono font-bold uppercase transition-all cursor-pointer ${
-                    visionMode === mode.id
-                      ? "bg-white text-sky-800 shadow-xs border border-sky-300"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         <AnimatePresence mode="wait">
           {point ? (
@@ -101,13 +70,7 @@ export function EvidenceViewer({ point }: EvidenceViewerProps) {
                     <img
                       src={imageUrl}
                       alt={`Evidence frame from ${point.cameraId}`}
-                      className={`w-full object-contain max-h-[260px] transition-all duration-300 ${
-                        visionMode === "thermal"
-                          ? "invert hue-rotate-180 contrast-150 saturate-200"
-                          : visionMode === "edge"
-                          ? "contrast-200 brightness-110 grayscale"
-                          : ""
-                      }`}
+                      className="w-full object-contain max-h-[260px]"
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-8 text-center text-xs text-slate-400 font-mono">

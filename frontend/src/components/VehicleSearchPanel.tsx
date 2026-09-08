@@ -54,21 +54,14 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
           <div className="flex items-center gap-2">
             <span className="flex h-2.5 w-2.5 rounded-full bg-sky-500 shadow-xs animate-pulse" />
             <h2 className="text-xs font-bold uppercase tracking-widest text-sky-800">
-              Target Search & ANPR
+              Target Search
             </h2>
           </div>
-          <span className="text-[10px] font-mono text-sky-800 bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-md font-bold shadow-xs">
-            License Plate Recognition
-          </span>
         </div>
 
         <div className="mt-4">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-700">
             <span>Vehicle Registration Plate</span>
-            <span className="text-[10px] text-sky-700 font-mono font-bold flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              ANPR Active
-            </span>
           </div>
 
           {/* 3D Realistic Indian HSRP Plate with Hologram Foil & Bevel */}

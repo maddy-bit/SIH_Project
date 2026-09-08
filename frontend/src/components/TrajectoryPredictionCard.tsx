@@ -66,14 +66,10 @@ export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProp
           <span className="text-base">🔮</span>
           <div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-              Markov Trajectory Predictor
+              Trajectory Predictor
             </h3>
-            <p className="text-[10px] text-slate-500 font-mono">NEXT JUNCTION FORECAST</p>
           </div>
         </div>
-        <span className="rounded bg-sky-100 px-2 py-0.5 text-[10px] font-mono font-bold text-sky-800 border border-sky-300">
-          ROUTE FORECAST
-        </span>
       </div>
 
       <div className="mt-3 flex flex-col gap-2.5">
