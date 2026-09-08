@@ -409,26 +409,6 @@ export function InvestigationMap({
     });
   };
 
-  const updateSvgTrajectory = () => {
-    const coords = roadCoordinatesRef.current;
-    if (!mapRef.current || coords.length < 2) {
-      svgPathCasingRef.current?.setAttribute("d", "");
-      svgPathGlowRef.current?.setAttribute("d", "");
-      svgPathLaserRef.current?.setAttribute("d", "");
-      return;
-    }
-    const d = coords
-      .map((pt, i) => {
-        const ptPos = mapRef.current?.project(pt);
-        if (!ptPos) return "";
-        return `${i === 0 ? "M" : "L"} ${ptPos.x.toFixed(1)} ${ptPos.y.toFixed(1)}`;
-      })
-      .join(" ");
-    svgPathCasingRef.current?.setAttribute("d", d);
-    svgPathGlowRef.current?.setAttribute("d", d);
-    svgPathLaserRef.current?.setAttribute("d", d);
-  };
-
   // Render camera network mesh and tactical camera pins
   useEffect(() => {
     const map = mapRef.current;
