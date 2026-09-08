@@ -125,9 +125,6 @@ export function InvestigationMap({
   const checkpointElementsRef = useRef<{ el: HTMLDivElement; index: number }[]>([]);
   const isInitialReconstructRef = useRef<boolean>(true);
   const roadCoordinatesRef = useRef<[number, number][]>([]);
-  const svgPathCasingRef = useRef<SVGPathElement>(null);
-  const svgPathGlowRef = useRef<SVGPathElement>(null);
-  const svgPathLaserRef = useRef<SVGPathElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -669,28 +666,6 @@ export function InvestigationMap({
     };
   }, [effectivePoints, mapReady, activeLayer, onSelectPoint]);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-
-    updateSvgTrajectory();
-    map.on("move", updateSvgTrajectory);
-    map.on("moveend", updateSvgTrajectory);
-    map.on("zoom", updateSvgTrajectory);
-    map.on("pitch", updateSvgTrajectory);
-    map.on("rotate", updateSvgTrajectory);
-    map.on("idle", updateSvgTrajectory);
-
-    return () => {
-      map.off("move", updateSvgTrajectory);
-      map.off("moveend", updateSvgTrajectory);
-      map.off("zoom", updateSvgTrajectory);
-      map.off("pitch", updateSvgTrajectory);
-      map.off("rotate", updateSvgTrajectory);
-      map.off("idle", updateSvgTrajectory);
-    };
-  }, [mapReady]);
-
   // Update checkpoint visual active state without re-creating DOM markers (zero jitter)
   useEffect(() => {
     checkpointElementsRef.current.forEach(({ el, index }) => {
@@ -936,47 +911,7 @@ export function InvestigationMap({
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-500" />
         <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-500" />
 
-        {/* Real-road SVG Trajectory Overlay */}
-        <svg className="pointer-events-none absolute inset-0 h-full w-full z-[5] overflow-visible">
-          <defs>
-            <filter id="route-glow-blur" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <path
-            ref={svgPathCasingRef}
-            d=""
-            fill="none"
-            stroke="#091e42"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.85"
-          />
-          <path
-            ref={svgPathGlowRef}
-            d=""
-            fill="none"
-            stroke="#0284c7"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter="url(#route-glow-blur)"
-          />
-          <path
-            ref={svgPathLaserRef}
-            d=""
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        {/* MapLibre WebGL canvas renders the real-road trajectory natively locked to map coordinates */}
 
 
 
