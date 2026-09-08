@@ -195,24 +195,23 @@ export function InvestigationMap({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
+    let isReadyFired = false;
     const markReady = () => {
-      if (!map.isStyleLoaded()) return;
+      if (isReadyFired) return;
+      isReadyFired = true;
       map.resize();
       setMapReady(true);
     };
 
     map.on("load", markReady);
     map.on("style.load", markReady);
-    map.on("styledata", () => {
-      if (map.isStyleLoaded()) markReady();
-    });
+    map.on("styledata", markReady);
     map.on("error", (e) => {
       console.warn("MapLibre load note:", e);
+      markReady();
     });
 
-    if (map.isStyleLoaded()) {
-      markReady();
-    }
+    const safetyTimer = setTimeout(markReady, 100);
 
     mapRef.current = map;
     if (typeof window !== "undefined") {
@@ -225,6 +224,7 @@ export function InvestigationMap({
     resizeObserverRef.current = ro;
 
     return () => {
+      clearTimeout(safetyTimer);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -271,38 +271,53 @@ export function InvestigationMap({
                 features: [],
               };
 
-        const routeSrc = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-        if (routeSrc) {
-          routeSrc.setData(initialData);
-        } else {
-          map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: initialData });
-          if (!map.getLayer("trajectory-route-casing")) {
-            map.addLayer({
-              id: "trajectory-route-casing",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#021533", "line-width": 12, "line-opacity": 0.95 },
-            });
+        const setOrQueueInitialRoute = () => {
+          const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+          if (source) {
+            source.setData(initialData);
+            return true;
           }
-          if (!map.getLayer("trajectory-route-glow")) {
-            map.addLayer({
-              id: "trajectory-route-glow",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
-            });
+          if (map.isStyleLoaded()) {
+            try {
+              map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: initialData });
+              if (!map.getLayer("trajectory-route-casing")) {
+                map.addLayer({
+                  id: "trajectory-route-casing",
+                  type: "line",
+                  source: ROUTE_SOURCE_ID,
+                  layout: { "line-join": "round", "line-cap": "round" },
+                  paint: { "line-color": "#021533", "line-width": 12, "line-opacity": 0.95 },
+                });
+              }
+              if (!map.getLayer("trajectory-route-glow")) {
+                map.addLayer({
+                  id: "trajectory-route-glow",
+                  type: "line",
+                  source: ROUTE_SOURCE_ID,
+                  layout: { "line-join": "round", "line-cap": "round" },
+                  paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
+                });
+              }
+              if (!map.getLayer("trajectory-route-laser")) {
+                map.addLayer({
+                  id: "trajectory-route-laser",
+                  type: "line",
+                  source: ROUTE_SOURCE_ID,
+                  layout: { "line-join": "round", "line-cap": "round" },
+                  paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
+                });
+              }
+              return true;
+            } catch (err) {
+              console.error("Error creating route source on demand:", err);
+            }
           }
-          if (!map.getLayer("trajectory-route-laser")) {
-            map.addLayer({
-              id: "trajectory-route-laser",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
-            });
-          }
+          return false;
+        };
+
+        if (!setOrQueueInitialRoute()) {
+          map.once("styledata", () => setOrQueueInitialRoute());
+          setTimeout(() => setOrQueueInitialRoute(), 200);
         }
 
         // Restore mesh links if available
@@ -415,24 +430,38 @@ export function InvestigationMap({
       features: meshFeatures,
     };
 
-    try {
-      if (map.getSource(MESH_LINKS_SOURCE_ID)) {
-        (map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource).setData(meshGeojson);
-      } else {
-        map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
-        map.addLayer({
-          id: "camera-mesh-layer",
-          type: "line",
-          source: MESH_LINKS_SOURCE_ID,
-          paint: {
-            "line-color": "#0284c7",
-            "line-width": 1.5,
-            "line-opacity": 0.35,
-          },
-        });
+    const setOrQueueMesh = () => {
+      const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (meshSrc) {
+        meshSrc.setData(meshGeojson);
+        return true;
       }
-    } catch (err) {
-      console.error("FAILED TO ADD MESH LAYER:", err);
+      if (map.isStyleLoaded()) {
+        try {
+          map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
+          if (!map.getLayer("camera-mesh-layer")) {
+            map.addLayer({
+              id: "camera-mesh-layer",
+              type: "line",
+              source: MESH_LINKS_SOURCE_ID,
+              paint: {
+                "line-color": "#0284c7",
+                "line-width": 1.5,
+                "line-opacity": 0.35,
+              },
+            });
+          }
+          return true;
+        } catch (err) {
+          console.error("FAILED TO ADD MESH LAYER:", err);
+        }
+      }
+      return false;
+    };
+
+    if (!setOrQueueMesh()) {
+      map.once("styledata", () => setOrQueueMesh());
+      setTimeout(() => setOrQueueMesh(), 200);
     }
 
     // 2. Render sleek tactical CCTV camera pins for cameras NOT in active trajectory
@@ -518,42 +547,53 @@ export function InvestigationMap({
           },
         ],
       };
-      const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-      if (source) {
-        source.setData(data);
-      } else {
-        try {
-          map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data });
-          if (!map.getLayer("trajectory-route-casing")) {
-            map.addLayer({
-              id: "trajectory-route-casing",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#031738", "line-width": 12, "line-opacity": 0.95 },
-            });
-          }
-          if (!map.getLayer("trajectory-route-glow")) {
-            map.addLayer({
-              id: "trajectory-route-glow",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
-            });
-          }
-          if (!map.getLayer("trajectory-route-laser")) {
-            map.addLayer({
-              id: "trajectory-route-laser",
-              type: "line",
-              source: ROUTE_SOURCE_ID,
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
-            });
-          }
-        } catch (err) {
-          console.error("Error creating route source on demand:", err);
+      const setOrQueueRoute = () => {
+        const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+        if (source) {
+          source.setData(data);
+          return true;
         }
+        if (map.isStyleLoaded()) {
+          try {
+            map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data });
+            if (!map.getLayer("trajectory-route-casing")) {
+              map.addLayer({
+                id: "trajectory-route-casing",
+                type: "line",
+                source: ROUTE_SOURCE_ID,
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: { "line-color": "#021533", "line-width": 12, "line-opacity": 0.95 },
+              });
+            }
+            if (!map.getLayer("trajectory-route-glow")) {
+              map.addLayer({
+                id: "trajectory-route-glow",
+                type: "line",
+                source: ROUTE_SOURCE_ID,
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
+              });
+            }
+            if (!map.getLayer("trajectory-route-laser")) {
+              map.addLayer({
+                id: "trajectory-route-laser",
+                type: "line",
+                source: ROUTE_SOURCE_ID,
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
+              });
+            }
+            return true;
+          } catch (err) {
+            console.error("Error creating route source on demand:", err);
+          }
+        }
+        return false;
+      };
+
+      if (!setOrQueueRoute()) {
+        map.once("styledata", () => setOrQueueRoute());
+        setTimeout(() => setOrQueueRoute(), 200);
       }
     };
 
