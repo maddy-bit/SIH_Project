@@ -72,7 +72,7 @@ export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProp
           </div>
         </div>
         <span className="rounded bg-sky-100 px-2 py-0.5 text-[10px] font-mono font-bold text-sky-800 border border-sky-300">
-          AI FORECAST
+          ROUTE FORECAST
         </span>
       </div>
 

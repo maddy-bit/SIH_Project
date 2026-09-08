@@ -145,7 +145,7 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Camera Nodes"
             value={`${data.camerasOnline}/${data.totalCameras}`}
-            sublabel="Network operational"
+            sublabel="Active Network"
             accent="text-emerald-700"
           />
         </StatCard>
@@ -154,7 +154,7 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Processing Feeds"
             value={data.camerasProcessing}
-            sublabel="Real-time 4K inference"
+            sublabel="Live Camera Streams"
             accent="text-sky-800"
           />
         </StatCard>
@@ -163,7 +163,7 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Attention Required"
             value={data.camerasOffline}
-            sublabel="Zero feed signal"
+            sublabel="No Feed Signal"
             accent={data.camerasOffline > 0 ? "text-amber-700" : "text-slate-400"}
           />
         </StatCard>
@@ -172,7 +172,7 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Unique Plates"
             value={data.totalVehicles.toLocaleString()}
-            sublabel="Normalized database"
+            sublabel="Registered Records"
             accent="text-purple-700"
           />
         </StatCard>
@@ -181,7 +181,7 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Inference Logs"
             value={data.totalDetections.toLocaleString()}
-            sublabel="YOLO + OCR bounding boxes"
+            sublabel="Detection Logs"
             accent="text-blue-700"
           />
         </StatCard>
@@ -194,7 +194,7 @@ export function AnalyticsDashboard() {
                 ? `${data.averageTransitionSpeedKmh.toFixed(0)} km/h`
                 : "—"
             }
-            sublabel="Inter-camera transit"
+            sublabel="Corridor Transit"
             accent="text-emerald-700"
           />
         </StatCard>
@@ -222,7 +222,7 @@ export function AnalyticsDashboard() {
         </StatCard>
 
         {/* Vehicle Classification Breakdown */}
-        <StatCard title="Vehicle Classification (YOLOv8)" className="lg:col-span-1">
+        <StatCard title="Vehicle Classification" className="lg:col-span-1">
           {data.vehicleTypeDistribution.length === 0 ? (
             <p className="text-xs text-slate-400 font-mono py-4">No vehicle classifications recorded yet.</p>
           ) : (

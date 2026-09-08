@@ -400,7 +400,7 @@ export function VehicleHologram3D({
           <div className="text-[11px] font-bold text-slate-800">4.68 x 1.86 x 1.69 m</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-1.5">
-          <div className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">YOLOv8 Class</div>
+          <div className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Vehicle Class</div>
           <div className="text-[11px] font-bold text-emerald-700">SUV (98.4%)</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-1.5">

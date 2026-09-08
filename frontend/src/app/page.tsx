@@ -34,16 +34,16 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="rounded bg-sky-100 px-1.5 py-0.2 text-[9px] font-mono font-black tracking-widest text-sky-800 border border-sky-200">
-                  SIH26127
+                  SYS-01
                 </span>
                 <span className="hidden sm:inline text-[10px] font-extrabold text-slate-600 uppercase tracking-widest font-mono">
-                  SMART CITY SURVEILLANCE
+                  URBAN TRAFFIC MONITORING
                 </span>
               </div>
               <h1 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
                 <span>City AI Traffic Intelligence</span>
                 <span className="hidden lg:inline text-[9px] font-mono text-sky-800 font-extrabold border border-sky-200 px-1.5 py-0.2 rounded bg-sky-50">
-                  v2.4 NEURAL
+                  v2.4 STABLE
                 </span>
               </h1>
             </div>

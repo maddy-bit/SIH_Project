@@ -58,7 +58,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
             </h2>
           </div>
           <span className="text-[10px] font-mono text-sky-800 bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-md font-bold shadow-xs">
-            YOLOv8 + EasyOCR
+            License Plate Recognition
           </span>
         </div>
 
@@ -67,7 +67,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
             <span>Vehicle Registration Plate</span>
             <span className="text-[10px] text-sky-700 font-mono font-bold flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              3D ANPR Active
+              ANPR Active
             </span>
           </div>
 

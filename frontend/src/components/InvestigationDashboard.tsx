@@ -164,10 +164,10 @@ export function InvestigationDashboard() {
         <div className="flex items-center gap-3">
           <span className="flex h-3 w-3 rounded-full bg-sky-500 shadow-xs animate-pulse" />
           <span className="text-xs font-mono font-extrabold text-sky-800 tracking-wider">
-            3D CITY AI SURVEILLANCE MATRIX
+            3D CITY SURVEILLANCE MATRIX
           </span>
           <span className="hidden sm:inline text-xs text-slate-600 font-semibold">
-            • 12 Real-Time 4K Video Feeds • YOLOv8 Vehicle Classifiers • EasyOCR Neural Core
+            • 12 Real-Time Camera Feeds • Automated Vehicle Classifiers • Optical License Scanner
           </span>
         </div>
 

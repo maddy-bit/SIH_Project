@@ -30,7 +30,7 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
   async function handleStartIngestion() {
     setIsProcessing(true);
     setProgress(10);
-    setStatusText("Loading Video Feed into Neural Pipeline...");
+    setStatusText("Loading Video Feed into Processing Pipeline...");
     setResultMessage(null);
 
     try {
@@ -42,7 +42,7 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
       const res = await processVideoFeed(videoPath, cameraId);
 
       setProgress(100);
-      setStatusText("YOLOv8 + ByteTrack + EasyOCR Execution Complete!");
+      setStatusText("Optical Detection & License Recognition Complete!");
       setResultMessage(
         `Successfully processed ${res.framesProcessed || 120} frames. Detected ${
           res.detectionsCount || 15
@@ -85,10 +85,10 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
               </div>
               <div>
                 <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
-                  CCTV Video Feed AI Ingestion Engine
+                  CCTV Video Feed Processing Engine
                 </h2>
                 <p className="text-xs text-slate-500 font-mono">
-                  YOLOv8 DETECTOR • BYTETRACK TRACKER • EASYOCR CORE
+                  AUTOMATED DETECTOR • VEHICLE TRACKER • OPTICAL RECOGNITION
                 </p>
               </div>
             </div>

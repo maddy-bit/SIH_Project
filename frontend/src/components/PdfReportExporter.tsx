@@ -50,7 +50,7 @@ export function PdfReportExporter({ summary, trajectory }: PdfReportExporterProp
         <div style={{ borderBottom: "3px solid #000", paddingBottom: "12px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontSize: "18px", fontWeight: "900", textTransform: "uppercase", letterSpacing: "1px" }}>
-              🏙️ City AI Traffic Intelligence — SIH26127
+              🏙️ City AI Traffic Intelligence — SYS-01
             </div>
             <div style={{ fontSize: "13px", fontWeight: "600", color: "#374151", marginTop: "2px" }}>
               Official ANPR Vehicle Intelligence &amp; Trajectory Dossier
@@ -173,7 +173,7 @@ export function PdfReportExporter({ summary, trajectory }: PdfReportExporterProp
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontWeight: "700", color: "#000" }}>Digital Verification Seal</div>
-            <div style={{ fontFamily: "monospace", marginTop: "4px" }}>BEL-SIH26127-AUTH-SEC</div>
+            <div style={{ fontFamily: "monospace", marginTop: "4px" }}>BEL-TRAFFIC-AUTH-SEC</div>
             <div style={{ marginTop: "4px" }}>This document is classified CONFIDENTIAL.</div>
             <div>Unauthorized disclosure is an offence under IT Act 2000.</div>
           </div>

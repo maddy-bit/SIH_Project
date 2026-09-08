@@ -52,8 +52,8 @@ export function EvidenceViewer({ point }: EvidenceViewerProps) {
               {(
                 [
                   { id: "standard", label: "Standard" },
-                  { id: "thermal", label: "Thermal IR" },
-                  { id: "edge", label: "AI Edge" },
+                  { id: "thermal", label: "Infrared" },
+                  { id: "edge", label: "High Contrast" },
                 ] as const
               ).map((mode) => (
                 <button

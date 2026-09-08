@@ -169,7 +169,7 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
                 <div className="text-center font-mono text-sm text-zinc-300">
                   <div className="text-4xl mb-2">📹</div>
                   <div className="text-white font-bold">LIVE 4K CAMERA STREAM — {expandedCam.id}</div>
-                  <div className="text-xs text-cyan-400 mt-1">YOLOv8 Detection + ByteTrack Active (0.012s Latency)</div>
+                  <div className="text-xs text-cyan-400 mt-1">Vehicle Detection + Tracking Active (0.012s Latency)</div>
                 </div>
                 <div className="absolute top-4 left-4 border border-slate-700 bg-slate-900/90 p-3 rounded-xl text-xs font-mono text-zinc-200">
                   <div>FPS: <span className="text-emerald-400 font-bold">59.8</span></div>

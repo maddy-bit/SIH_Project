@@ -625,16 +625,16 @@ export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) 
               <div>
                 <div className="flex items-center gap-2">
                   <span className="rounded bg-sky-100 px-2 py-0.5 text-[10px] font-mono font-black text-sky-800 border border-sky-200">
-                    SIH26127 // DEFCON-1
+                    SYS-01 // READY
                   </span>
                   <span className="text-[11px] font-mono font-bold text-slate-500 uppercase tracking-widest">
                     SMART CITY TRAFFIC SURVEILLANCE
                   </span>
                 </div>
                 <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
-                  <span>City AI Neural Matrix Initialization</span>
+                  <span>City AI Traffic Network Initialization</span>
                   <span className="text-xs font-mono font-bold text-sky-800 px-2 py-0.5 rounded border border-sky-200 bg-sky-50">
-                    v2.4 NEURAL
+                    v2.4 STABLE
                   </span>
                 </h1>
               </div>
@@ -642,7 +642,7 @@ export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) 
 
             <div className="flex items-center gap-3">
               <div className="flex flex-col text-right font-mono text-[11px]">
-                <span className="text-slate-500">NEURAL ENGINE CALIBRATION</span>
+                <span className="text-slate-500">SYSTEM CALIBRATION</span>
                 <span className="font-extrabold text-sky-700">
                   INITIALIZATION: {progress}%
                 </span>

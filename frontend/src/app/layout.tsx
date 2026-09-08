@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "City AI Traffic Intelligence",
-  description: "City-wide AI engine for multi-camera ANPR trajectory tracking and urban traffic analytics (SIH26127).",
+  description: "City-wide engine for multi-camera ANPR trajectory tracking and urban traffic analytics.",
 };
 
 export default function RootLayout({
