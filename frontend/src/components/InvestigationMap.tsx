@@ -547,15 +547,17 @@ export function InvestigationMap({
           },
         ],
       };
-      const setOrQueueRoute = () => {
-        const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-        if (source) {
-          source.setData(data);
-          return true;
-        }
-        if (map.isStyleLoaded()) {
-          try {
+
+      const setRouteData = () => {
+        try {
+          const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+          if (source) {
+            source.setData(data);
+          } else if (map.isStyleLoaded()) {
             map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data });
+          }
+
+          if (map.isStyleLoaded()) {
             if (!map.getLayer("trajectory-route-casing")) {
               map.addLayer({
                 id: "trajectory-route-casing",
@@ -583,18 +585,24 @@ export function InvestigationMap({
                 paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
               });
             }
-            return true;
-          } catch (err) {
-            console.error("Error creating route source on demand:", err);
           }
+        } catch (err) {
+          console.error("Error setting route data:", err);
         }
-        return false;
       };
 
-      if (!setOrQueueRoute()) {
-        map.once("styledata", () => setOrQueueRoute());
-        setTimeout(() => setOrQueueRoute(), 200);
+      setRouteData();
+
+      // If style is still loading, MapLibre will overwrite sources when it finishes.
+      // Re-apply route data once style is fully ready.
+      if (!map.isStyleLoaded()) {
+        map.once("style.load", setRouteData);
+        map.once("load", setRouteData);
+        map.once("styledata", setRouteData);
       }
+      setTimeout(setRouteData, 250);
+      setTimeout(setRouteData, 600);
+      setTimeout(setRouteData, 1200);
     };
 
     // Immediately render initial route using current camera waypoints
