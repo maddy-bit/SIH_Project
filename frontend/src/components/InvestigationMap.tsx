@@ -146,7 +146,7 @@ export function InvestigationMap({
     return p;
   });
 
-  // Initialize map with bulletproof raster tile config
+  // Initialize map with bulletproof raster tile config & 3D pitch capability
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -156,6 +156,7 @@ export function InvestigationMap({
       center: [73.8350, 18.5350], // Pune City Camera Network
       zoom: 12.5,
       pitch: 50,   // 3D Isometric View by default
+      maxPitch: 85, // Enable full 3D tilt up to 85°
       bearing: -18,
       attributionControl: { compact: true },
     });
@@ -180,7 +181,7 @@ export function InvestigationMap({
             type: "line",
             source: ROUTE_SOURCE_ID,
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#091e42", "line-width": 10 },
+            paint: { "line-color": "#031738", "line-width": 12, "line-opacity": 0.95 },
           });
         }
 
@@ -190,7 +191,7 @@ export function InvestigationMap({
             type: "line",
             source: ROUTE_SOURCE_ID,
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#0284c7", "line-width": 6 },
+            paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
           });
         }
 
@@ -200,7 +201,7 @@ export function InvestigationMap({
             type: "line",
             source: ROUTE_SOURCE_ID,
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#ffffff", "line-width": 2 },
+            paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
           });
         }
       } catch (err) {
@@ -300,7 +301,7 @@ export function InvestigationMap({
             type: "line",
             source: ROUTE_SOURCE_ID,
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#091e42", "line-width": 10, "line-opacity": 0.85 },
+            paint: { "line-color": "#031738", "line-width": 12, "line-opacity": 0.95 },
           });
         }
         if (!map.getLayer("trajectory-route-glow")) {
@@ -309,7 +310,7 @@ export function InvestigationMap({
             type: "line",
             source: ROUTE_SOURCE_ID,
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#0284c7", "line-width": 6, "line-opacity": 0.95 },
+            paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
           });
         }
         if (!map.getLayer("trajectory-route-laser")) {
@@ -318,7 +319,7 @@ export function InvestigationMap({
             type: "line",
             source: ROUTE_SOURCE_ID,
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 1.0 },
+            paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
           });
         }
 
@@ -395,14 +396,25 @@ export function InvestigationMap({
     setPitchMode(mode);
     setIs3D(mode !== "2D");
 
-    const targetPitch = mode === "2D" ? 0 : mode === "3D" ? 50 : 65;
-    const targetBearing = mode === "2D" ? 0 : -18;
-
-    map.easeTo({
-      pitch: targetPitch,
-      bearing: targetBearing,
-      duration: 900,
-    });
+    if (mode === "2D") {
+      map.easeTo({
+        pitch: 0,
+        bearing: 0,
+        duration: 800,
+      });
+    } else if (mode === "3D") {
+      map.easeTo({
+        pitch: 55,
+        bearing: -25,
+        duration: 800,
+      });
+    } else if (mode === "DRONE") {
+      map.easeTo({
+        pitch: 75,
+        bearing: 45,
+        duration: 800,
+      });
+    }
   };
 
   // Render camera network mesh and tactical camera pins
@@ -550,7 +562,7 @@ export function InvestigationMap({
               type: "line",
               source: ROUTE_SOURCE_ID,
               layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#091e42", "line-width": 10, "line-opacity": 0.85 },
+              paint: { "line-color": "#031738", "line-width": 12, "line-opacity": 0.95 },
             });
           }
           if (!map.getLayer("trajectory-route-glow")) {
@@ -559,7 +571,7 @@ export function InvestigationMap({
               type: "line",
               source: ROUTE_SOURCE_ID,
               layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#0284c7", "line-width": 6, "line-opacity": 0.95 },
+              paint: { "line-color": "#0284c7", "line-width": 7, "line-opacity": 1.0 },
             });
           }
           if (!map.getLayer("trajectory-route-laser")) {
@@ -568,7 +580,7 @@ export function InvestigationMap({
               type: "line",
               source: ROUTE_SOURCE_ID,
               layout: { "line-join": "round", "line-cap": "round" },
-              paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 1.0 },
+              paint: { "line-color": "#38bdf8", "line-width": 3, "line-opacity": 1.0 },
             });
           }
         } catch (err) {
