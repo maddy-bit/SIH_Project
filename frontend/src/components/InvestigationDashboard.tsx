@@ -57,10 +57,6 @@ export function InvestigationDashboard() {
     getCameras()
       .then(setCameras)
       .catch(() => {});
-
-    // Automatically load default demo target MH12AB1234 on mount so UI is pre-populated
-    handleSearch("MH12AB1234", "historical");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -159,57 +155,77 @@ export function InvestigationDashboard() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      {/* Crisp High-Contrast Action Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 shadow-xs">
-        <div className="flex items-center gap-3">
-          <span className="flex h-3 w-3 rounded-full bg-sky-500 shadow-xs animate-pulse" />
-          <span className="text-xs font-mono font-extrabold text-sky-800 tracking-wider">
-            3D CITY SURVEILLANCE
+      {/* Sharp Neo-Brutalist Action Strip */}
+      <div className="neo-box p-3 sm:px-4 sm:py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-600" />
+          <span className="text-sm sm:text-base font-mono font-bold text-slate-950 tracking-wide uppercase">
+            Active Multi-Camera Tracking
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => setIsVideoIngestOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-2 text-xs font-mono font-bold text-white shadow-xs hover:from-sky-500 hover:to-blue-500 transition-all cursor-pointer"
+            className="neo-btn-accent flex items-center gap-2 px-4 py-2.5 text-sm font-mono font-bold uppercase cursor-pointer"
           >
             <span>📹</span>
-            <span>Ingest CCTV Video Feed</span>
+            <span>Ingest Video Feed</span>
           </button>
           <button
             type="button"
             onClick={() => setIsCameraGridOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-sky-300 bg-white px-4 py-2 text-xs font-mono font-bold text-sky-800 hover:bg-sky-50 transition-all shadow-xs cursor-pointer"
+            className="neo-btn-secondary flex items-center gap-2 px-4 py-2.5 text-sm font-mono font-bold uppercase cursor-pointer"
           >
             <span>🎥</span>
-            <span>Live 12-Camera CCTV Matrix</span>
+            <span>12-Camera Grid</span>
           </button>
         </div>
       </div>
 
       {/* Main 3-Column Layout */}
-      <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[350px_1fr_370px] xl:grid-cols-[370px_1fr_390px]">
-        {/* Left Column */}
+      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[360px_1fr_360px] xl:grid-cols-[380px_1fr_380px]">
+        {/* Left Column: Target Search & Surveillance Controls */}
         <div className="flex flex-col gap-4">
           <VehicleSearchPanel onSearch={handleSearch} isSearching={searchState === "searching"} />
 
           <SecurityWatchlistModal />
 
           <AnimatePresence mode="wait">
+            {searchState === "idle" && (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="neo-box p-4 bg-white"
+              >
+                <div className="flex items-center gap-2 text-slate-950 font-bold text-base mb-1.5 uppercase tracking-wide">
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-slate-700" />
+                  <span>Ready for Target Input</span>
+                </div>
+                <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                  Enter a vehicle registration number above or choose a preset scenario, then click <strong className="text-slate-950 font-bold font-mono">⚡ Reconstruct 3D Trajectory</strong> to begin multi-camera tracking.
+                </p>
+              </motion.div>
+            )}
+
             {searchState === "not-found" && (
               <motion.div
                 key="not-found"
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="card-3d-light rounded-2xl p-4.5 text-xs text-slate-600 border border-slate-200"
+                className="neo-box p-4 border border-slate-300"
               >
-                <div className="flex items-center gap-2 text-amber-700 font-bold mb-1.5">
+                <div className="flex items-center gap-2 text-amber-600 font-bold text-sm mb-1">
                   <span>⚠</span>
-                  <span>NO TARGET RECORD FOUND</span>
+                  <span className="uppercase tracking-wide font-mono">TARGET RECORD NOT FOUND</span>
                 </div>
-                No vehicle detections match this plate string. Try selecting one of the demo targets above.
+                <p className="text-sm text-slate-700 font-medium">
+                  No camera detections match this plate string. Try selecting one of the preset targets above.
+                </p>
               </motion.div>
             )}
 
@@ -219,35 +235,34 @@ export function InvestigationDashboard() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="card-3d-light rounded-2xl border border-rose-200 bg-rose-50 p-4.5 text-xs text-rose-800 shadow-sm"
+                className="neo-box bg-rose-50 p-4 border border-rose-300"
               >
-                <div className="flex items-center gap-2 font-bold mb-1.5">
+                <div className="flex items-center gap-2 font-bold mb-1 font-mono text-sm text-rose-700">
                   <span>⛔</span>
-                  <span>SERVICE RECONNECTION</span>
+                  <span>ENGINE RECONNECTION</span>
                 </div>
-                {errorMessage ?? "Unable to connect to trajectory engine."}
+                <p className="font-medium text-sm text-rose-800">{errorMessage ?? "Unable to connect to trajectory engine."}</p>
               </motion.div>
             )}
 
             {searchState === "found" && summary && (
               <motion.div
                 key="found"
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col gap-3.5"
               >
                 {isLive && (
-                  <div className="flex items-center justify-between rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-mono text-sky-800 shadow-xs">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-sm font-mono font-bold text-amber-950">
+                    <div className="flex items-center gap-2">
                       <span className="relative flex h-2.5 w-2.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-500 opacity-75" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-600" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
                       </span>
-                      <span className="font-black">
-                        {liveStatus === "connecting" ? "ESTABLISHING WEBSOCKET LINK…" : "LIVE 3D RADAR REPLAY ACTIVE"}
+                      <span>
+                        {liveStatus === "connecting" ? "CONNECTING WEBSOCKET…" : "LIVE RADAR REPLAY ACTIVE"}
                       </span>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-200 font-bold text-sky-900">LIVE</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-xs bg-amber-500 text-black font-black">LIVE</span>
                   </div>
                 )}
                 <VehicleIntelligencePanel summary={summary} trajectory={trajectory} />
@@ -257,16 +272,14 @@ export function InvestigationDashboard() {
           </AnimatePresence>
 
           {points.length >= 2 && !isLive && (
-            <motion.button
+            <button
               type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
               onClick={() => setReplayToken((n) => n + 1)}
-              className="btn-3d-light flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-mono font-bold tracking-widest text-white shadow-md uppercase cursor-pointer"
+              className="neo-btn flex items-center justify-center gap-2 py-3.5 text-sm sm:text-base font-mono font-bold tracking-wider text-white uppercase cursor-pointer"
             >
               <span>▶</span>
-              <span>Replay 3D Trajectory Route</span>
-            </motion.button>
+              <span>Replay Route Trajectory</span>
+            </button>
           )}
         </div>
 

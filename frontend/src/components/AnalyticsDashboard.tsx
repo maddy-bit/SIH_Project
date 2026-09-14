@@ -8,29 +8,31 @@ import { TiltCard3D } from "./TiltCard3D";
 
 function StatCard({
   title,
+  colTag,
   children,
   className = "",
 }: {
   title: string;
+  colTag?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <TiltCard3D maxTilt={4} scale={1.01}>
-      <div
-        className={`card-3d-light relative rounded-2xl p-5 transition-all duration-300 overflow-hidden ${className}`}
-      >
-        {/* Tactical HUD Corner Reticles */}
-        <div className="pointer-events-none absolute top-2 left-2 h-2 w-2 border-t-2 border-l-2 border-sky-400/80" />
-        <div className="pointer-events-none absolute top-2 right-2 h-2 w-2 border-t-2 border-r-2 border-sky-400/80" />
-        <div className="pointer-events-none absolute bottom-2 left-2 h-2 w-2 border-b-2 border-l-2 border-sky-400/80" />
-        <div className="pointer-events-none absolute bottom-2 right-2 h-2 w-2 border-b-2 border-r-2 border-sky-400/80" />
-
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{title}</h2>
-          <span className="h-2 w-2 rounded-full bg-sky-500 shadow-xs animate-pulse" />
+    <TiltCard3D>
+      <div className={`neo-box overflow-hidden ${className}`}>
+        {/* Dedicated Box Header Strip */}
+        <div className="neo-header">
+          <div className="flex items-center gap-2">
+            {colTag && (
+              <span className="bg-slate-800 text-white font-mono font-bold text-xs px-2.5 py-0.5 rounded-xs">
+                {colTag}
+              </span>
+            )}
+            <h2 className="text-base font-bold uppercase tracking-wider text-slate-950">{title}</h2>
+          </div>
+          <span className="h-2 w-2 rounded-full bg-slate-400" />
         </div>
-        <div className="mt-3.5">{children}</div>
+        <div className="p-4">{children}</div>
       </div>
     </TiltCard3D>
   );
@@ -40,7 +42,6 @@ function BigStat({
   label,
   value,
   sublabel,
-  accent = "text-sky-800",
 }: {
   label: string;
   value: string | number;
@@ -49,14 +50,14 @@ function BigStat({
 }) {
   return (
     <div>
-      <div className={`text-3xl font-black font-mono tabular-nums tracking-tight ${accent}`}>
+      <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums tracking-tight text-slate-950">
         {value}
       </div>
-      <div className="mt-1 text-[11px] font-bold uppercase tracking-wider text-slate-700">
+      <div className="mt-1 text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
         {label}
       </div>
       {sublabel && (
-        <div className="mt-0.5 text-[10px] font-mono text-slate-400">{sublabel}</div>
+        <div className="mt-0.5 text-[11px] font-mono font-bold text-slate-800">{sublabel}</div>
       )}
     </div>
   );
@@ -66,32 +67,33 @@ function BarRow({
   label,
   count,
   max,
-  accent = "from-sky-500 to-blue-600",
   icon,
 }: {
   label: string;
   count: number;
   max: number;
-  accent?: string;
   icon?: string;
 }) {
-  const pct = max > 0 ? Math.max(5, Math.round((count / max) * 100)) : 0;
+  const pct = max > 0 ? Math.max(4, Math.round((count / max) * 100)) : 0;
 
   return (
-    <div className="mb-3.5 last:mb-0">
-      <div className="mb-1.5 flex items-center justify-between text-xs">
-        <span className="flex items-center gap-2 font-bold text-slate-800">
+    <div className="mb-3 last:mb-0">
+      <div className="mb-1 flex items-center justify-between text-xs sm:text-sm">
+        <span className="flex items-center gap-1.5 font-bold text-slate-950 font-mono">
           {icon && <span className="text-sm">{icon}</span>}
           <span>{label}</span>
         </span>
-        <span className="font-mono font-black tabular-nums text-slate-700">{count.toLocaleString()}</span>
+        <span className="font-mono font-bold tabular-nums text-slate-950 bg-slate-100 px-2.5 py-0.5 rounded-xs border border-slate-300 text-xs sm:text-sm">
+          {count.toLocaleString()}
+        </span>
       </div>
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200 shadow-inner">
+      {/* Clean refined progress bar with dark slate fill */}
+      <div className="h-2.5 w-full overflow-hidden rounded-xs bg-slate-100 border border-slate-300">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className={`h-full rounded-full bg-gradient-to-r ${accent}`}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="h-full bg-slate-800 rounded-none"
         />
       </div>
     </div>
@@ -111,12 +113,12 @@ export function AnalyticsDashboard() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="card-3d-light rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800 shadow-md">
-          <div className="flex items-center gap-2 font-bold mb-1">
+        <div className="neo-box bg-rose-100 p-6 text-sm text-black">
+          <div className="flex items-center gap-2 font-mono font-black mb-1">
             <span>⛔</span>
             <span>ANALYTICS SERVICE UNAVAILABLE</span>
           </div>
-          {error}
+          <p className="font-medium">{error}</p>
         </div>
       </div>
     );
@@ -124,10 +126,10 @@ export function AnalyticsDashboard() {
 
   if (!data) {
     return (
-      <div className="flex flex-1 items-center justify-center p-12 text-sm text-slate-500 font-mono">
+      <div className="flex flex-1 items-center justify-center p-12 text-xs text-neutral-600 font-mono">
         <div className="flex items-center gap-3">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
-          <span>COMPILING 3D SMART CITY METRICS…</span>
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
+          <span className="font-black">COMPILING SMART CITY METRICS…</span>
         </div>
       </div>
     );
@@ -138,14 +140,14 @@ export function AnalyticsDashboard() {
   const cameraMax = Math.max(1, ...data.busiestCameras.map((c) => c.count));
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-4">
-      {/* Top Telemetry KPI Bar */}
+    <div className="flex-1 p-4 md:p-6 space-y-5">
+      {/* Top Telemetry KPI Bar - 6 Clear Metric Tiles */}
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard title="Active Surveillance">
           <BigStat
             label="Camera Nodes"
             value={`${data.camerasOnline}/${data.totalCameras}`}
-            accent="text-emerald-700"
+            sublabel="Surveillance Mesh"
           />
         </StatCard>
 
@@ -153,23 +155,23 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Processing Feeds"
             value={data.camerasProcessing}
-            accent="text-sky-800"
+            sublabel="Live Ingestion"
           />
         </StatCard>
 
         <StatCard title="Offline Nodes">
           <BigStat
-            label="Attention Required"
+            label="Maintenance"
             value={data.camerasOffline}
-            accent={data.camerasOffline > 0 ? "text-amber-700" : "text-slate-400"}
+            sublabel={data.camerasOffline > 0 ? "Attention Required" : "All Operational"}
           />
         </StatCard>
 
-        <StatCard title="Identified Targets">
+        <StatCard title="Target Catalog">
           <BigStat
             label="Unique Plates"
             value={data.totalVehicles.toLocaleString()}
-            accent="text-purple-700"
+            sublabel="OCR Recognized"
           />
         </StatCard>
 
@@ -177,11 +179,11 @@ export function AnalyticsDashboard() {
           <BigStat
             label="Inference Logs"
             value={data.totalDetections.toLocaleString()}
-            accent="text-blue-700"
+            sublabel="Timestamped Frames"
           />
         </StatCard>
 
-        <StatCard title="Avg Corridor Speed">
+        <StatCard title="Corridor Velocity">
           <BigStat
             label="Kinematic Flow"
             value={
@@ -189,38 +191,37 @@ export function AnalyticsDashboard() {
                 ? `${data.averageTransitionSpeedKmh.toFixed(0)} km/h`
                 : "—"
             }
-            accent="text-emerald-700"
+            sublabel="Inter-Node Average"
           />
         </StatCard>
       </div>
 
-      {/* Main Analytics Content Grids */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Hourly Distribution */}
+      {/* Main Analytics Content Grids - 3 Clearly Differentiated Columns */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Column 1: Hourly Distribution */}
         <StatCard title="Hourly Traffic Density (24H)" className="lg:col-span-1">
           {data.detectionsByHour.length === 0 ? (
-            <p className="text-xs text-slate-400 font-mono py-4">No hourly detection data recorded yet.</p>
+            <p className="text-xs text-neutral-500 font-mono py-4">No hourly detection data recorded yet.</p>
           ) : (
-            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
               {data.detectionsByHour.map((h) => (
                 <BarRow
                   key={h.hour}
                   label={`${String(h.hour).padStart(2, "0")}:00 hrs`}
                   count={h.count}
                   max={hourMax}
-                  accent="from-sky-500 to-teal-500"
                 />
               ))}
             </div>
           )}
         </StatCard>
 
-        {/* Vehicle Classification Breakdown */}
+        {/* Column 2: Vehicle Classification Breakdown */}
         <StatCard title="Vehicle Classification" className="lg:col-span-1">
           {data.vehicleTypeDistribution.length === 0 ? (
-            <p className="text-xs text-slate-400 font-mono py-4">No vehicle classifications recorded yet.</p>
+            <p className="text-xs text-neutral-500 font-mono py-4">No vehicle classifications recorded yet.</p>
           ) : (
-            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
               {data.vehicleTypeDistribution.map((t) => {
                 const icon =
                   t.vehicleType?.toLowerCase() === "suv"
@@ -240,7 +241,6 @@ export function AnalyticsDashboard() {
                     count={t.count}
                     max={typeMax}
                     icon={icon}
-                    accent="from-purple-500 to-indigo-600"
                   />
                 );
               })}
@@ -248,19 +248,18 @@ export function AnalyticsDashboard() {
           )}
         </StatCard>
 
-        {/* Busiest Camera Nodes */}
+        {/* Column 3: Busiest Camera Nodes */}
         <StatCard title="High-Density Camera Checkpoints" className="lg:col-span-1">
           {data.busiestCameras.length === 0 ? (
-            <p className="text-xs text-slate-400 font-mono py-4">No camera density data recorded.</p>
+            <p className="text-xs text-neutral-500 font-mono py-4">No camera density data recorded.</p>
           ) : (
-            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
               {data.busiestCameras.map((c) => (
                 <BarRow
                   key={c.cameraId}
                   label={`${c.cameraId} (${c.cameraName})`}
                   count={c.count}
                   max={cameraMax}
-                  accent="from-amber-500 to-orange-500"
                 />
               ))}
             </div>
@@ -268,63 +267,75 @@ export function AnalyticsDashboard() {
         </StatCard>
       </div>
 
-      {/* Top Corridors & Arterial Routes */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Secondary Analytics Content Grids - 2 Clearly Differentiated Columns */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Column 4: Top Corridors */}
         <StatCard title="Most Frequent Traffic Corridors">
           {data.topRoutes.length === 0 ? (
-            <p className="text-xs text-slate-400 font-mono py-4">No multi-camera route transitions scored yet.</p>
+            <p className="text-xs text-slate-700 font-mono py-4">No multi-camera route transitions scored yet.</p>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {data.topRoutes.slice(0, 5).map((r, i) => (
                 <div
                   key={`${r.fromCameraId}-${r.toCameraId}`}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-xs"
+                  className="flex items-center justify-between rounded-md border border-slate-300 bg-white p-3 text-sm"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-sky-100 text-sky-800 font-mono font-bold text-[10px]">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-xs bg-slate-900 text-white font-mono font-bold text-xs">
                       #{i + 1}
                     </span>
-                    <span className="font-mono font-bold text-slate-900">{r.fromCameraId}</span>
-                    <span className="text-sky-600 font-bold">➔</span>
-                    <span className="font-mono font-bold text-slate-900">{r.toCameraId}</span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="font-mono font-bold text-slate-950 text-sm">{r.fromCameraId}</span>
+                    <span className="font-bold text-slate-500">➔</span>
+                    <span className="font-mono font-bold text-slate-950 text-sm">{r.toCameraId}</span>
+                    <span className="text-xs text-slate-800 font-mono font-bold hidden sm:inline">
                       ({r.fromCameraName} to {r.toCameraName})
                     </span>
                   </div>
-                  <span className="font-mono font-bold text-sky-800">{r.count} Transits</span>
+                  <span className="font-mono font-bold text-slate-950 bg-slate-100 px-3 py-1 border border-slate-300 rounded-xs text-xs sm:text-sm">
+                    {r.count} Transits
+                  </span>
                 </div>
               ))}
             </div>
           )}
         </StatCard>
 
+        {/* Column 5: Common Origin & Destination Nodes */}
         <StatCard title="Common Origin & Destination Nodes">
-          <div className="grid grid-cols-2 gap-3.5">
-            <div>
-              <div className="text-[10px] uppercase font-bold text-emerald-700 mb-2">Top Origin Hubs:</div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="border border-slate-300 bg-white p-3.5 rounded-md">
+              <div className="text-xs font-mono uppercase font-bold text-slate-950 bg-slate-100 px-3 py-1 border border-slate-300 rounded-xs mb-3 inline-block">
+                Top Origin Hubs
+              </div>
               {data.commonOrigins.length === 0 ? (
-                <p className="text-xs text-slate-400 font-mono">No data</p>
+                <p className="text-sm text-slate-800 font-mono font-bold">No data</p>
               ) : (
-                data.commonOrigins.slice(0, 4).map((o) => (
-                  <div key={o.cameraId} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-100">
-                    <span className="font-mono text-slate-700">{o.cameraId}</span>
-                    <span className="font-mono text-slate-900 font-bold">{o.count}</span>
-                  </div>
-                ))
+                <div className="space-y-2">
+                  {data.commonOrigins.slice(0, 4).map((o) => (
+                    <div key={o.cameraId} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-200 last:border-b-0 font-mono">
+                      <span className="font-bold text-slate-950">{o.cameraId}</span>
+                      <span className="font-bold text-slate-950 bg-slate-100 px-2.5 py-0.5 border border-slate-300 rounded-xs text-xs">{o.count}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            <div>
-              <div className="text-[10px] uppercase font-bold text-sky-800 mb-2">Top Destination Hubs:</div>
+            <div className="border border-slate-300 bg-white p-3.5 rounded-md">
+              <div className="text-xs font-mono uppercase font-bold text-slate-950 bg-slate-100 px-3 py-1 border border-slate-300 rounded-xs mb-3 inline-block">
+                Top Destination Hubs
+              </div>
               {data.commonDestinations.length === 0 ? (
-                <p className="text-xs text-slate-400 font-mono">No data</p>
+                <p className="text-sm text-slate-800 font-mono font-bold">No data</p>
               ) : (
-                data.commonDestinations.slice(0, 4).map((d) => (
-                  <div key={d.cameraId} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-100">
-                    <span className="font-mono text-slate-700">{d.cameraId}</span>
-                    <span className="font-mono text-slate-900 font-bold">{d.count}</span>
-                  </div>
-                ))
+                <div className="space-y-2">
+                  {data.commonDestinations.slice(0, 4).map((d) => (
+                    <div key={d.cameraId} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-200 last:border-b-0 font-mono">
+                      <span className="font-bold text-slate-950">{d.cameraId}</span>
+                      <span className="font-bold text-slate-950 bg-slate-100 px-2.5 py-0.5 border border-slate-300 rounded-xs text-xs">{d.count}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

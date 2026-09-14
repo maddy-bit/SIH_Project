@@ -49,45 +49,44 @@ export function SecurityWatchlistModal() {
   const getSeverityBadge = (severity: string) => {
     switch (severity?.toUpperCase()) {
       case "CRITICAL":
-        return "bg-rose-100 border-rose-300 text-rose-800 font-black";
+        return "bg-rose-300 border border-black text-black font-black";
       case "HIGH":
-        return "bg-amber-100 border-amber-300 text-amber-800 font-bold";
+        return "bg-amber-300 border border-black text-black font-black";
       case "MEDIUM":
-        return "bg-sky-100 border-sky-300 text-sky-800 font-bold";
+        return "bg-[#facc15] border border-black text-black font-black";
       default:
-        return "bg-slate-100 border-slate-300 text-slate-700 font-semibold";
+        return "bg-neutral-200 border border-black text-black font-bold";
     }
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-white/95 p-4 backdrop-blur-md shadow-xs">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-sky-500 animate-pulse shadow-xs shadow-sky-400/50" />
-          <h2 className="text-xs font-mono font-extrabold uppercase tracking-wider text-slate-900">
-            BEL Watchlist & Alert Engine
-          </h2>
+    <div className="neo-box overflow-hidden">
+      <div className="neo-header">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="bg-amber-400 text-slate-950 font-mono font-bold text-xs px-2.5 py-0.5 rounded-xs shrink-0">
+            ALERTS
+          </span>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("alerts")}
-            className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-lg transition-all cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-mono font-bold rounded-xs transition-all cursor-pointer whitespace-nowrap border ${
               activeTab === "alerts"
-                ? "bg-sky-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-900 hover:bg-slate-100 border-slate-300"
             }`}
           >
-            Live Alerts ({alerts.length})
+            Alerts ({alerts.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("watchlist")}
-            className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-lg transition-all cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-mono font-bold rounded-xs transition-all cursor-pointer whitespace-nowrap border ${
               activeTab === "watchlist"
-                ? "bg-sky-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-900 hover:bg-slate-100 border-slate-300"
             }`}
           >
             Watchlist ({watchlist.length})
@@ -95,42 +94,42 @@ export function SecurityWatchlistModal() {
         </div>
       </div>
 
-      <div className="mt-3 max-h-56 overflow-y-auto pr-1">
+      <div className="p-3.5 max-h-60 overflow-y-auto">
         {activeTab === "alerts" ? (
           alerts.length === 0 ? (
-            <p className="text-xs text-slate-500 italic">No security alerts triggered. Surveillance clear.</p>
+            <p className="text-xs text-slate-800 font-mono italic font-semibold">No security alerts triggered. Surveillance clear.</p>
           ) : (
             alerts.map((a, idx) => (
-              <div key={a.alertId || idx} className="mb-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs shadow-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-extrabold text-slate-900">{a.alertType}</span>
-                  <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono ${getSeverityBadge(a.severity)}`}>
+              <div key={a.alertId || idx} className="mb-2 rounded-md border border-slate-300 bg-white p-2 text-xs">
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="font-mono font-bold text-slate-950 text-xs">{a.alertType}</span>
+                  <span className={`rounded-xs px-1.5 py-0.5 text-[9px] font-mono font-bold shrink-0 ${getSeverityBadge(a.severity)}`}>
                     {a.severity}
                   </span>
                 </div>
-                <p className="mt-1.5 text-slate-700 font-medium leading-snug">{a.description}</p>
-                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono border-t border-slate-200/80 pt-1.5">
-                  <span>Plate: <strong className="text-slate-900 font-bold">{a.plateNumber}</strong></span>
-                  <span>Camera: <strong className="text-slate-900 font-bold">{a.cameraId}</strong></span>
+                <p className="mt-1 text-slate-800 font-medium leading-tight text-[10px] sm:text-[11px]">{a.description}</p>
+                <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-700 font-mono font-bold border-t border-slate-200 pt-1">
+                  <span>Plate: <strong className="text-slate-950 font-bold">{a.plateNumber}</strong></span>
+                  <span>Node: <strong className="text-slate-950 font-bold">{a.cameraId}</strong></span>
                 </div>
               </div>
             ))
           )
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Registered Targets</span>
+              <span className="text-xs font-mono font-bold text-slate-800 uppercase tracking-wider">Registered Targets</span>
               <button
                 type="button"
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="rounded-lg bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 border border-sky-200 hover:bg-sky-100 transition-all cursor-pointer"
+                className="rounded-xs bg-amber-400 px-3 py-1.5 text-xs font-mono font-bold text-slate-950 border border-amber-500 hover:bg-amber-500 transition-all cursor-pointer"
               >
                 {showAddForm ? "Cancel" : "+ Add Target Plate"}
               </button>
             </div>
 
             {showAddForm && (
-              <form onSubmit={handleAddEntry} className="rounded-xl border border-slate-200 bg-white p-3 text-xs space-y-2 shadow-xs">
+              <form onSubmit={handleAddEntry} className="rounded-md border border-slate-300 bg-white p-3.5 text-sm space-y-2.5">
                 <div>
                   <input
                     type="text"
@@ -138,14 +137,14 @@ export function SecurityWatchlistModal() {
                     placeholder="Enter License Plate (e.g. MH15TC554)"
                     value={newPlate}
                     onChange={(e) => setNewPlate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2 font-mono text-xs text-slate-900 uppercase focus:border-sky-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-md border border-slate-300 bg-slate-50 p-2.5 font-mono text-sm font-bold text-slate-950 uppercase focus:border-slate-800 focus:bg-white focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     value={newReason}
                     onChange={(e) => setNewReason(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-slate-50 p-1.5 text-[11px] text-slate-800"
+                    className="rounded-md border border-slate-300 bg-slate-50 p-2 text-xs font-bold text-slate-900"
                   >
                     <option value="HIGH_VALUE_STOLEN_VEHICLE">Stolen Vehicle</option>
                     <option value="SUSPECT_OF_INTEREST">Suspect of Interest</option>
@@ -155,7 +154,7 @@ export function SecurityWatchlistModal() {
                   <select
                     value={newSeverity}
                     onChange={(e) => setNewSeverity(e.target.value as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW")}
-                    className="rounded-lg border border-slate-300 bg-slate-50 p-1.5 text-[11px] text-rose-700 font-bold"
+                    className="rounded-md border border-slate-300 bg-slate-50 p-2 text-xs text-rose-700 font-bold"
                   >
                     <option value="CRITICAL">CRITICAL</option>
                     <option value="HIGH">HIGH</option>
@@ -166,7 +165,7 @@ export function SecurityWatchlistModal() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-lg bg-sky-600 py-1.5 text-xs font-bold text-white hover:bg-sky-700 transition-all cursor-pointer shadow-xs"
+                  className="w-full rounded-md bg-slate-900 py-2.5 text-xs sm:text-sm font-bold uppercase text-white hover:bg-slate-800 transition-all cursor-pointer"
                 >
                   {isSubmitting ? "Registering..." : "Register Watchlist Target"}
                 </button>
@@ -174,13 +173,13 @@ export function SecurityWatchlistModal() {
             )}
 
             {watchlist.length === 0 ? (
-              <p className="text-xs text-slate-500 italic">No watchlisted plates registered.</p>
+              <p className="text-sm text-slate-800 italic font-semibold">No watchlisted plates registered.</p>
             ) : (
               watchlist.map((w, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 text-xs border border-slate-200 shadow-xs">
-                  <span className="font-mono font-black text-slate-900">{w.plateNumber}</span>
-                  <span className="text-slate-600 text-[11px] font-medium">{w.reason}</span>
-                  <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono ${getSeverityBadge(w.severity)}`}>
+                <div key={idx} className="flex items-center justify-between rounded-md bg-white p-3 text-sm border border-slate-300">
+                  <span className="font-mono font-bold text-slate-950 text-sm">{w.plateNumber}</span>
+                  <span className="text-slate-900 text-xs sm:text-sm font-bold">{w.reason}</span>
+                  <span className={`rounded-xs border px-2.5 py-0.5 text-xs font-mono font-bold ${getSeverityBadge(w.severity)}`}>
                     {w.severity}
                   </span>
                 </div>

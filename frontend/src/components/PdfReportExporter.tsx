@@ -35,10 +35,10 @@ export function PdfReportExporter({ summary, trajectory }: PdfReportExporterProp
       <button
         type="button"
         onClick={handleExportPrint}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-xs font-mono font-bold text-sky-800 hover:bg-sky-100 transition-all shadow-xs cursor-pointer"
+        className="neo-btn flex w-full items-center justify-center gap-2.5 px-5 py-3.5 sm:py-4 text-sm sm:text-base font-mono font-black uppercase tracking-wider cursor-pointer"
       >
-        <span>📄</span>
-        <span>Export Law Enforcement PDF Dossier</span>
+        <span className="text-base sm:text-lg">📄</span>
+        <span>Export Law Enforcement Dossier</span>
       </button>
 
       {/*

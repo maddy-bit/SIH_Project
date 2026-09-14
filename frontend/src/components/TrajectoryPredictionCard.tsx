@@ -60,21 +60,17 @@ export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProp
   const displayCandidates = candidates.length > 0 ? candidates : FALLBACK_CANDIDATES;
 
   return (
-    <div className="card-3d-light rounded-2xl border border-sky-200/80 bg-gradient-to-br from-white via-sky-50/30 to-blue-50/40 p-4 shadow-sm">
-      <div className="flex items-center justify-between border-b border-sky-200/60 pb-2.5">
-        <div className="flex items-center gap-2">
-          <span className="text-base">🔮</span>
-          <div>
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-              Trajectory Predictor
-            </h3>
-          </div>
-        </div>
+    <div className="neo-box overflow-hidden">
+      <div className="neo-header">
+        <h3 className="text-sm sm:text-base font-bold uppercase tracking-wide text-slate-950 whitespace-nowrap">
+          Trajectory Predictor
+        </h3>
+        <span className="text-xs font-mono font-bold text-slate-800 shrink-0">MARKOV</span>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2.5">
+      <div className="p-4 space-y-2.5">
         {isLoading ? (
-          <div className="flex h-20 items-center justify-center text-xs font-mono text-slate-500 animate-pulse">
+          <div className="flex h-16 items-center justify-center text-sm font-mono text-slate-800 font-bold">
             Computing Spatial Probabilities...
           </div>
         ) : (
@@ -83,35 +79,35 @@ export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProp
               key={cand.nextCameraId || idx}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="flex items-center justify-between rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-xs"
+              transition={{ delay: idx * 0.08 }}
+              className="flex items-center justify-between rounded-md border border-slate-300 bg-white p-3 text-sm"
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 <span
-                  className={`flex h-6 w-6 items-center justify-center rounded-lg text-xs font-black font-mono shadow-xs ${
+                  className={`flex h-7 w-7 items-center justify-center rounded-xs text-xs font-bold font-mono ${
                     idx === 0
-                      ? "bg-sky-500 text-white"
+                      ? "bg-slate-900 text-white"
                       : idx === 1
-                      ? "bg-slate-200 text-slate-700"
-                      : "bg-slate-100 text-slate-500"
+                      ? "bg-slate-200 text-slate-900 border border-slate-300"
+                      : "bg-slate-100 text-slate-700 border border-slate-300"
                   }`}
                 >
                   #{idx + 1}
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-slate-900">{cand.nextCameraName}</p>
-                  <p className="text-[10px] font-mono text-slate-500">
-                    ID: {cand.nextCameraId} • ETA ~{Math.round(cand.estimatedTravelSeconds / 60)}m
+                  <p className="text-sm font-bold text-slate-950 uppercase">{cand.nextCameraName}</p>
+                  <p className="text-xs font-mono text-slate-800 font-bold">
+                    NODE: {cand.nextCameraId} • ETA ~{Math.round(cand.estimatedTravelSeconds / 60)}m
                   </p>
                 </div>
               </div>
 
               <div className="text-right">
-                <span className="text-xs font-black font-mono text-sky-700">
+                <span className="text-sm font-bold font-mono text-slate-950 bg-slate-100 px-2.5 py-1 rounded-xs border border-slate-300">
                   {Math.round(cand.probability * 100)}%
                 </span>
                 {cand.estimatedArrivalIso && (
-                  <p className="text-[9px] font-mono text-slate-400">{cand.estimatedArrivalIso}</p>
+                  <p className="text-[11px] font-mono text-slate-800 font-bold mt-1">{cand.estimatedArrivalIso}</p>
                 )}
               </div>
             </motion.div>

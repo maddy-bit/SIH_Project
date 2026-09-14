@@ -17,144 +17,135 @@ export function EvidenceViewer({ point }: EvidenceViewerProps) {
   const imageUrl = evidenceImageUrl(point?.imagePath);
 
   return (
-    <TiltCard3D maxTilt={4} scale={1.01}>
-      <div className="card-3d-light relative rounded-2xl p-5 text-slate-900 overflow-hidden">
-        {/* Tactical HUD Corner Reticles */}
-        <div className="pointer-events-none absolute top-2 left-2 h-2.5 w-2.5 border-t-2 border-l-2 border-sky-400" />
-        <div className="pointer-events-none absolute top-2 right-2 h-2.5 w-2.5 border-t-2 border-r-2 border-sky-400" />
-        <div className="pointer-events-none absolute bottom-2 left-2 h-2.5 w-2.5 border-b-2 border-l-2 border-sky-400" />
-        <div className="pointer-events-none absolute bottom-2 right-2 h-2.5 w-2.5 border-b-2 border-r-2 border-sky-400" />
-
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-sky-500 shadow-xs animate-pulse" />
-            <h2 className="text-xs font-bold uppercase tracking-widest text-sky-800">
-              CCTV Camera Evidence
-            </h2>
-          </div>
-          {point && (
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-md border border-rose-200 shadow-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
-              EVIDENCE FRAME
+    <TiltCard3D>
+      <div className="neo-box overflow-hidden">
+        {/* Dedicated Box Header Strip */}
+        <div className="neo-header">
+          <h2 className="text-sm sm:text-base font-bold uppercase tracking-wide text-slate-950 whitespace-nowrap">
+            Evidence Frame
+          </h2>
+          {point ? (
+            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-bold bg-slate-100 text-slate-950 border border-slate-300 px-2 py-0.5 rounded-xs whitespace-nowrap shrink-0">
+              CAM {point.cameraId}
             </span>
+          ) : (
+            <span className="text-xs font-mono font-bold text-slate-800 shrink-0">STANDBY</span>
           )}
         </div>
 
+        <div className="p-4">
+          <AnimatePresence mode="wait">
+            {point ? (
+              <motion.div
+                key={`${point.cameraId}-${point.timestamp}`}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {/* Viewfinder Frame */}
+                <div className="relative overflow-hidden rounded-md border-2 border-slate-700 bg-slate-950">
+                  <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 rounded-xs bg-black/80 px-2.5 py-1 text-[11px] font-mono text-amber-300 font-bold border border-white/20">
+                    <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                    <span>REC • {point.cameraId}</span>
+                  </div>
 
+                  <div className="absolute top-2 right-2 z-20 rounded-xs bg-black/80 px-2.5 py-1 text-[11px] font-mono text-slate-200 font-bold border border-white/20">
+                    4K OPTICAL
+                  </div>
 
-        <AnimatePresence mode="wait">
-          {point ? (
-            <motion.div
-              key={`${point.cameraId}-${point.timestamp}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="mt-3"
-            >
-              {/* Viewfinder Frame with Tactical Corner Brackets */}
-              <div className="relative overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-lg">
-                <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 rounded-lg bg-black/85 px-2.5 py-1 text-[10px] font-mono text-cyan-300 backdrop-blur-md border border-slate-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  <span>FEED // {point.cameraId}</span>
-                </div>
+                  {/* CCTV Snapshot Image */}
+                  <div className="relative flex min-h-[195px] w-full items-center justify-center bg-slate-950 overflow-hidden">
+                    {imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={imageUrl}
+                        alt={`Evidence frame from ${point.cameraId}`}
+                        className="w-full object-contain max-h-[260px]"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-8 text-center text-sm text-slate-300 font-mono font-bold">
+                        <span className="text-3xl mb-2">📹</span>
+                        <span>No snapshot frame available for this checkpoint</span>
+                      </div>
+                    )}
 
-                <div className="absolute top-2.5 right-2.5 z-20 rounded-lg bg-black/85 px-2.5 py-1 text-[10px] font-mono text-slate-300 backdrop-blur-md border border-slate-700">
-                  STANDARD FILTER
-                </div>
-
-                {/* CCTV Snapshot Image with 3D Depth Shaders */}
-                <div className="relative flex min-h-[195px] w-full items-center justify-center bg-slate-950 overflow-hidden">
-                  {imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={imageUrl}
-                      alt={`Evidence frame from ${point.cameraId}`}
-                      className="w-full object-contain max-h-[260px]"
+                    {/* Scanline overlay */}
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-15"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0px, rgba(255,255,255,0.2) 1px, transparent 1px, transparent 3px)",
+                      }}
                     />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-8 text-center text-xs text-slate-400 font-mono">
-                      <span className="text-3xl mb-2">📹</span>
-                      <span>No snapshot frame available for this checkpoint</span>
-                    </div>
-                  )}
 
-                  {/* Holographic Scanline Overlay */}
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-20"
-                    style={{
-                      backgroundImage:
-                        "repeating-linear-gradient(0deg, rgba(0,0,0,0.4) 0px, rgba(0,0,0,0.4) 1px, transparent 1px, transparent 3px)",
-                    }}
-                  />
+                    {/* Laser Scanner Line */}
+                    <motion.div
+                      animate={{ top: ["0%", "100%", "0%"] }}
+                      transition={{ repeat: Infinity, duration: 3.5, ease: "linear" }}
+                      className="pointer-events-none absolute inset-x-0 h-0.5 bg-amber-400 shadow-[0_0_6px_#f59e0b]"
+                    />
 
-                  {/* Animated Scanning Laser Line */}
-                  <motion.div
-                    animate={{ top: ["0%", "100%", "0%"] }}
-                    transition={{ repeat: Infinity, duration: 3.5, ease: "linear" }}
-                    className="pointer-events-none absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent shadow-[0_0_8px_#38bdf8]"
-                  />
-
-                  {/* Viewfinder Reticles */}
-                  <div className="pointer-events-none absolute inset-0 border-2 border-cyan-500/20 m-2.5 rounded-xl" />
-                  <div className="pointer-events-none absolute top-4 left-4 h-3.5 w-3.5 border-t-2 border-l-2 border-cyan-400" />
-                  <div className="pointer-events-none absolute top-4 right-4 h-3.5 w-3.5 border-t-2 border-r-2 border-cyan-400" />
-                  <div className="pointer-events-none absolute bottom-4 left-4 h-3.5 w-3.5 border-b-2 border-l-2 border-cyan-400" />
-                  <div className="pointer-events-none absolute bottom-4 right-4 h-3.5 w-3.5 border-b-2 border-r-2 border-cyan-400" />
+                    {/* Corner Reticles */}
+                    <div className="pointer-events-none absolute top-2.5 left-2.5 h-3 w-3 border-t-2 border-l-2 border-white/70" />
+                    <div className="pointer-events-none absolute top-2.5 right-2.5 h-3 w-3 border-t-2 border-r-2 border-white/70" />
+                    <div className="pointer-events-none absolute bottom-2.5 left-2.5 h-3 w-3 border-b-2 border-l-2 border-white/70" />
+                    <div className="pointer-events-none absolute bottom-2.5 right-2.5 h-3 w-3 border-b-2 border-r-2 border-white/70" />
+                  </div>
                 </div>
+
+                {/* Detailed Forensic Metrics Readout */}
+                <div className="mt-3 rounded-md border border-slate-300 bg-white p-3">
+                  <dl className="grid grid-cols-2 gap-y-2 text-xs">
+                    <dt className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                      Camera Node
+                    </dt>
+                    <dd className="text-right font-mono font-bold text-slate-950 truncate" title={`${point.cameraId} (${point.cameraName})`}>
+                      {point.cameraId} <span className="font-sans font-medium text-slate-600">({point.cameraName})</span>
+                    </dd>
+
+                    <dt className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                      Timestamp
+                    </dt>
+                    <dd className="text-right font-mono font-bold text-slate-950">
+                      {formatTimestamp(point.timestamp)}
+                    </dd>
+
+                    <dt className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                      OCR Confidence
+                    </dt>
+                    <dd className="text-right">
+                      <ConfidenceBadge value={point.plateConfidence} label="Plate" />
+                    </dd>
+
+                    <dt className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                      Vehicle Match
+                    </dt>
+                    <dd className="text-right">
+                      <ConfidenceBadge value={point.detectionConfidence} label="Detection" />
+                    </dd>
+
+                    {point.incomingTransitionConfidence != null && (
+                      <>
+                        <dt className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                          Transition Score
+                        </dt>
+                        <dd className="text-right">
+                          <ConfidenceBadge value={point.incomingTransitionConfidence} label="Score" />
+                        </dd>
+                      </>
+                    )}
+                  </dl>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center text-sm text-slate-800 font-mono font-bold">
+                <span className="text-3xl mb-2 opacity-70">🎯</span>
+                <span>Select a timeline event or camera marker to inspect CCTV frame evidence.</span>
               </div>
-
-              {/* Detailed Forensic Metrics Readout */}
-              <div className="mt-3.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 shadow-inner">
-                <dl className="grid grid-cols-2 gap-y-2.5 text-xs">
-                  <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    Camera Node
-                  </dt>
-                  <dd className="text-right font-mono font-bold text-slate-900">
-                    {point.cameraId} ({point.cameraName})
-                  </dd>
-
-                  <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    Timestamp
-                  </dt>
-                  <dd className="text-right font-mono font-bold text-slate-900">
-                    {formatTimestamp(point.timestamp)}
-                  </dd>
-
-                  <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    OCR Confidence
-                  </dt>
-                  <dd className="text-right">
-                    <ConfidenceBadge value={point.plateConfidence} />
-                  </dd>
-
-                  <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    Detection Confidence
-                  </dt>
-                  <dd className="text-right">
-                    <ConfidenceBadge value={point.detectionConfidence} />
-                  </dd>
-
-                  {point.incomingTransitionConfidence != null && (
-                    <>
-                      <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        Transition Score
-                      </dt>
-                      <dd className="text-right">
-                        <ConfidenceBadge value={point.incomingTransitionConfidence} label="Score" />
-                      </dd>
-                    </>
-                  )}
-                </dl>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-8 text-center text-xs text-slate-400 font-medium">
-              <span className="text-3xl mb-2 opacity-60">🎯</span>
-              <span>Select a timeline event or a camera marker on the map to inspect CCTV frame evidence.</span>
-            </div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </TiltCard3D>
   );

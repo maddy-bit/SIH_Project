@@ -14,31 +14,31 @@ interface StatusItemProps {
 
 function StatusItem({ label, value, tone = "neutral", icon }: StatusItemProps) {
   let dotColor = "bg-slate-400";
-  let textColor = "text-slate-800";
+  let textColor = "text-slate-900";
 
   if (tone === "positive") {
-    dotColor = "bg-emerald-500 shadow-[0_0_6px_#10b981]";
-    textColor = "text-emerald-700";
+    dotColor = "bg-emerald-600";
+    textColor = "text-emerald-900 font-bold";
   } else if (tone === "warning") {
-    dotColor = "bg-amber-500 shadow-[0_0_6px_#f59e0b]";
-    textColor = "text-amber-700";
+    dotColor = "bg-amber-500";
+    textColor = "text-amber-900 font-bold";
   } else if (tone === "cyan") {
-    dotColor = "bg-sky-500 shadow-[0_0_6px_#0284c7]";
-    textColor = "text-sky-700";
+    dotColor = "bg-slate-700";
+    textColor = "text-slate-950 font-bold";
   }
 
   return (
-    <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 border-l border-slate-200/90 first:border-l-0">
+    <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 border-l border-slate-300 first:border-l-0">
       {icon ? (
-        <span className="text-slate-500">{icon}</span>
+        <span className="text-slate-700">{icon}</span>
       ) : (
-        <span className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full shrink-0 ${dotColor}`} />
+        <span className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
       )}
       <div className="flex flex-col leading-tight">
-        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">
+        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-700">
           {label}
         </span>
-        <span className={`text-[11px] font-mono font-bold ${textColor}`}>
+        <span className={`text-xs font-mono font-bold ${textColor}`}>
           {value}
         </span>
       </div>
@@ -57,8 +57,13 @@ export function SystemStatusBar() {
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
-      const utcStr = now.toISOString().slice(11, 19) + " UTC";
-      setCurrentTime(utcStr);
+      const localStr = now.toLocaleTimeString([], {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setCurrentTime(localStr);
     };
     updateClock();
     const interval = setInterval(updateClock, 1000);
@@ -105,16 +110,15 @@ export function SystemStatusBar() {
     state === "checking" ? "CONNECTING…" : state === "online" ? "ONLINE" : "SIM ACTIVE";
 
   return (
-    <div className="flex items-center rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-xs py-0.5">
+    <div className="flex items-center rounded-md border-1.5 border-slate-400 bg-white py-1">
       {/* Primary Engine State Indicator */}
       <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1">
-        <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex h-full w-full rounded-full bg-emerald-500 shadow-xs" />
+        <span className="relative flex h-2.5 w-2.5 shrink-0">
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
         </span>
         <div className="flex flex-col leading-tight">
-          <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">AI ENGINE</span>
-          <span className="text-[11px] font-mono font-bold tracking-wide text-emerald-700 whitespace-nowrap">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-700">ENGINE</span>
+          <span className="text-xs font-mono font-bold tracking-wide text-slate-950 whitespace-nowrap">
             {systemLabel}
           </span>
         </div>
@@ -141,7 +145,7 @@ export function SystemStatusBar() {
       {/* System Time - Visible on xl and up */}
       <div className="hidden xl:block">
         <StatusItem
-          label="UTC Time"
+          label="Current Time"
           value={currentTime || "00:00:00"}
           tone="neutral"
         />

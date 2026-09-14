@@ -6,20 +6,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f5f9;
-  --foreground: #0f172a;
+  --background: #f4f4f0;
+  --foreground: #000000;
   --card-bg: #ffffff;
-  --card-border: #cbd5e1;
-  --accent-blue: #2563eb;
-  --accent-cyan: #0284c7;
-  --accent-emerald: #059669;
+  --card-border: #000000;
+  --accent-yellow: #facc15;
+  --accent-dark: #000000;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk), monospace;
+  --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
 /* Global Font Antialiasing and Sharp Text Rendering */
@@ -31,74 +30,140 @@ body {
 }
 
 body {
-  background-color: #f1f5f9;
+  background-color: #f4f4f0;
   color: var(--foreground);
-  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-image: 
-    radial-gradient(circle at 10% 10%, rgba(224, 242, 254, 0.85) 0%, transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(224, 231, 255, 0.65) 0%, transparent 45%),
-    linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
-  background-attachment: fixed;
+  font-family: var(--font-jetbrains-mono), monospace;
+  background-image: radial-gradient(#d4d4d8 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
   overflow-x: hidden;
 }
 
-/* Crisp, Razor-Sharp High-Contrast 3D Cards */
-.card-3d-light {
+/* Distinct Technical Cards with Clear 1.5px Dividing Borders (No Shadow) */
+.card-3d-light,
+.neo-box {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  box-shadow: 
-    0 4px 16px -2px rgba(15, 23, 42, 0.07),
-    0 1px 3px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  border: 1.5px solid #94a3b8;
+  box-shadow: none;
+  border-radius: 8px;
+  transition: border-color 0.12s ease;
 }
 
-.card-3d-light:hover {
-  border-color: #94a3b8;
-  box-shadow: 
-    0 10px 28px -4px rgba(15, 23, 42, 0.11),
-    0 2px 6px rgba(15, 23, 42, 0.04);
+.neo-box-sm {
+  background: #ffffff;
+  border: 1.5px solid #94a3b8;
+  box-shadow: none;
+  border-radius: 6px;
 }
 
-/* 3D Embossed Reflective Plate with Sharp High-Contrast Borders */
-.plate-3d-light {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 2px solid #64748b;
-  box-shadow: 
-    inset 0 1px 2px rgba(255, 255, 255, 0.9),
-    inset 0 -1px 2px rgba(15, 23, 42, 0.06),
-    0 4px 12px rgba(15, 23, 42, 0.08);
+/* Distinct Box Header Strip with Crisp 1.5px Divider */
+.neo-header {
+  border-bottom: 1.5px solid #94a3b8;
+  background: #f1f5f9;
+  padding: 0.625rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  color: #0f172a;
 }
 
-/* 3D Tactile Push Button — Crisp & Punchy */
-.btn-3d-light {
-  background: linear-gradient(to bottom, #0284c7, #0369a1);
-  box-shadow: 
-    0 3px 0 #075985,
-    0 6px 16px rgba(2, 132, 199, 0.35);
-  transition: all 0.12s ease;
+/* Border utility fallbacks for 1.5px borders */
+.border-1\.5 {
+  border-width: 1.5px !important;
+  border-style: solid;
 }
 
-.btn-3d-light:hover {
-  background: linear-gradient(to bottom, #0ea5e9, #0284c7);
-  box-shadow: 
-    0 3px 0 #075985,
-    0 8px 20px rgba(2, 132, 199, 0.45);
-  transform: translateY(-1px);
+.border-b-1\.5 {
+  border-bottom-width: 1.5px !important;
+  border-bottom-style: solid;
 }
 
-.btn-3d-light:active {
-  transform: translateY(2px);
-  box-shadow: 
-    0 1px 0 #075985,
-    0 3px 8px rgba(2, 132, 199, 0.25);
+.border-r-1\.5 {
+  border-right-width: 1.5px !important;
+  border-right-style: solid;
 }
 
-/* Sharp Indian Plate Typography (Zero Blurry Shadow) */
+/* Sharp Registration Plate Frame */
+.plate-3d-light,
+.plate-box {
+  background: #ffffff;
+  border: 1.5px solid #64748b;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+/* Popped-Up Push Buttons (Sleek Dark Slate & Amber Accent, 14px Text, Semi-Bold) */
+.btn-3d-light,
+.neo-btn {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1.5px solid #0f172a;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  box-shadow: none;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+
+.btn-3d-light:hover,
+.neo-btn:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+}
+
+.btn-3d-light:active,
+.neo-btn:active {
+  transform: translateY(1px);
+  background: #334155;
+}
+
+.neo-btn-accent {
+  background: #d97706;
+  color: #ffffff;
+  border: 1.5px solid #b45309;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  box-shadow: none;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+
+.neo-btn-accent:hover {
+  background: #b45309;
+  border-color: #92400e;
+}
+
+.neo-btn-accent:active {
+  transform: translateY(1px);
+}
+
+.neo-btn-secondary {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #94a3b8;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+  box-shadow: none;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.neo-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #64748b;
+  color: #000000;
+}
+
+/* Sharp Indian Plate Typography */
 .plate-text-3d {
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  text-shadow: none;
+  font-weight: 900;
 }
 
-/* 3D Holographic Shimmer */
+/* Holographic Shimmer */
 @keyframes hologram-shimmer {
   0% {
     background-position: -200% 0;
@@ -112,27 +177,27 @@ body {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(56, 189, 248, 0.35) 50%,
+    rgba(250, 204, 21, 0.25) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   background-size: 200% 100%;
   animation: hologram-shimmer 3s infinite linear;
 }
 
-/* Scrollbar */
+/* Clean Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.6);
+  background: #f4f4f0;
+  border-left: 1px solid #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.7);
-  border-radius: 9999px;
+  background: #000000;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.9);
+  background: #27272a;
 }
 
 /* ============================================================

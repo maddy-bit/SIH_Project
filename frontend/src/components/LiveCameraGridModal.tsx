@@ -29,38 +29,38 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative flex h-[90vh] w-full max-w-7xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
+          className="relative flex h-[90vh] w-full max-w-7xl flex-col rounded-xl border border-slate-300 bg-white shadow-2xl overflow-hidden"
         >
           {/* Top Modal Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/90 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-3.5">
             <div className="flex items-center gap-3">
-              <span className="flex h-3 w-3 rounded-full bg-rose-500 animate-ping" />
+              <span className="flex h-3 w-3 rounded-full bg-emerald-500" />
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-700 font-bold border border-sky-200">
-                    LIVE AI MATRIX
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-xs bg-blue-50 text-blue-700 border border-blue-200 font-bold uppercase">
+                    12-NODE MATRIX
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">12 CAMERA CCTV SURVEILLANCE GRID</span>
+                  <span className="text-[10px] font-mono font-semibold text-slate-500">SURVEILLANCE VIDEO WALL</span>
                 </div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                  <span>Smart City Video Analytics Wall</span>
-                  <span className="text-xs font-mono text-emerald-600 font-semibold">● REC 60FPS</span>
+                <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2 uppercase">
+                  <span>Smart City Video Analytics</span>
+                  <span className="text-xs font-mono text-emerald-600 font-bold">● REC 60FPS</span>
                 </h2>
               </div>
             </div>
 
             {/* Filter Tabs & Close Button */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
+              <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 p-0.5 shadow-xs">
                 {(["ALL", "ONLINE", "PROCESSING"] as const).map((filter) => (
                   <button
                     key={filter}
                     type="button"
                     onClick={() => setSelectedFilter(filter)}
-                    className={`rounded-lg px-3 py-1 text-xs font-mono font-bold transition-all cursor-pointer ${
+                    className={`rounded-xs px-2.5 py-1 text-xs font-mono font-bold transition-all cursor-pointer ${
                       selectedFilter === filter
-                        ? "bg-sky-50 text-sky-700 border border-sky-300 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-700 hover:bg-slate-200/70"
                     }`}
                   >
                     {filter}
@@ -71,7 +71,7 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition-all cursor-pointer font-bold shadow-xs"
               >
                 ✕
               </button>
