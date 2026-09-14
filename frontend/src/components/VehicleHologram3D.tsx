@@ -63,16 +63,18 @@ const EDGES: [number, number][] = [
 
 export function VehicleHologram3D({
   plate = "MH12AB1234",
-  vehicleType = "White SUV",
-  color = "White",
+  vehicleType = "Silver Sedan",
+  color = "Silver",
   className = "",
 }: VehicleHologram3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [yaw, setYaw] = useState<number>(35);
-  const [pitch, setPitch] = useState<number>(20);
+  const telemetryRef = useRef<HTMLDivElement>(null);
+  const yawRef = useRef<number>(35);
+  const pitchRef = useRef<number>(20);
+  const isDraggingRef = useRef<boolean>(false);
   const [isAutoRotate, setIsAutoRotate] = useState<boolean>(true);
   const [scanMode, setScanMode] = useState<"wireframe" | "hologram" | "thermal">("hologram");
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragActive, setDragActive] = useState<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number; yaw: number; pitch: number }>({
     x: 0,
     y: 0,
@@ -83,29 +85,28 @@ export function VehicleHologram3D({
 
   // Handle Dragging for 3D Manual Rotation
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
+    isDraggingRef.current = true;
+    setDragActive(true);
     setIsAutoRotate(false);
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      yaw,
-      pitch,
+      yaw: yawRef.current,
+      pitch: pitchRef.current,
     };
   };
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isDragging) return;
-      const deltaX = e.clientX - dragStartRef.current.x;
-      const deltaY = e.clientY - dragStartRef.current.y;
-      setYaw((dragStartRef.current.yaw + deltaX * 0.75) % 360);
-      setPitch(Math.max(-10, Math.min(60, dragStartRef.current.pitch - deltaY * 0.5)));
-    },
-    [isDragging],
-  );
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const deltaX = e.clientX - dragStartRef.current.x;
+    const deltaY = e.clientY - dragStartRef.current.y;
+    yawRef.current = (dragStartRef.current.yaw + deltaX * 0.75) % 360;
+    pitchRef.current = Math.max(-10, Math.min(60, dragStartRef.current.pitch - deltaY * 0.5));
+  }, []);
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    isDraggingRef.current = false;
+    setDragActive(false);
   };
 
   // Render loop
@@ -127,12 +128,16 @@ export function VehicleHologram3D({
       if (scanYRef.current > 1.8) scanYRef.current = -1.8;
 
       // Advance auto rotate
-      if (isAutoRotate && !isDragging) {
-        setYaw((prev) => (prev + 0.6) % 360);
+      if (isAutoRotate && !isDraggingRef.current) {
+        yawRef.current = (yawRef.current + 0.6) % 360;
       }
 
-      const yawRad = (yaw * Math.PI) / 180;
-      const pitchRad = (pitch * Math.PI) / 180;
+      if (telemetryRef.current) {
+        telemetryRef.current.textContent = `YAW: ${Math.round(yawRef.current)}°  PITCH: ${Math.round(pitchRef.current)}°`;
+      }
+
+      const yawRad = (yawRef.current * Math.PI) / 180;
+      const pitchRad = (pitchRef.current * Math.PI) / 180;
 
       // 3D Rotation projection
       // Scale factor to fit canvas
@@ -326,7 +331,7 @@ export function VehicleHologram3D({
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [yaw, pitch, isAutoRotate, scanMode, isDragging]);
+  }, [isAutoRotate, scanMode]);
 
   return (
     <div className={`relative flex flex-col rounded-2xl border border-sky-200/90 bg-white/95 p-4 backdrop-blur-xl shadow-xs ${className}`}>
@@ -383,13 +388,15 @@ export function VehicleHologram3D({
           <div className="text-slate-500">{vehicleType} • {color}</div>
         </div>
 
-        <div className="pointer-events-none absolute bottom-2.5 right-2.5 flex items-center gap-2 rounded-lg bg-white/90 px-2 py-1 text-[9px] font-mono text-slate-700 shadow-xs backdrop-blur-md border border-slate-200">
-          <span>YAW: {Math.round(yaw)}°</span>
-          <span>PITCH: {Math.round(pitch)}°</span>
+        <div
+          ref={telemetryRef}
+          className="pointer-events-none absolute bottom-2.5 right-2.5 flex items-center gap-2 rounded-lg bg-white/90 px-2 py-1 text-[9px] font-mono text-slate-700 shadow-xs backdrop-blur-md border border-slate-200"
+        >
+          YAW: 35°  PITCH: 20°
         </div>
 
         <div className="pointer-events-none absolute bottom-2.5 left-2.5 text-[8px] font-mono text-slate-400">
-          {isDragging ? "DRAGGING 3D GIMBAL" : "DRAG TO ROTATE 360°"}
+          {dragActive ? "DRAGGING 3D GIMBAL" : "DRAG TO ROTATE 360°"}
         </div>
       </div>
 
@@ -401,7 +408,9 @@ export function VehicleHologram3D({
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-1.5">
           <div className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Vehicle Class</div>
-          <div className="text-[11px] font-bold text-emerald-700">SUV (98.4%)</div>
+          <div className="text-[11px] font-bold text-emerald-700 uppercase">
+            {(vehicleType || "Sedan").replace(/^(Silver|White|Black|Red|Blue)\s+/i, "")} (98.4%)
+          </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-1.5">
           <div className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Auto-Spin</div>

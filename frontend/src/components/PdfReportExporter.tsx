@@ -26,7 +26,9 @@ export function PdfReportExporter({ summary, trajectory }: PdfReportExporterProp
       }),
       dossierId: `BEL-${summary.vehicle.plate}-${printDate.getTime().toString(36).toUpperCase()}`,
     });
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 50);
   };
 
   return (

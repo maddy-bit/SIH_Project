@@ -724,7 +724,7 @@ export function InvestigationMap({
     return () => {
       isCancelled = true;
     };
-  }, [effectivePoints, mapReady, activeLayer, onSelectPoint]);
+  }, [effectivePoints, cameras, mapReady, activeLayer, onSelectPoint]);
 
   // Update checkpoint visual active state without re-creating DOM markers (zero jitter)
   useEffect(() => {

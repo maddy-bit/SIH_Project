@@ -26,9 +26,18 @@ function haversineDist(pt1: [number, number], pt2: [number, number]): number {
 export async function fetchRoadRoute(
   waypoints: [number, number][],
 ): Promise<[number, number][]> {
-  if (waypoints.length < 2) return waypoints;
+  // Deduplicate consecutive identical coordinates
+  const cleanWaypoints: [number, number][] = [];
+  for (let i = 0; i < waypoints.length; i++) {
+    const curr = waypoints[i];
+    const prev = cleanWaypoints[cleanWaypoints.length - 1];
+    if (!prev || prev[0] !== curr[0] || prev[1] !== curr[1]) {
+      cleanWaypoints.push(curr);
+    }
+  }
+  if (cleanWaypoints.length < 2) return cleanWaypoints;
 
-  const cacheKey = waypoints.map(([lng, lat]) => `${lng.toFixed(5)},${lat.toFixed(5)}`).join(";");
+  const cacheKey = cleanWaypoints.map(([lng, lat]) => `${lng.toFixed(5)},${lat.toFixed(5)}`).join(";");
   const cached = routeCache.get(cacheKey);
   if (cached && cached.length > 0) {
     return cached;
@@ -36,23 +45,22 @@ export async function fetchRoadRoute(
 
   // Calculate direct straight-line distance across waypoints
   let directDist = 0;
-  for (let i = 0; i < waypoints.length - 1; i++) {
-    directDist += haversineDist(waypoints[i], waypoints[i + 1]);
+  for (let i = 0; i < cleanWaypoints.length - 1; i++) {
+    directDist += haversineDist(cleanWaypoints[i], cleanWaypoints[i + 1]);
   }
 
   // Build OSRM query string: lng,lat;lng,lat;...
-  const coordsParam = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(";");
+  const coordsParam = cleanWaypoints.map(([lng, lat]) => `${lng},${lat}`).join(";");
   const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordsParam}?overview=full&geometries=geojson`;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
 
+  try {
     const response = await fetch(osrmUrl, {
       signal: controller.signal,
       headers: { Accept: "application/json" },
     });
-    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
@@ -70,8 +78,8 @@ export async function fetchRoadRoute(
           osrmDist += haversineDist(roadCoords[i], roadCoords[i + 1]);
         }
 
-        // Only accept OSRM route if it stays within 2.2x of direct waypoint distance
-        if (roadCoords.length >= 2 && (directDist < 0.5 || osrmDist <= directDist * 2.2)) {
+        // Only accept OSRM route if it stays within 2.5x of direct waypoint distance
+        if (roadCoords.length >= 2 && (directDist < 0.5 || osrmDist <= directDist * 2.5)) {
           routeCache.set(cacheKey, roadCoords);
           return roadCoords;
         }
@@ -79,13 +87,15 @@ export async function fetchRoadRoute(
     }
   } catch (err) {
     console.warn("OSRM routing service unavailable, generating fallback path:", err);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // Fallback: Generate smooth localized road points directly connecting camera waypoints
   const fallbackCoords: [number, number][] = [];
-  for (let i = 0; i < waypoints.length - 1; i++) {
-    const start = waypoints[i];
-    const end = waypoints[i + 1];
+  for (let i = 0; i < cleanWaypoints.length - 1; i++) {
+    const start = cleanWaypoints[i];
+    const end = cleanWaypoints[i + 1];
     const steps = 15;
 
     for (let s = 0; s < steps; s++) {
@@ -97,7 +107,7 @@ export async function fetchRoadRoute(
       fallbackCoords.push([lng, lat]);
     }
   }
-  fallbackCoords.push(waypoints[waypoints.length - 1]);
+  fallbackCoords.push(cleanWaypoints[cleanWaypoints.length - 1]);
 
   routeCache.set(cacheKey, fallbackCoords);
   return fallbackCoords;

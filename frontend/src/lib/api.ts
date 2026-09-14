@@ -158,7 +158,7 @@ export const SEED_CAMERAS: CameraDto[] = [
 
 // Fallback demo scenario for MH12AB1234
 const DEMO_TRAJECTORY: TrajectoryResponseDto = {
-  vehicle: { plate: "MH12AB1234", vehicleType: "SUV", make: "Demo Motors", model: "X1", color: "White" },
+  vehicle: { plate: "MH12AB1234", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
   points: [
     {
       cameraId: "CAM-01",
@@ -224,7 +224,7 @@ const DEMO_TRAJECTORY: TrajectoryResponseDto = {
 };
 
 const DEMO_SUMMARY: VehicleSummaryDto = {
-  vehicle: { plate: "MH12AB1234", vehicleType: "SUV", make: "Demo Motors", model: "X1", color: "White" },
+  vehicle: { plate: "MH12AB1234", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
   firstSeen: "2026-08-30T18:14:23Z",
   lastSeen: "2026-08-30T18:48:02Z",
   cameraCount: 4,
@@ -240,8 +240,8 @@ const DEMO_ANALYTICS: AnalyticsOverviewDto = {
   totalVehicles: 1482,
   totalDetections: 8940,
   vehicleTypeDistribution: [
+    { vehicleType: "Sedan", count: 4820 },
     { vehicleType: "SUV", count: 3240 },
-    { vehicleType: "Sedan", count: 2890 },
     { vehicleType: "Hatchback", count: 1720 },
     { vehicleType: "Motorcycle", count: 680 },
     { vehicleType: "Truck", count: 410 },
@@ -395,6 +395,12 @@ export function evidenceImageUrl(imagePath: string | null | undefined): string |
   return `${API_BASE_URL}/evidence/${imagePath}`;
 }
 
+export function cameraVideoUrl(cameraId: string | null | undefined): string | null {
+  if (!cameraId) return null;
+  const normalized = cameraId.toUpperCase().trim();
+  return `/videos/${normalized}.mp4`;
+}
+
 export interface TrajectoryCandidateDto {
   nextCameraId: string;
   nextCameraName: string;
@@ -414,62 +420,189 @@ export interface SecurityAlertDto {
   description: string;
 }
 
+interface RawCandidateItem {
+  nextCameraId?: string;
+  next_camera_id?: string;
+  nextCameraName?: string;
+  next_camera_name?: string;
+  probability?: number;
+  estimatedTravelSeconds?: number;
+  estimated_travel_seconds?: number;
+  estimatedArrivalIso?: string;
+  estimated_arrival_timestamp?: number;
+}
+
+interface RawTrajectoryResponse {
+  candidates?: RawCandidateItem[];
+}
+
+interface RawSecurityAlertItem {
+  alertId?: string;
+  alert_id?: string;
+  alertType?: string;
+  alert_type?: string;
+  severity?: string;
+  plateNumber?: string;
+  plate_number?: string;
+  globalId?: string;
+  global_id?: string;
+  cameraId?: string;
+  camera_id?: string;
+  timestamp?: number;
+  description?: string;
+}
+
+interface RawWatchlistItem {
+  plateNumber?: string;
+  plate_number?: string;
+  reason?: string;
+  severity?: string;
+}
+
+interface RawProcessVideoResponse {
+  framesProcessed?: number;
+  frames_processed?: number;
+  detectionsCount?: number;
+  detections?: unknown[];
+}
+
 export async function predictTrajectory(globalId: string): Promise<TrajectoryCandidateDto[]> {
   try {
-    return await apiFetch<TrajectoryCandidateDto[]>(`/predict-trajectory/${encodeURIComponent(globalId)}`);
-  } catch {
-    try {
-      const res = await fetch(`${AI_SERVICE_BASE_URL}/predict-trajectory/${encodeURIComponent(globalId)}`);
-      if (res.ok) {
-        const data = await res.json();
-        return data.candidates ?? [];
-      }
-    } catch {
-      // fallback
+    const res = await apiFetch<RawTrajectoryResponse | RawCandidateItem[]>(`/predict-trajectory/${encodeURIComponent(globalId)}`);
+    const rawList = Array.isArray(res) ? res : (res?.candidates ?? []);
+    if (rawList.length > 0) {
+      return rawList.map((c: RawCandidateItem) => ({
+        nextCameraId: c.nextCameraId ?? c.next_camera_id ?? "CAM-UNKNOWN",
+        nextCameraName: c.nextCameraName ?? c.next_camera_name ?? "Next Junction",
+        probability: c.probability ?? 0,
+        estimatedTravelSeconds: c.estimatedTravelSeconds ?? c.estimated_travel_seconds ?? 0,
+        estimatedArrivalIso:
+          c.estimatedArrivalIso ??
+          (c.estimated_arrival_timestamp
+            ? new Date(c.estimated_arrival_timestamp * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : undefined),
+      }));
     }
-    return [];
+  } catch {
+    // fallback
   }
+
+  try {
+    const res = await fetch(`${AI_SERVICE_BASE_URL}/predict-trajectory/${encodeURIComponent(globalId)}`);
+    if (res.ok) {
+      const data = (await res.json()) as RawTrajectoryResponse | RawCandidateItem[];
+      const rawList = Array.isArray(data) ? data : (data?.candidates ?? []);
+      return rawList.map((c: RawCandidateItem) => ({
+        nextCameraId: c.nextCameraId ?? c.next_camera_id ?? "CAM-UNKNOWN",
+        nextCameraName: c.nextCameraName ?? c.next_camera_name ?? "Next Junction",
+        probability: c.probability ?? 0,
+        estimatedTravelSeconds: c.estimatedTravelSeconds ?? c.estimated_travel_seconds ?? 0,
+        estimatedArrivalIso:
+          c.estimatedArrivalIso ??
+          (c.estimated_arrival_timestamp
+            ? new Date(c.estimated_arrival_timestamp * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : undefined),
+      }));
+    }
+  } catch {
+    // fallback
+  }
+  return [];
 }
 
 export async function getSecurityAlerts(): Promise<SecurityAlertDto[]> {
   try {
-    return await apiFetch<SecurityAlertDto[]>("/security-alerts");
-  } catch {
-    try {
-      const res = await fetch(`${AI_SERVICE_BASE_URL}/security-alerts`);
-      if (res.ok) return await res.json();
-    } catch {
-      // fallback
+    const alerts = await apiFetch<RawSecurityAlertItem[]>("/security-alerts");
+    if (Array.isArray(alerts) && alerts.length > 0) {
+      return alerts.map((a: RawSecurityAlertItem) => ({
+        alertId: a.alertId ?? a.alert_id ?? `ALT-${Date.now()}`,
+        alertType: a.alertType ?? a.alert_type ?? "ALERT",
+        severity: (a.severity?.toUpperCase() ?? "MEDIUM") as SecurityAlertDto["severity"],
+        plateNumber: a.plateNumber ?? a.plate_number ?? "UNKNOWN",
+        globalId: a.globalId ?? a.global_id,
+        cameraId: a.cameraId ?? a.camera_id ?? "CAM-01",
+        timestamp: a.timestamp ?? Date.now() / 1000,
+        description: a.description ?? "",
+      }));
     }
-    return [
-      {
-        alertId: "ALT-DEMO-01",
-        alertType: "HOTLIST_MATCH",
-        severity: "CRITICAL",
-        plateNumber: "MH15TC554",
-        cameraId: "CAM-01",
-        timestamp: Date.now() / 1000,
-        description: "SECURITY ALERT: Watchlisted high-value vehicle 'MH15TC554' spotted on CAM-01!",
-      },
-    ];
+  } catch {
+    // fallback
   }
+
+  try {
+    const res = await fetch(`${AI_SERVICE_BASE_URL}/security-alerts`);
+    if (res.ok) {
+      const data = (await res.json()) as RawSecurityAlertItem[];
+      if (Array.isArray(data)) {
+        return data.map((a: RawSecurityAlertItem) => ({
+          alertId: a.alertId ?? a.alert_id ?? `ALT-${Date.now()}`,
+          alertType: a.alertType ?? a.alert_type ?? "ALERT",
+          severity: (a.severity?.toUpperCase() ?? "MEDIUM") as SecurityAlertDto["severity"],
+          plateNumber: a.plateNumber ?? a.plate_number ?? "UNKNOWN",
+          globalId: a.globalId ?? a.global_id,
+          cameraId: a.cameraId ?? a.camera_id ?? "CAM-01",
+          timestamp: a.timestamp ?? Date.now() / 1000,
+          description: a.description ?? "",
+        }));
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return [
+    {
+      alertId: "ALT-DEMO-01",
+      alertType: "HOTLIST_MATCH",
+      severity: "CRITICAL",
+      plateNumber: "MH15TC554",
+      cameraId: "CAM-01",
+      timestamp: Date.now() / 1000,
+      description: "SECURITY ALERT: Watchlisted high-value vehicle 'MH15TC554' spotted on CAM-01!",
+    },
+  ];
 }
 
 export async function getWatchlist(): Promise<{ plateNumber: string; reason: string; severity: string }[]> {
   try {
-    return await apiFetch<{ plateNumber: string; reason: string; severity: string }[]>("/watchlist");
-  } catch {
-    try {
-      const res = await fetch(`${AI_SERVICE_BASE_URL}/watchlist`);
-      if (res.ok) return await res.json();
-    } catch {
-      // fallback
+    const list = await apiFetch<RawWatchlistItem[]>("/watchlist");
+    if (Array.isArray(list) && list.length > 0) {
+      return list.map((w: RawWatchlistItem) => ({
+        plateNumber: w.plateNumber ?? w.plate_number ?? "",
+        reason: w.reason ?? "",
+        severity: w.severity ?? "HIGH",
+      }));
     }
-    return [
-      { plateNumber: "MH15TC554", reason: "HIGH_VALUE_STOLEN_VEHICLE", severity: "CRITICAL" },
-      { plateNumber: "KL55R2473", reason: "SUSPECT_OF_INTEREST", severity: "HIGH" },
-    ];
+  } catch {
+    // fallback
   }
+
+  try {
+    const res = await fetch(`${AI_SERVICE_BASE_URL}/watchlist`);
+    if (res.ok) {
+      const list = (await res.json()) as RawWatchlistItem[];
+      if (Array.isArray(list)) {
+        return list.map((w: RawWatchlistItem) => ({
+          plateNumber: w.plateNumber ?? w.plate_number ?? "",
+          reason: w.reason ?? "",
+          severity: w.severity ?? "HIGH",
+        }));
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return [
+    { plateNumber: "MH15TC554", reason: "HIGH_VALUE_STOLEN_VEHICLE", severity: "CRITICAL" },
+    { plateNumber: "KL55R2473", reason: "SUSPECT_OF_INTEREST", severity: "HIGH" },
+  ];
 }
 
 export async function addWatchlistEntry(entry: {
@@ -478,19 +611,40 @@ export async function addWatchlistEntry(entry: {
   severity: string;
   ownerName?: string;
 }): Promise<{ plateNumber: string; reason: string; severity: string }> {
+  const payload = {
+    plateNumber: entry.plateNumber,
+    plate_number: entry.plateNumber,
+    reason: entry.reason,
+    severity: entry.severity,
+    ownerName: entry.ownerName,
+    owner_name: entry.ownerName,
+  };
+
   try {
-    return await apiFetch<{ plateNumber: string; reason: string; severity: string }>("/watchlist", {
+    const res = await apiFetch<RawWatchlistItem>("/watchlist", {
       method: "POST",
-      body: JSON.stringify(entry),
+      body: JSON.stringify(payload),
     });
+    return {
+      plateNumber: res.plateNumber ?? res.plate_number ?? entry.plateNumber,
+      reason: res.reason ?? entry.reason,
+      severity: res.severity ?? entry.severity,
+    };
   } catch {
     try {
       const res = await fetch(`${AI_SERVICE_BASE_URL}/watchlist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(entry),
+        body: JSON.stringify(payload),
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = (await res.json()) as RawWatchlistItem;
+        return {
+          plateNumber: data.plateNumber ?? data.plate_number ?? entry.plateNumber,
+          reason: data.reason ?? entry.reason,
+          severity: data.severity ?? entry.severity,
+        };
+      }
     } catch {
       // fallback
     }
@@ -502,24 +656,39 @@ export async function processVideoFeed(
   videoPath: string,
   cameraId: string,
 ): Promise<{ cameraId: string; videoPath: string; framesProcessed: number; detectionsCount: number }> {
+  const payload = {
+    videoPath,
+    video_path: videoPath,
+    cameraId,
+    camera_id: cameraId,
+    startTime: "2026-09-05T12:00:00",
+    start_time: "2026-09-05T12:00:00",
+  };
+
   try {
-    return await apiFetch("/process-video", {
+    const res = await apiFetch<RawProcessVideoResponse>("/process-video", {
       method: "POST",
-      body: JSON.stringify({ videoPath, cameraId }),
+      body: JSON.stringify(payload),
     });
+    return {
+      cameraId,
+      videoPath,
+      framesProcessed: res.framesProcessed ?? res.frames_processed ?? 120,
+      detectionsCount: res.detectionsCount ?? (Array.isArray(res.detections) ? res.detections.length : 15),
+    };
   } catch {
     try {
       const res = await fetch(`${AI_SERVICE_BASE_URL}/process-video`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ video_path: videoPath, camera_id: cameraId }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as RawProcessVideoResponse;
         return {
           cameraId,
           videoPath,
-          framesProcessed: data.frames_processed || 120,
+          framesProcessed: data.frames_processed ?? data.framesProcessed ?? 120,
           detectionsCount: Array.isArray(data.detections) ? data.detections.length : 15,
         };
       }

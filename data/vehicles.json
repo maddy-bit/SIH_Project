@@ -1,5 +1,5 @@
 [
-  { "plate": "MH12AB1234", "vehicleType": "SUV", "make": "Demo Motors", "model": "X1", "color": "White" },
+  { "plate": "MH12AB1234", "vehicleType": "Sedan", "make": "Toyota", "model": "Prius", "color": "Silver" },
   { "plate": "MH14CD5678", "vehicleType": "Sedan", "make": "Demo Motors", "model": "S2", "color": "Silver" },
   { "plate": "MH12EF9012", "vehicleType": "Hatchback", "make": "Demo Motors", "model": "H1", "color": "Red" },
   { "plate": "MH20GH3456", "vehicleType": "Truck", "make": "Demo Freight", "model": "T4", "color": "Blue" },

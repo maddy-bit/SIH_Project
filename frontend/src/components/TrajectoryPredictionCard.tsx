@@ -97,7 +97,7 @@ export function TrajectoryPredictionCard({ plate }: TrajectoryPredictionCardProp
                 <div>
                   <p className="text-sm font-bold text-slate-950 uppercase">{cand.nextCameraName}</p>
                   <p className="text-xs font-mono text-slate-800 font-bold">
-                    NODE: {cand.nextCameraId} • ETA ~{Math.round(cand.estimatedTravelSeconds / 60)}m
+                    NODE: {cand.nextCameraId} • ETA ~{Math.round((cand.estimatedTravelSeconds ?? 0) / 60)}m
                   </p>
                 </div>
               </div>

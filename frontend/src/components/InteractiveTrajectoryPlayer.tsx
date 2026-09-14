@@ -86,7 +86,12 @@ export function InteractiveTrajectoryPlayer({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={() => {
+              if (!isPlaying && activeIndex >= items.length - 1) {
+                notifyIndexChange(0);
+              }
+              setIsPlaying(!isPlaying);
+            }}
             title={isPlaying ? "Pause Playback" : "Play Journey"}
             className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-900 bg-slate-900 text-white hover:bg-slate-800 active:translate-y-[1px] transition-all cursor-pointer text-xs font-bold"
           >

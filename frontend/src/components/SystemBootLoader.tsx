@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 interface SystemBootLoaderProps {
   onComplete: () => void;
   isOpen: boolean;
+  targetVehicleType?: string;
+  targetColor?: string;
 }
 
 const CAMERAS_BOOT = [
@@ -98,7 +100,12 @@ const CYBER_EDGES: [number, number][] = [
   [6, 13], [7, 12],
 ];
 
-export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) {
+export function SystemBootLoader({
+  onComplete,
+  isOpen,
+  targetVehicleType = "Sedan",
+  targetColor = "Silver",
+}: SystemBootLoaderProps) {
   const carCanvasRef = useRef<HTMLCanvasElement>(null);
   const globeCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -437,7 +444,7 @@ export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) 
       ctx.strokeRect(roofCenter.px - bSize, roofCenter.py - bSize, bSize * 2, bSize * 2);
       ctx.fillStyle = "#0f172a";
       ctx.font = "bold 10px monospace";
-      ctx.fillText("TARGET: WHITE SUV // ANPR LOCKED", roofCenter.px - 75, roofCenter.py - bSize - 10);
+      ctx.fillText(`TARGET: ${(targetColor || "SILVER").toUpperCase()} ${(targetVehicleType || "SEDAN").toUpperCase()} // ANPR LOCKED`, roofCenter.px - 75, roofCenter.py - bSize - 10);
       ctx.restore();
 
       ctx.restore(); // Restore dpr scale
@@ -447,7 +454,7 @@ export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) 
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [isOpen, renderMode]);
+  }, [isOpen, renderMode, targetColor, targetVehicleType]);
 
   // 2. Render 3D Holographic Pune Surveillance Radar Sphere (White Theme)
   useEffect(() => {
@@ -557,14 +564,14 @@ export function SystemBootLoader({ onComplete, isOpen }: SystemBootLoaderProps) 
 
       ctx.fillStyle = "#be123c";
       ctx.font = "bold 9px monospace";
-      ctx.fillText("TARGET: WHITE SUV", tx + 8, ty + 12);
+      ctx.fillText(`TARGET: ${(targetColor || "SILVER").toUpperCase()} ${(targetVehicleType || "SEDAN").toUpperCase()}`, tx + 8, ty + 12);
 
       animId = requestAnimationFrame(render);
     };
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [isOpen]);
+  }, [isOpen, targetColor, targetVehicleType]);
 
   if (!isOpen) return null;
 

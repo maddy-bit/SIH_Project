@@ -114,7 +114,15 @@ export function SystemStatusBar() {
       {/* Primary Engine State Indicator */}
       <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1">
         <span className="relative flex h-2.5 w-2.5 shrink-0">
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <span
+            className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
+              state === "online"
+                ? "bg-emerald-500"
+                : state === "checking"
+                ? "bg-amber-400 animate-pulse"
+                : "bg-sky-500"
+            }`}
+          />
         </span>
         <div className="flex flex-col leading-tight">
           <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-700">ENGINE</span>

@@ -135,9 +135,16 @@ export function AnalyticsDashboard() {
     );
   }
 
-  const hourMax = Math.max(1, ...data.detectionsByHour.map((h) => h.count));
-  const typeMax = Math.max(1, ...data.vehicleTypeDistribution.map((t) => t.count));
-  const cameraMax = Math.max(1, ...data.busiestCameras.map((c) => c.count));
+  const detectionsByHour = data.detectionsByHour ?? [];
+  const vehicleTypeDistribution = data.vehicleTypeDistribution ?? [];
+  const busiestCameras = data.busiestCameras ?? [];
+  const topRoutes = data.topRoutes ?? [];
+  const commonOrigins = data.commonOrigins ?? [];
+  const commonDestinations = data.commonDestinations ?? [];
+
+  const hourMax = Math.max(1, ...detectionsByHour.map((h) => h.count));
+  const typeMax = Math.max(1, ...vehicleTypeDistribution.map((t) => t.count));
+  const cameraMax = Math.max(1, ...busiestCameras.map((c) => c.count));
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-5">
@@ -200,11 +207,11 @@ export function AnalyticsDashboard() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Column 1: Hourly Distribution */}
         <StatCard title="Hourly Traffic Density (24H)" className="lg:col-span-1">
-          {data.detectionsByHour.length === 0 ? (
+          {detectionsByHour.length === 0 ? (
             <p className="text-xs text-neutral-500 font-mono py-4">No hourly detection data recorded yet.</p>
           ) : (
             <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
-              {data.detectionsByHour.map((h) => (
+              {detectionsByHour.map((h) => (
                 <BarRow
                   key={h.hour}
                   label={`${String(h.hour).padStart(2, "0")}:00 hrs`}
@@ -218,11 +225,11 @@ export function AnalyticsDashboard() {
 
         {/* Column 2: Vehicle Classification Breakdown */}
         <StatCard title="Vehicle Classification" className="lg:col-span-1">
-          {data.vehicleTypeDistribution.length === 0 ? (
+          {vehicleTypeDistribution.length === 0 ? (
             <p className="text-xs text-neutral-500 font-mono py-4">No vehicle classifications recorded yet.</p>
           ) : (
             <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
-              {data.vehicleTypeDistribution.map((t) => {
+              {vehicleTypeDistribution.map((t) => {
                 const icon =
                   t.vehicleType?.toLowerCase() === "suv"
                     ? "🚙"
@@ -250,11 +257,11 @@ export function AnalyticsDashboard() {
 
         {/* Column 3: Busiest Camera Nodes */}
         <StatCard title="High-Density Camera Checkpoints" className="lg:col-span-1">
-          {data.busiestCameras.length === 0 ? (
+          {busiestCameras.length === 0 ? (
             <p className="text-xs text-neutral-500 font-mono py-4">No camera density data recorded.</p>
           ) : (
             <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
-              {data.busiestCameras.map((c) => (
+              {busiestCameras.map((c) => (
                 <BarRow
                   key={c.cameraId}
                   label={`${c.cameraId} (${c.cameraName})`}
@@ -271,11 +278,11 @@ export function AnalyticsDashboard() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Column 4: Top Corridors */}
         <StatCard title="Most Frequent Traffic Corridors">
-          {data.topRoutes.length === 0 ? (
+          {topRoutes.length === 0 ? (
             <p className="text-xs text-slate-700 font-mono py-4">No multi-camera route transitions scored yet.</p>
           ) : (
             <div className="space-y-2">
-              {data.topRoutes.slice(0, 5).map((r, i) => (
+              {topRoutes.slice(0, 5).map((r, i) => (
                 <div
                   key={`${r.fromCameraId}-${r.toCameraId}`}
                   className="flex items-center justify-between rounded-md border border-slate-300 bg-white p-3 text-sm"
@@ -307,11 +314,11 @@ export function AnalyticsDashboard() {
               <div className="text-xs font-mono uppercase font-bold text-slate-950 bg-slate-100 px-3 py-1 border border-slate-300 rounded-xs mb-3 inline-block">
                 Top Origin Hubs
               </div>
-              {data.commonOrigins.length === 0 ? (
+              {commonOrigins.length === 0 ? (
                 <p className="text-sm text-slate-800 font-mono font-bold">No data</p>
               ) : (
                 <div className="space-y-2">
-                  {data.commonOrigins.slice(0, 4).map((o) => (
+                  {commonOrigins.slice(0, 4).map((o) => (
                     <div key={o.cameraId} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-200 last:border-b-0 font-mono">
                       <span className="font-bold text-slate-950">{o.cameraId}</span>
                       <span className="font-bold text-slate-950 bg-slate-100 px-2.5 py-0.5 border border-slate-300 rounded-xs text-xs">{o.count}</span>
@@ -325,11 +332,11 @@ export function AnalyticsDashboard() {
               <div className="text-xs font-mono uppercase font-bold text-slate-950 bg-slate-100 px-3 py-1 border border-slate-300 rounded-xs mb-3 inline-block">
                 Top Destination Hubs
               </div>
-              {data.commonDestinations.length === 0 ? (
+              {commonDestinations.length === 0 ? (
                 <p className="text-sm text-slate-800 font-mono font-bold">No data</p>
               ) : (
                 <div className="space-y-2">
-                  {data.commonDestinations.slice(0, 4).map((d) => (
+                  {commonDestinations.slice(0, 4).map((d) => (
                     <div key={d.cameraId} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-200 last:border-b-0 font-mono">
                       <span className="font-bold text-slate-950">{d.cameraId}</span>
                       <span className="font-bold text-slate-950 bg-slate-100 px-2.5 py-0.5 border border-slate-300 rounded-xs text-xs">{d.count}</span>

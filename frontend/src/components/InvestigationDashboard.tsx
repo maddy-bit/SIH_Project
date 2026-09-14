@@ -39,6 +39,8 @@ import { SecurityWatchlistModal } from "./SecurityWatchlistModal";
 import { PdfReportExporter } from "./PdfReportExporter";
 import { InteractiveTrajectoryPlayer } from "./InteractiveTrajectoryPlayer";
 import { VideoIngestionModal } from "./VideoIngestionModal";
+import { VehicleRegistrySection } from "./VehicleRegistrySection";
+import { VehicleRegistryModal } from "./VehicleRegistryModal";
 
 export function InvestigationDashboard() {
   const [cameras, setCameras] = useState<CameraDto[]>([]);
@@ -51,6 +53,7 @@ export function InvestigationDashboard() {
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
   const [isCameraGridOpen, setIsCameraGridOpen] = useState(false);
   const [isVideoIngestOpen, setIsVideoIngestOpen] = useState(false);
+  const [isRegistryModalOpen, setIsRegistryModalOpen] = useState(false);
   const liveCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -111,7 +114,12 @@ export function InvestigationDashboard() {
     });
   }
 
-  async function handleSearch(plate: string, mode: SearchMode) {
+  async function handleSearch(
+    plate: string,
+    mode: SearchMode,
+    overrideVehicleType?: string,
+    overrideColor?: string,
+  ) {
     stopLive();
     setSearchState("searching");
     setErrorMessage(null);
@@ -122,11 +130,23 @@ export function InvestigationDashboard() {
 
     try {
       const summaryResult = await getVehicleSummary(plate);
+      if (overrideVehicleType) {
+        summaryResult.vehicle.vehicleType = overrideVehicleType;
+      }
+      if (overrideColor) {
+        summaryResult.vehicle.color = overrideColor;
+      }
       setSummary(summaryResult);
 
       if (mode === "historical" || mode === "combined") {
         try {
           const trajectoryResult = await getVehicleTrajectory(plate);
+          if (overrideVehicleType) {
+            trajectoryResult.vehicle.vehicleType = overrideVehicleType;
+          }
+          if (overrideColor) {
+            trajectoryResult.vehicle.color = overrideColor;
+          }
           setTrajectory(trajectoryResult);
           if (trajectoryResult.points.length > 0) setSelectedIndex(0);
         } catch {
@@ -180,6 +200,14 @@ export function InvestigationDashboard() {
           >
             <span>🎥</span>
             <span>12-Camera Grid</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsRegistryModalOpen(true)}
+            className="neo-btn-secondary flex items-center gap-2 px-4 py-2.5 text-sm font-mono font-bold uppercase cursor-pointer"
+          >
+            <span>🏛️</span>
+            <span>VAHAN Registry</span>
           </button>
         </div>
       </div>
@@ -270,20 +298,9 @@ export function InvestigationDashboard() {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {points.length >= 2 && !isLive && (
-            <button
-              type="button"
-              onClick={() => setReplayToken((n) => n + 1)}
-              className="neo-btn flex items-center justify-center gap-2 py-3.5 text-sm sm:text-base font-mono font-bold tracking-wider text-white uppercase cursor-pointer"
-            >
-              <span>▶</span>
-              <span>Replay Route Trajectory</span>
-            </button>
-          )}
         </div>
 
-        {/* Center Column: 3D Map & Trajectory Player */}
+        {/* Center Column: 3D Map, Trajectory Player & VAHAN Vehicle Registry */}
         <div className="min-h-[480px] flex flex-col gap-4">
           <InvestigationMap
             cameras={cameras}
@@ -299,12 +316,32 @@ export function InvestigationDashboard() {
               onSelectPoint={setSelectedIndex}
             />
           )}
+          {summary && (
+            <VehicleRegistrySection plateNumber={summary.vehicle.plate} />
+          )}
         </div>
 
         {/* Right Column: Timeline & Forensic CCTV Viewer */}
-        <div className="flex flex-col gap-4 overflow-y-auto">
+        <div className="flex flex-col gap-4 overflow-y-auto p-1 -m-1">
           <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
-          <EvidenceViewer point={selectedPoint} />
+          <EvidenceViewer
+            point={selectedPoint}
+            targetPlate={summary?.vehicle.plate ?? "MH12AB1234"}
+            vehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
+            vehicleColor={summary?.vehicle.color ?? trajectory?.vehicle.color ?? "Silver"}
+            selectedIndex={selectedIndex}
+            totalPoints={points.length}
+            onNextCheckpoint={() => {
+              if (selectedIndex !== null && selectedIndex < points.length - 1) {
+                setSelectedIndex(selectedIndex + 1);
+              }
+            }}
+            onPrevCheckpoint={() => {
+              if (selectedIndex !== null && selectedIndex > 0) {
+                setSelectedIndex(selectedIndex - 1);
+              }
+            }}
+          />
         </div>
       </div>
 
@@ -313,13 +350,21 @@ export function InvestigationDashboard() {
         isOpen={isCameraGridOpen}
         onClose={() => setIsCameraGridOpen(false)}
         cameras={cameras}
+        targetVehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
       />
 
       {/* CCTV Video Feed Ingestion Modal */}
       <VideoIngestionModal
         isOpen={isVideoIngestOpen}
         onClose={() => setIsVideoIngestOpen(false)}
-        onTargetDetected={(plate) => handleSearch(plate, "historical")}
+        onTargetDetected={(plate, vType, vColor) => handleSearch(plate, "historical", vType, vColor)}
+      />
+
+      {/* Indian Vehicle Registry VAHAN Modal */}
+      <VehicleRegistryModal
+        isOpen={isRegistryModalOpen}
+        onClose={() => setIsRegistryModalOpen(false)}
+        initialPlate={summary?.vehicle.plate ?? "MH12AB1234"}
       />
     </div>
   );

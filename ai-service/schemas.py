@@ -279,7 +279,7 @@ class DetectionEvent(BaseModel):
 class ProcessVideoRequest(BaseModel):
     video_path: str
     camera_id: str
-    start_time: str
+    start_time: str = "2026-09-05T12:00:00"
     frame_stride: int = 5
     plate_sample_stride: int = 3
 

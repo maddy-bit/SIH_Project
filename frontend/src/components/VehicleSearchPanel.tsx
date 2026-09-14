@@ -17,7 +17,7 @@ const MODES: { value: SearchMode; label: string; desc: string }[] = [
 ];
 
 const PRESETS = [
-  { plate: "MH12AB1234", desc: "White SUV (4 Cams)", tag: "DEMO TARGET" },
+  { plate: "MH12AB1234", desc: "Silver Sedan (4 Cams)", tag: "DEMO TARGET" },
   { plate: "DL04CA2020", desc: "Black Sedan (CAM-02)", tag: "DECOY" },
   { plate: "KA05MH8899", desc: "Silver Hatch (CAM-05)", tag: "DECOY" },
 ];

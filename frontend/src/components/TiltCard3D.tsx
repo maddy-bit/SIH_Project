@@ -25,12 +25,15 @@ export function TiltCard3D({
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative"
+      className="relative px-0.5"
     >
       <div
         style={{
-          transform: isHovered ? "translate(-2px, -2px)" : "none",
-          transition: "transform 0.1s ease, box-shadow 0.1s ease",
+          transform: isHovered ? "translateY(-3px)" : "none",
+          transition: "transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease",
+          boxShadow: isHovered
+            ? "0 6px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)"
+            : "none",
         }}
         className={`relative ${className}`}
       >

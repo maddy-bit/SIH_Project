@@ -8,13 +8,17 @@ interface LiveCameraGridModalProps {
   isOpen: boolean;
   onClose: () => void;
   cameras: CameraDto[];
+  targetVehicleType?: string | null;
 }
 
-export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGridModalProps) {
+export function LiveCameraGridModal({
+  isOpen,
+  onClose,
+  cameras,
+  targetVehicleType = "Sedan",
+}: LiveCameraGridModalProps) {
   const [selectedFilter, setSelectedFilter] = useState<"ALL" | "ONLINE" | "PROCESSING">("ALL");
   const [expandedCam, setExpandedCam] = useState<CameraDto | null>(null);
-
-  if (!isOpen) return null;
 
   const filteredCameras = cameras.filter((c) => {
     if (selectedFilter === "ONLINE") return c.status === "ONLINE";
@@ -24,8 +28,9 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-slate-900/60">
-        <motion.div
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-slate-900/60">
+          <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -112,7 +117,7 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
                       {isOnline && (
                         <div className="absolute top-8 left-12 h-20 w-28 rounded border-2 border-emerald-400 bg-emerald-500/10 flex flex-col justify-between p-1 text-[9px] font-mono font-bold text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                           <div className="flex items-center justify-between">
-                            <span>SUV 96%</span>
+                            <span className="uppercase">{(targetVehicleType || "Sedan").toUpperCase()} 96%</span>
                             <span className="bg-emerald-950/80 px-1 rounded">TRK-0{index + 1}</span>
                           </div>
                           <div className="bg-slate-950/90 px-1 py-0.5 rounded text-[8px] text-cyan-300 border border-emerald-500/40 self-start">
@@ -181,6 +186,7 @@ export function LiveCameraGridModal({ isOpen, onClose, cameras }: LiveCameraGrid
           )}
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }
