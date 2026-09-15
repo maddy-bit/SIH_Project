@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * dropped - see VehicleDetection's nullable vehicle field.
  */
 @Service
+@SuppressWarnings("null")
 public class DetectionIngestionService {
 
     private final CameraRepository cameraRepository;
@@ -74,7 +75,7 @@ public class DetectionIngestionService {
         VehicleDetection saved = detectionRepository.save(detection);
 
         if (vehicle != null && vehicle.getPlate() != null) {
-            String plate = vehicle.getPlate();
+            String plate = java.util.Objects.requireNonNull(vehicle.getPlate());
             try {
                 Cache vehicleCache = cacheManager.getCache("vehicles");
                 if (vehicleCache != null) vehicleCache.evict(plate);
