@@ -1,6 +1,7 @@
 package com.cityai.backend.service;
 
 import com.cityai.backend.dto.DetectionIngestRequest;
+import com.cityai.backend.dto.VehicleDetectionDto;
 import com.cityai.backend.model.Camera;
 import com.cityai.backend.model.Vehicle;
 import com.cityai.backend.model.VehicleDetection;
@@ -8,11 +9,10 @@ import com.cityai.backend.repository.CameraRepository;
 import com.cityai.backend.repository.VehicleDetectionRepository;
 import com.cityai.backend.repository.VehicleRepository;
 import java.util.NoSuchElementException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Turns raw AI-pipeline output (DetectionIngestRequest) into stored

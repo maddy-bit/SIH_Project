@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TiltCard3D } from "./TiltCard3D";
-import { getVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
+import { getVehicleRegistryRecord, fetchVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
 
 interface VehicleRegistrySectionProps {
   plateNumber: string;
@@ -18,8 +18,27 @@ export function VehicleRegistrySection({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isMasked, setIsMasked] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"all" | "technical" | "compliance">("all");
+  const [record, setRecord] = useState<IndianVehicleRcRecord>(() => getVehicleRegistryRecord(plateNumber));
+  const [isLoading, setIsLoading] = useState(false);
 
-  const record: IndianVehicleRcRecord = getVehicleRegistryRecord(plateNumber);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const live = await fetchVehicleRegistryRecord(plateNumber);
+        if (!cancelled) setRecord(live);
+      } catch {
+        if (!cancelled) setRecord(getVehicleRegistryRecord(plateNumber));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [plateNumber]);
 
   return (
     <TiltCard3D className={className}>

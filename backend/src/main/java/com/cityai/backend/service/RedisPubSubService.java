@@ -1,6 +1,5 @@
 package com.cityai.backend.service;
 
-import com.cityai.backend.config.RedisConfig;
 import com.cityai.backend.dto.VehicleDetectionDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -14,9 +13,12 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class RedisPubSubService implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(RedisPubSubService.class);
@@ -64,7 +66,7 @@ public class RedisPubSubService implements MessageListener {
     }
 
     @Override
-    public void onMessage(Message message, byte[] pattern) {
+    public void onMessage(@NonNull Message message, @Nullable byte[] pattern) {
         try {
             String body = new String(message.getBody(), StandardCharsets.UTF_8);
             VehicleDetectionDto detection = objectMapper.readValue(body, VehicleDetectionDto.class);

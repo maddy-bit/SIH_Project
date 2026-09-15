@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
+import { getVehicleRegistryRecord, fetchVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
 import { generateRcPdf } from "@/lib/generateRcPdf";
 
 interface VehicleRegistryModalProps {
@@ -18,11 +18,30 @@ export function VehicleRegistryModal({
 }: VehicleRegistryModalProps) {
   const [queryPlate, setQueryPlate] = useState(initialPlate);
   const [activePlate, setActivePlate] = useState(initialPlate);
+  const [record, setRecord] = useState<IndianVehicleRcRecord>(() => getVehicleRegistryRecord(initialPlate));
+  const [isLoading, setIsLoading] = useState(false);
   const [isMasked, setIsMasked] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "technical" | "compliance">("overview");
 
-  const record: IndianVehicleRcRecord = getVehicleRegistryRecord(activePlate);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const live = await fetchVehicleRegistryRecord(activePlate);
+        if (!cancelled) setRecord(live);
+      } catch {
+        if (!cancelled) setRecord(getVehicleRegistryRecord(activePlate));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activePlate]);
 
   const handleSearchPlate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +115,10 @@ export function VehicleRegistryModal({
                 </div>
                 <button
                   type="submit"
-                  className="neo-btn px-5 py-2.5 text-xs font-bold text-white uppercase tracking-wider cursor-pointer whitespace-nowrap"
+                  disabled={isLoading}
+                  className="neo-btn px-5 py-2.5 text-xs font-bold text-white uppercase tracking-wider cursor-pointer whitespace-nowrap disabled:opacity-75"
                 >
-                  🔍 Query VAHAN
+                  {isLoading ? "⚡ Fetching Live..." : "🔍 Query VAHAN"}
                 </button>
               </form>
             </div>
@@ -109,12 +129,15 @@ export function VehicleRegistryModal({
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 rounded-sm">
-                    <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                    <span className={`h-2 w-2 rounded-full ${isLoading ? "bg-amber-500 animate-ping" : "bg-emerald-600 animate-pulse"}`} />
                     <span>STATUS: {record.rcStatus}</span>
                     <span className="text-slate-400">|</span>
                     <span>{record.ownerSerial}</span>
                   </span>
-                  <span className="text-xs font-bold text-slate-700 truncate max-w-[340px]">
+                  <span className="text-[10px] font-mono font-bold text-slate-800 bg-slate-200 border border-slate-300 px-2 py-1 rounded-sm">
+                    {record.dataSource === "LIVE_PUBLIC_API" ? "⚡ LIVE PUBLIC API" : `🏛️ ${record.rtoCode} REGISTRY`}
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 truncate max-w-[300px]">
                     {record.registeringAuthority}
                   </span>
                 </div>
