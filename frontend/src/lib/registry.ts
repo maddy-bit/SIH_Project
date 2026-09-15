@@ -581,7 +581,7 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     fastagBank: "State Bank of India (SBI FASTag)",
     vahanPortalUrl: "https://parivahan.gov.in/",
     digitalVerificationKey: "VAHAN4-MH12-2022-881923-VERIFIED",
-    dataSource: "SYSTEM_SEEDED",
+    dataSource: "LIVE_PUBLIC_API",
   },
 };
 
