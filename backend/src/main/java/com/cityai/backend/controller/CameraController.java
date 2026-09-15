@@ -7,6 +7,7 @@ import com.cityai.backend.spatial.SpatialCameraService;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +29,7 @@ public class CameraController {
     }
 
     @GetMapping
+    @Cacheable(value = "cameras", key = "'all'")
     public List<CameraDto> listCameras() {
         return cameraRepository.findAll().stream().map(CameraDto::from).toList();
     }
@@ -53,6 +55,7 @@ public class CameraController {
     }
 
     @GetMapping("/{cameraId}")
+    @Cacheable(value = "cameras", key = "#cameraId")
     public CameraDto getCamera(@PathVariable("cameraId") String cameraId) {
         if (cameraId == null) {
             throw new NoSuchElementException("Unknown camera: null");

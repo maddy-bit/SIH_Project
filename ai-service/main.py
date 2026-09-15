@@ -28,6 +28,7 @@ from schemas import (
 )
 from services.video_pipeline import VideoPipeline
 from services.multi_camera_orchestrator import MultiCameraOrchestrator
+from services.redis_service import redis_service
 
 app = FastAPI(
     title="City AI ANPR Trajectory & Urban Traffic Intelligence Engine (SIH26127 BEL)",
@@ -37,6 +38,11 @@ app = FastAPI(
 
 _pipeline: Optional[VideoPipeline] = None
 _orchestrator: Optional[MultiCameraOrchestrator] = None
+
+
+@app.on_event("startup")
+async def on_startup():
+    await redis_service.initialize()
 
 
 def get_pipeline() -> VideoPipeline:
@@ -54,14 +60,24 @@ def get_orchestrator() -> MultiCameraOrchestrator:
 
 
 @app.get("/health")
-def health() -> dict:
+async def health() -> dict:
+    redis_info = await redis_service.check_health()
     return {
         "status": "ok",
         "service": "city-ai-anpr-trajectory-engine",
         "organization": "Bharat Electronics Limited (BEL)",
         "sih_problem": "SIH26127",
         "version": "2.0.0",
+        "redis": redis_info,
     }
+
+
+@app.get("/jobs/{job_id}")
+async def get_job_status(job_id: str) -> dict:
+    status = await redis_service.get_job_status(job_id)
+    if not status:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+    return status
 
 
 @app.post("/process-video", response_model=ProcessVideoResponse)

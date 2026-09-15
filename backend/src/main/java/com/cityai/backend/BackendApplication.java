@@ -2,6 +2,7 @@ package com.cityai.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
 /**
  * Entry point for the City AI Traffic Intelligence Engine backend (SIH26127).
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * modules are added in later phases per the phased build plan.
  */
 @SpringBootApplication
+@EnableCaching
 public class BackendApplication {
 
     public static void main(String[] args) {

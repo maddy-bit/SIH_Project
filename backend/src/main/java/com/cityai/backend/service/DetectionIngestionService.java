@@ -11,6 +11,9 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+
 /**
  * Turns raw AI-pipeline output (DetectionIngestRequest) into stored
  * VehicleDetection rows, resolving/creating the Vehicle identity from a
@@ -25,16 +28,22 @@ public class DetectionIngestionService {
     private final VehicleRepository vehicleRepository;
     private final VehicleDetectionRepository detectionRepository;
     private final VehicleRegistryService vehicleRegistryService;
+    private final CacheManager cacheManager;
+    private final RedisPubSubService redisPubSubService;
 
     public DetectionIngestionService(
             CameraRepository cameraRepository,
             VehicleRepository vehicleRepository,
             VehicleDetectionRepository detectionRepository,
-            VehicleRegistryService vehicleRegistryService) {
+            VehicleRegistryService vehicleRegistryService,
+            CacheManager cacheManager,
+            RedisPubSubService redisPubSubService) {
         this.cameraRepository = cameraRepository;
         this.vehicleRepository = vehicleRepository;
         this.detectionRepository = detectionRepository;
         this.vehicleRegistryService = vehicleRegistryService;
+        this.cacheManager = cacheManager;
+        this.redisPubSubService = redisPubSubService;
     }
 
     @Transactional
@@ -62,9 +71,25 @@ public class DetectionIngestionService {
         detection.setPlateConfidence(request.plateConfidence());
         detection.setTrackId(request.trackId());
         detection.setFrameNumber(request.frameNumber());
-        detection.setImagePath(request.imagePath());
+        VehicleDetection saved = detectionRepository.save(detection);
 
-        return detectionRepository.save(detection);
+        if (vehicle != null && vehicle.getPlate() != null) {
+            String plate = vehicle.getPlate();
+            try {
+                Cache vehicleCache = cacheManager.getCache("vehicles");
+                if (vehicleCache != null) vehicleCache.evict(plate);
+                Cache trajectoryCache = cacheManager.getCache("trajectories");
+                if (trajectoryCache != null) trajectoryCache.evict(plate);
+            } catch (Exception ignored) {
+            }
+        }
+
+        try {
+            redisPubSubService.publishDetection(VehicleDetectionDto.from(saved));
+        } catch (Exception ignored) {
+        }
+
+        return saved;
     }
 
     private Vehicle resolveOrCreateVehicle(String normalizedPlate) {

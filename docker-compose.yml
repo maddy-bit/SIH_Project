@@ -15,16 +15,33 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   backend:
     build: ./backend
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: postgres
       DB_URL: jdbc:postgresql://db:5432/cityai
       DB_USERNAME: cityai
       DB_PASSWORD: cityai_dev_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       CORS_ALLOWED_ORIGINS: http://localhost:3000
       AI_SERVICE_URL: http://ai-service:8000
       DATA_DIR: /data
@@ -38,6 +55,12 @@ services:
 
   ai-service:
     build: ./ai-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     volumes:
       - ./videos:/app/videos:ro
       - ./data:/data
@@ -58,3 +81,4 @@ services:
 volumes:
   db-data:
   ai-models:
+  redis-data:

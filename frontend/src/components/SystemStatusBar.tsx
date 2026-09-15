@@ -49,6 +49,7 @@ function StatusItem({ label, value, tone = "neutral", icon }: StatusItemProps) {
 export function SystemStatusBar() {
   const [state, setState] = useState<ConnectionState>("checking");
   const [version, setVersion] = useState<string | null>(null);
+  const [redisInfo, setRedisInfo] = useState<{ status: string; latency: number | null } | null>(null);
   const [cameraCounts, setCameraCounts] = useState<{ online: number; processing: number; total: number } | null>(
     null,
   );
@@ -79,6 +80,12 @@ export function SystemStatusBar() {
         if (!cancelled) {
           setState("online");
           setVersion(health.version);
+          if (health.redisStatus) {
+            setRedisInfo({
+              status: health.redisStatus,
+              latency: health.redisLatencyMs ?? null,
+            });
+          }
         }
       } catch {
         if (!cancelled) setState("offline");
@@ -138,6 +145,21 @@ export function SystemStatusBar() {
           label="Mesh Nodes"
           value={cameraCounts ? `${cameraCounts.online}/${cameraCounts.total}` : "12/12"}
           tone="cyan"
+        />
+      </div>
+
+      {/* Redis Distributed Cache - Visible on md and up */}
+      <div className="hidden md:block">
+        <StatusItem
+          label="Redis Cache"
+          value={
+            redisInfo?.status === "UP"
+              ? `ONLINE${redisInfo.latency != null ? ` (${redisInfo.latency}ms)` : ""}`
+              : redisInfo?.status === "STANDALONE_FALLBACK"
+              ? "IN-MEMORY"
+              : "READY"
+          }
+          tone={redisInfo?.status === "UP" ? "positive" : "warning"}
         />
       </div>
 

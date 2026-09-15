@@ -31,6 +31,8 @@ export interface HealthResponse {
   service: string;
   version: string;
   timestamp: string;
+  redisStatus?: "UP" | "STANDALONE_FALLBACK" | "DOWN" | string;
+  redisLatencyMs?: number | null;
 }
 
 export interface CameraDto {

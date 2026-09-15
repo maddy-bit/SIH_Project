@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -165,6 +166,7 @@ public class TrajectoryEngine {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "trajectories", key = "#normalizedPlate")
     public TrajectoryResponseDto reconstructAsDto(String normalizedPlate) {
         return reconstruct(normalizedPlate).toDto();
     }
