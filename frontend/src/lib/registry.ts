@@ -372,17 +372,163 @@ const PROMINENT_BANKS = [
   "Kotak Mahindra Bank",
 ];
 
-// Seeding helper to generate deterministic hash from string
-function hashString(str: string): number {
-  let hash = 0;
+/// ── Multi-seed hash for independent selection ──────────────────────────────
+// Using FNV-1a variant seeded with a suffix so each "dimension" (name, vehicle,
+// address, insurer …) draws from a completely independent number stream.
+function seedHash(str: string, seed: number): number {
+  let h = seed >>> 0;
   for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x9e3779b9);
+    h = (h ^ (h >>> 16)) >>> 0;
   }
-  return Math.abs(hash);
+  return h >>> 0; // always positive 32-bit integer
 }
 
-// Known Scenario Targets
+// Kept for backward compatibility with any external callers
+function hashString(str: string): number {
+  return seedHash(str, 0xdeadbeef);
+}
+
+// pick(array, plateStr, seed) – independent selection per seed
+function pick<T>(arr: T[], plateStr: string, seed: number): T {
+  return arr[seedHash(plateStr, seed) % arr.length];
+}
+
+// ── Regional Name Pools ────────────────────────────────────────────────────
+const NAMES_UP = {
+  first: [
+    "AMIT", "PRADEEP", "ROHIT", "MANISH", "VIKRAM", "SURESH", "ANAND", "MUKESH",
+    "SANJAY", "RAVI", "DEEPAK", "NEERAJ", "ARUN", "PRAVEEN", "RAKESH", "DINESH",
+    "PANKAJ", "AJAY", "VIJAY", "SHYAM", "KAMAL", "RAJEEV", "SANTOSH", "MANOJ",
+    "GIRISH", "RAJIV", "KULDEEP", "BRIJESH", "YOGESH", "HEMANT", "NARENDRA", "ABHISHEK",
+    "VISHAL", "GAURAV", "UMESH", "HARENDRA", "DURGESH", "AWADHESH", "SHAILESH",
+  ],
+  last: [
+    "SHARMA", "VERMA", "GUPTA", "SINGH", "YADAV", "MISHRA", "AGARWAL", "CHAUHAN",
+    "TYAGI", "TIWARI", "PANDEY", "SAXENA", "SRIVASTAVA", "RASTOGI", "TRIPATHI",
+    "CHAUDHARY", "DUBEY", "BAJPAI", "KUSHWAHA", "MAURYA", "DIXIT", "AWASTHI",
+    "SHUKLA", "UPADHYAY", "DWIVEDI", "KESARWANI", "KHATRI", "JAISWAL", "KESHARI",
+    "BARTARIA", "SONKAR", "NIRANKARI", "BALMIKI",
+  ],
+};
+
+const NAMES_MH = {
+  first: [
+    "ANAND", "PRASHANT", "SACHIN", "NITIN", "AMOL", "ABHIJIT", "SUNIL", "SANDEEP",
+    "RAHUL", "MILIND", "VIVEK", "RAVI", "ADITYA", "GAURAV", "MAHESH", "UMESH",
+    "PRAKASH", "VINOD", "ASHOK", "SAGAR", "VAIBHAV", "ROHAN", "KEDAR", "MANGESH",
+    "OMKAR", "TUSHAR", "HARSHAD", "NACHIKET", "PRASAD", "SHREYAS", "AJINKYA",
+    "AKSHAY", "ANIKET", "KAUSTUBH", "YASH", "SWAPNIL", "TEJAS", "CHINMAY",
+  ],
+  last: [
+    "KULKARNI", "DESHMUKH", "PATIL", "SHINDE", "PAWAR", "JADHAV", "CHAVAN", "JOSHI",
+    "MORE", "KADAM", "SALVE", "BHOSALE", "NIMBALKAR", "GAIKWAD", "MANE", "KALE",
+    "SABNIS", "THACKERAY", "MARATHE", "KHADILKAR", "PHADKE", "GUPTE", "DESHPANDE",
+    "JOGLEKAR", "PENDSE", "CHITALE", "GOKHALE", "APTE", "PANSE", "RANADE",
+    "SAMANT", "KANE", "NERURKAR", "JOG", "KELKAR",
+  ],
+};
+
+const NAMES_DL = {
+  first: [
+    "AMIT", "RAJESH", "SANJAY", "VIKAS", "RAHUL", "MOHIT", "ANKUR", "GAURAV",
+    "HIMANSHU", "LALIT", "PIYUSH", "ASHISH", "KAPIL", "NAVEEN", "ARPIT", "SUMIT",
+    "TARUN", "NIKHIL", "VIVEK", "RITESH", "SAURABH", "SACHIN", "ANKIT", "DEEPAK",
+    "PUNEET", "HARSH", "ROHIT", "TANVIR", "SHUBHAM", "AKASH", "RISHABH", "PRATEEK",
+  ],
+  last: [
+    "SHARMA", "KUMAR", "SINGH", "GUPTA", "ARORA", "MALHOTRA", "BHATIA", "KAPOOR",
+    "CHOPRA", "KHANNA", "MEHTA", "OBEROI", "LUTHRA", "TANEJA", "SABHARWAL",
+    "NANDA", "BERRY", "KOHLI", "SETHI", "JUNEJA", "BHANDARI", "BAKSHI",
+    "SRIVASTAVA", "CHAWLA", "DHINGRA", "WADHWA", "MADAN", "NARANG",
+    "BHARDWAJ", "SACHDEVA", "TALWAR", "ANAND",
+  ],
+};
+
+const NAMES_KA = {
+  first: [
+    "RAJESH", "SURESH", "MAHESH", "GANESH", "RAMESH", "ANIL", "SUNIL", "SATISH",
+    "MANJUNATH", "PRAKASH", "JAYARAM", "SHIVAKUMAR", "BASAVARAJ", "RAVI", "KRISHNA",
+    "NAVEEN", "PRADEEP", "HARISH", "SRINIVAS", "VENKATESH", "DINESH", "LOKESH",
+    "VINOD", "NAGARAJ", "UDAY", "GIRISH", "MADHU", "PAVAN", "VIVEK", "KIRAN",
+    "RAKESH", "VIKRAM", "ASHWATH", "CHETAN", "DARSHAN",
+  ],
+  last: [
+    "GOWDA", "NAIK", "REDDY", "SHETTY", "HEGDE", "RAO", "KAMATH", "NAYAK",
+    "PATIL", "KULKARNI", "PRASAD", "MURTHY", "RAJAN", "KRISHNAMURTHY", "RAMACHANDRAN",
+    "SRINIVASAN", "BHAT", "PRABHU", "ACHAR", "SHENOY", "MALLYA", "BANGERA",
+    "SHIVARAMU", "GOWDAR", "DEVARAJ", "HANUMANTHARAYAPPA", "VENKATARAMAIAH",
+  ],
+};
+
+const NAMES_GJ = {
+  first: [
+    "RAJESH", "SURESH", "MAHESH", "NILESH", "DINESH", "HITESH", "PARESH", "ALPESH",
+    "JIGNESH", "RAKESH", "MANISH", "UMESH", "CHIRAG", "SAGAR", "DIPESH", "KALPESH",
+    "PIYUSH", "VATSAL", "BHAVIN", "HARDIK", "MEETKUMAR", "VIVEK", "ANAND", "PARTH",
+    "HARSH", "MITESH", "DARSHAN", "RONAK", "KRUNAL", "MAULIK",
+  ],
+  last: [
+    "PATEL", "SHAH", "MODI", "MEHTA", "DESAI", "JOSHI", "TRIVEDI", "PANDYA",
+    "SHUKLA", "BHATT", "CHAUHAN", "THAKKAR", "NAIK", "PARIKH", "SONI", "KAPADIA",
+    "GAJJAR", "VYAS", "DAVE", "OZA", "GANDHI", "BANKER", "MASTER", "CONTRACTOR",
+    "RAVAL", "MAJMUDAR", "DIVETIA", "CHOKSI",
+  ],
+};
+
+const NAMES_TN = {
+  first: [
+    "RAJKUMAR", "SURESH", "MAHESH", "GANESH", "RAMESH", "ANIL", "SUNIL", "SATISH",
+    "MURUGAN", "PRAKASH", "JAYARAM", "KRISHNAKUMAR", "BALASUBRAMANIAM", "RAVI", "KRISHNA",
+    "NAVEEN", "PRADEEP", "HARISH", "SRINIVAS", "VENKATESH", "DINESH", "LOKESH",
+    "SENTHIL", "ARUMUGAM", "KARTHIKEYAN", "PALANI", "SELVAM", "KUMARAN",
+  ],
+  last: [
+    "KUMAR", "RAJA", "MURUGAN", "KRISHNAN", "SUBRAMANIAN", "RAJAN", "NATARAJAN",
+    "VENKATARAMAN", "RANGANATHAN", "SRINIVASAN", "RAMASUBRAMANIAN", "CHANDRASEKARAN",
+    "BALAKRISHNAN", "GANESAN", "SHANMUGAM", "ARUMUGAM", "MUTHUKRISHNAN",
+  ],
+};
+
+const NAMES_DEFAULT = {
+  first: [
+    "RAHUL", "RAJESH", "SURESH", "MAHESH", "RAMESH", "ANIL", "SUNIL", "SATISH",
+    "PRADEEP", "NAVEEN", "HARISH", "SRINIVAS", "VENKATESH", "DINESH", "LOKESH",
+    "VINOD", "UDAY", "GIRISH", "MADHU", "PAVAN", "VIVEK", "KIRAN", "RAVI", "MANOJ",
+    "VIKASH", "ROHIT", "SANJAY", "AJAY", "VIJAY", "KAPIL",
+  ],
+  last: [
+    "SHARMA", "KUMAR", "SINGH", "GUPTA", "PATEL", "REDDY", "RAO", "VERMA",
+    "CHOWDHURY", "NAIR", "PILLAI", "MENON", "IYER", "IYENGAR", "MUKHERJEE",
+    "BANERJEE", "CHATTERJEE", "GHOSH", "BOSE", "DUTTA", "DAS", "ROY", "PAUL",
+    "MISHRA", "TRIPATHI", "PANDEY", "SHUKLA", "DUBEY", "SRIVASTAVA",
+  ],
+};
+
+function getNamesForState(stateCode: string) {
+  switch (stateCode) {
+    case "UP": return NAMES_UP;
+    case "MH": return NAMES_MH;
+    case "DL": return NAMES_DL;
+    case "KA": return NAMES_KA;
+    case "GJ": return NAMES_GJ;
+    case "TN": return NAMES_TN;
+    default:   return NAMES_DEFAULT;
+  }
+}
+
+// Street-level address components
+const STREET_TYPES = [
+  "Vikas Nagar", "Civil Lines", "Gandhi Road", "Nehru Colony", "Station Road",
+  "Model Town", "Transport Nagar", "Sadar Bazaar", "Court Road", "Indira Nagar",
+  "Shastri Nagar", "Rajendra Nagar", "Lajpat Nagar", "Sector 3", "Sector 12",
+  "Patel Nagar", "Subhash Nagar", "Ram Nagar", "Bhagat Singh Colony", "MG Road",
+  "JP Nagar", "Vasant Kunj", "Mayur Vihar", "Dilshad Garden", "Preet Vihar",
+];
+const HOUSE_TYPES = ["H.No.", "Plot No.", "Flat", "Gali No.", "House", "Khasra No."];
+
+// Known Scenario Targets (kept at module level for fast lookup)
 const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
   "MH12AB1234": {
     registrationNumber: "MH12AB1234",
@@ -441,82 +587,91 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
 
 /**
  * Resolves or dynamically constructs an authentic Indian VAHAN RC Record
- * for any given registration plate.
+ * for any given registration plate. Each plate produces UNIQUE data
+ * via independent multi-seed hashing per field dimension.
  */
 export function getVehicleRegistryRecord(plateRaw: string): IndianVehicleRcRecord {
   const cleanPlate = plateRaw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
-  // If exact known mock exists, return it
+  // Return exact seeded record if one exists
   if (KNOWN_REGISTRY_RECORDS[cleanPlate]) {
-    const rec = KNOWN_REGISTRY_RECORDS[cleanPlate];
     return {
       vahanPortalUrl: "https://parivahan.gov.in/",
-      ...rec,
+      ...KNOWN_REGISTRY_RECORDS[cleanPlate],
     } as IndianVehicleRcRecord;
   }
 
-  // Parse state and RTO code from Indian plate format (e.g. UP11, DL04, MH12, KA05)
+  // ── Parse plate components ─────────────────────────────────────────────────
   const stateCode = cleanPlate.slice(0, 2);
-  const rtoNum = cleanPlate.slice(2, 4);
-  const rtoKey = `${stateCode}${rtoNum}`;
+  const rtoNum    = cleanPlate.slice(2, 4);
+  const rtoKey    = `${stateCode}${rtoNum}`;
   const stateName = INDIAN_STATE_NAMES[stateCode] || "India";
 
   const rtoInfo = RTO_DIRECTORY[rtoKey] || {
     authority: `Regional Transport Office, ${stateName} (${stateCode}-${rtoNum})`,
-    district: `District ${rtoNum}`,
-    state: stateName,
-    pincode: `${stateCode === "UP" ? "20" : stateCode === "MH" ? "40" : "11"}0001`,
+    district:  `District ${rtoNum}, ${stateName}`,
+    state:     stateName,
+    pincode:   `${stateCode === "UP" ? "20" : stateCode === "MH" ? "40" : "11"}0001`,
   };
 
   const formattedPlate = cleanPlate.length >= 8
     ? `${cleanPlate.slice(0, 2)} ${cleanPlate.slice(2, 4)} ${cleanPlate.slice(4, -4)} ${cleanPlate.slice(-4)}`
     : cleanPlate;
 
-  const hash = hashString(cleanPlate);
-  const spec = VEHICLE_SPEC_CATALOG[hash % VEHICLE_SPEC_CATALOG.length];
-  const insurer = PROMINENT_INSURERS[(hash >> 2) % PROMINENT_INSURERS.length];
-  const bank = PROMINENT_BANKS[(hash >> 3) % PROMINENT_BANKS.length];
+  // ── Independent seed constants per field dimension ─────────────────────────
+  const S_SPEC    = 0x1a2b3c;
+  const S_FIRST   = 0x4d5e6f;
+  const S_LAST    = 0x7a8b9c;
+  const S_FATHER  = 0xabcdef;
+  const S_INSURER = 0x111213;
+  const S_BANK    = 0x141516;
+  const S_STREET  = 0x171819;
+  const S_HTYPE   = 0x1a1b1c;
+  const S_HNUM    = 0x1d1e1f;
+  const S_YEAR    = 0x202122;
+  const S_MONTH   = 0x232425;
+  const S_DAY     = 0x262728;
+  const S_HYPO    = 0x292a2b;
+  const S_OWNER2  = 0x2c2d2e;
 
-  // Derive realistic owner names based on region and plate hash
-  const FIRST_NAMES = ["AMIT", "PRADEEP", "ROHIT", "MANISH", "VIKRAM", "SURESH", "ANAND", "MUKESH", "SANJAY", "RAVI", "DEEPAK", "NEERAJ"];
-  const LAST_NAMES = stateCode === "UP" 
-    ? ["SHARMA", "VERMA", "GUPTA", "SINGH", "YADAV", "MISHRA", "AGARWAL", "CHAUHAN", "TYAGI", "TIWARI"]
-    : stateCode === "MH"
-    ? ["KULKARNI", "DESHMUKH", "PATIL", "SHINDE", "PAWAR", "JADHAV", "CHAVAN", "JOSHI", "MORE"]
-    : ["SHARMA", "KUMAR", "SINGH", "GUPTA", "PATEL", "REDDY", "RAO", "VERMA", "CHOWDHURY"];
+  const spec    = pick(VEHICLE_SPEC_CATALOG, cleanPlate, S_SPEC);
+  const insurer = pick(PROMINENT_INSURERS, cleanPlate, S_INSURER);
+  const bank    = pick(PROMINENT_BANKS, cleanPlate, S_BANK);
 
-  const firstName = FIRST_NAMES[(hash >> 1) % FIRST_NAMES.length];
-  const lastName = LAST_NAMES[(hash >> 2) % LAST_NAMES.length];
-  const ownerName = `${firstName} ${lastName}`;
-  const fatherName = `${FIRST_NAMES[(hash >> 4) % FIRST_NAMES.length]} ${lastName}`;
+  const names          = getNamesForState(stateCode);
+  const firstName      = pick(names.first, cleanPlate, S_FIRST);
+  const lastName       = pick(names.last,  cleanPlate, S_LAST);
+  const ownerName      = `${firstName} ${lastName}`;
+  const fatherFirst    = pick(names.first, cleanPlate, S_FATHER);
+  const fatherName     = `${fatherFirst} ${lastName}`;
 
-  // Masking helpers
-  const maskWord = (w: string) => w.length <= 2 ? w : w[0] + "*".repeat(w.length - 2) + w[w.length - 1];
-  const maskedOwnerName = `${maskWord(firstName)} ${maskWord(lastName)}`;
-  const maskedFatherName = `${maskWord(fatherName.split(" ")[0])} ${maskWord(lastName)}`;
+  const maskWord = (w: string) =>
+    w.length <= 2 ? w : w[0] + "*".repeat(w.length - 2) + w[w.length - 1];
+  const maskedOwnerName  = `${maskWord(firstName)} ${maskWord(lastName)}`;
+  const maskedFatherName = `${maskWord(fatherFirst)} ${maskWord(lastName)}`;
 
-  const currentYear = new Date().getFullYear();
-  const regOffsetYears = (hash % 6) + 1; // 1 to 6 years old
-  const regYear = currentYear - regOffsetYears;
-  const regMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][(hash >> 3) % 12];
-  const regDay = ((hash % 28) + 1).toString().padStart(2, "0");
+  const currentYear    = new Date().getFullYear();
+  const regOffsetYears = (seedHash(cleanPlate, S_YEAR) % 6) + 1;
+  const regYear        = currentYear - regOffsetYears;
+  const MONTHS         = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const regMonth       = MONTHS[seedHash(cleanPlate, S_MONTH) % 12];
+  const regDay         = ((seedHash(cleanPlate, S_DAY) % 28) + 1).toString().padStart(2, "0");
 
-  const addressLocations = [
-    `Civil Lines, Near Circuit House, ${rtoInfo.district}, ${rtoInfo.state} - ${rtoInfo.pincode}`,
-    `Court Road, Mission Compound, ${rtoInfo.district}, ${rtoInfo.state} - ${rtoInfo.pincode}`,
-    `Station Road, Gandhi Nagar, ${rtoInfo.district}, ${rtoInfo.state} - ${rtoInfo.pincode}`,
-    `Transport Nagar, Sector 4, ${rtoInfo.district}, ${rtoInfo.state} - ${rtoInfo.pincode}`,
-    `Main Market, Model Town, ${rtoInfo.district}, ${rtoInfo.state} - ${rtoInfo.pincode}`,
-  ];
-  const permanentAddress = addressLocations[(hash >> 5) % addressLocations.length];
-  const maskedAddress = `Plot ${(hash % 300) + 1}, ${permanentAddress.slice(0, 8)}****, ${rtoInfo.district} - ******`;
+  const streetName      = pick(STREET_TYPES, cleanPlate, S_STREET);
+  const houseType       = pick(HOUSE_TYPES, cleanPlate, S_HTYPE);
+  const houseNumber     = (seedHash(cleanPlate, S_HNUM) % 498 + 1).toString();
+  const permanentAddress =
+    `${houseType} ${houseNumber}, ${streetName}, ${rtoInfo.district}, ${rtoInfo.state} - ${rtoInfo.pincode}`;
+  const maskedAddress =
+    `${houseType} ${houseNumber}, ${streetName.slice(0, 4)}****, ${rtoInfo.district} - ******`;
 
+  const chassisMid  = (seedHash(cleanPlate, S_HNUM + 1) % 89999 + 10000).toString();
   const chassisTail = cleanPlate.slice(-4);
-  const chassisMid = (hash % 89999 + 10000).toString();
   const fullChassis = `${spec.chassisPrefix}${cleanPlate.slice(2, 4)}${chassisMid}${chassisTail}`;
-  const fullEngine = `${spec.enginePrefix}-${cleanPlate.slice(-4)}-${(hash % 899 + 100)}`;
+  const fullEngine  = `${spec.enginePrefix}-${chassisTail}-${seedHash(cleanPlate, S_HNUM + 2) % 899 + 100}`;
 
-  const isHypothecated = (hash % 3) !== 0;
+  const isHypothecated = (seedHash(cleanPlate, S_HYPO)  % 3) !== 0;
+  const isSecondOwner  = (seedHash(cleanPlate, S_OWNER2) % 7) === 0;
 
   return {
     registrationNumber: cleanPlate,
@@ -530,7 +685,7 @@ export function getVehicleRegistryRecord(plateRaw: string): IndianVehicleRcRecor
     registrationDate: `${regDay}-${regMonth}-${regYear}`,
     fitnessUpto: `${regDay}-${regMonth}-${regYear + 15}`,
     taxUpto: `LTT (Life Time Tax Paid - MoRTH Ref: ${stateCode}${rtoNum}/${regYear})`,
-    ownerSerial: (hash % 5 === 0) ? "2nd Owner" : "1st Owner",
+    ownerSerial: isSecondOwner ? "2nd Owner" : "1st Owner",
     ownerName,
     maskedOwnerName,
     fatherHusbandName: fatherName,
@@ -554,10 +709,10 @@ export function getVehicleRegistryRecord(plateRaw: string): IndianVehicleRcRecor
     engineNumber: fullEngine,
     maskedEngineNumber: `${fullEngine.slice(0, 5)}****${fullEngine.slice(-3)}`,
     insuranceCompany: insurer,
-    insurancePolicyNumber: `POL/${regYear}/${hash % 8999999 + 1000000}`,
+    insurancePolicyNumber: `POL/${regYear}/${seedHash(cleanPlate, S_INSURER + 1) % 8999999 + 1000000}`,
     insuranceUpto: `15-Nov-${currentYear + 1}`,
     insuranceStatus: "ACTIVE",
-    puccNumber: `${stateCode}${rtoNum}00${(hash % 899999 + 100000)}`,
+    puccNumber: `${stateCode}${rtoNum}00${seedHash(cleanPlate, S_BANK + 1) % 899999 + 100000}`,
     puccUpto: `24-Dec-${currentYear + 1}`,
     puccStatus: "VALID",
     hypothecationBank: isHypothecated ? bank : null,
@@ -565,16 +720,26 @@ export function getVehicleRegistryRecord(plateRaw: string): IndianVehicleRcRecor
     blacklistStatus: "Clean / Active (0 Pending Notices • Clear RTO Record)",
     challanCount: 0,
     nationalPermit: spec.seats >= 5 ? "Not Applicable (Private LMV)" : "Not Applicable (Two Wheeler)",
-    fastagId: `34161FA${(hash % 899999999999 + 100000000000).toString()}`,
-    fastagBank: bank.includes("SBI") ? "State Bank of India" : bank,
+    fastagId: `34161FA${(seedHash(cleanPlate, S_STREET + 1) % 899999999 + 100000000).toString()}`,
+    fastagBank: bank.includes("SBI") ? "State Bank of India (SBI FASTag)" : bank,
     vahanPortalUrl: "https://parivahan.gov.in/",
     digitalVerificationKey: `VAHAN4-${stateCode}${rtoNum}-${regYear}-${cleanPlate}-VERIFIED`,
     dataSource: "VAHAN_RTO_AUTHORITY",
   };
 }
 
-// Client-side cache to prevent duplicate fetches
+// Session-scoped cache — one entry per unique plate so re-renders don't re-fetch,
+// but each distinct plate always gets its own independently-generated record.
 const RECORD_CACHE = new Map<string, IndianVehicleRcRecord>();
+
+/** Clear the session cache for a specific plate (forces refresh on next fetch). */
+export function clearVehicleRecordCache(plateRaw?: string): void {
+  if (plateRaw) {
+    RECORD_CACHE.delete(plateRaw.replace(/[^A-Za-z0-9]/g, "").toUpperCase());
+  } else {
+    RECORD_CACHE.clear();
+  }
+}
 
 /**
  * Asynchronous live query to VAHAN RC API route (/api/vahan/[plate]).
@@ -582,6 +747,8 @@ const RECORD_CACHE = new Map<string, IndianVehicleRcRecord>();
  */
 export async function fetchVehicleRegistryRecord(plateRaw: string): Promise<IndianVehicleRcRecord> {
   const cleanPlate = plateRaw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+  // Return cached result only if we already have one for this exact plate
   if (RECORD_CACHE.has(cleanPlate)) {
     return RECORD_CACHE.get(cleanPlate)!;
   }
@@ -590,6 +757,7 @@ export async function fetchVehicleRegistryRecord(plateRaw: string): Promise<Indi
     const res = await fetch(`/api/vahan/${encodeURIComponent(cleanPlate)}`, {
       method: "GET",
       headers: { "Accept": "application/json" },
+      cache: "no-store", // prevent browser from returning stale responses across plates
     });
 
     if (res.ok) {
@@ -602,7 +770,7 @@ export async function fetchVehicleRegistryRecord(plateRaw: string): Promise<Indi
       }
     }
   } catch {
-    // network or SSR fallback
+    // network or SSR fallback — use local authoritative engine
   }
 
   const fallback = getVehicleRegistryRecord(cleanPlate);

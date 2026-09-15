@@ -8,8 +8,11 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
     return [
+      // Proxy all /api/* to Spring backend EXCEPT /api/vahan/* which is a
+      // Next.js native API route (frontend/src/app/api/vahan/[plate]/route.ts).
+      // Next.js path regex negative lookahead syntax: (?!vahan)
       {
-        source: "/api/:path*",
+        source: "/api/:path((?!vahan\\/).*)",
         destination: `${backendUrl}/api/:path*`,
       },
       {

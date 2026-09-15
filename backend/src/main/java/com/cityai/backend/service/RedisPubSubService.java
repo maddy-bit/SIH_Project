@@ -4,6 +4,7 @@ import com.cityai.backend.dto.VehicleDetectionDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.Message;
@@ -13,12 +14,12 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.Topic;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 @Service
-@SuppressWarnings("null")
 public class RedisPubSubService implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(RedisPubSubService.class);
@@ -45,7 +46,9 @@ public class RedisPubSubService implements MessageListener {
     @PostConstruct
     public void init() {
         try {
-            listenerContainer.addMessageListener(this, detectionTopic);
+            // Cast to Topic to satisfy the @NonNull Topic parameter in Spring Data Redis API
+            Topic topic = Objects.requireNonNull(detectionTopic, "detectionTopic must not be null");
+            listenerContainer.addMessageListener(this, topic);
             log.info("Subscribed to Redis detection topic: {}", detectionTopic.getTopic());
         } catch (Exception e) {
             log.warn("Could not register Redis message listener (Redis may be offline): {}", e.getMessage());
@@ -58,7 +61,9 @@ public class RedisPubSubService implements MessageListener {
     public void publishDetection(VehicleDetectionDto detection) {
         try {
             String json = objectMapper.writeValueAsString(detection);
-            redisTemplate.convertAndSend(detectionTopic.getTopic(), json);
+            // Cast to Object to satisfy @NonNull Object parameter in convertAndSend
+            Object payload = Objects.requireNonNull(json, "Serialized detection JSON must not be null");
+            redisTemplate.convertAndSend(detectionTopic.getTopic(), payload);
             log.debug("Published detection to Redis for plate: {}", detection.plateTextNormalized());
         } catch (Exception e) {
             log.warn("Failed to publish detection to Redis: {}", e.getMessage());

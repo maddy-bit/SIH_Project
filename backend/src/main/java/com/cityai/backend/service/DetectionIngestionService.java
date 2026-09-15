@@ -9,6 +9,9 @@ import com.cityai.backend.repository.CameraRepository;
 import com.cityai.backend.repository.VehicleDetectionRepository;
 import com.cityai.backend.repository.VehicleRepository;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
@@ -22,8 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
  * dropped - see VehicleDetection's nullable vehicle field.
  */
 @Service
-@SuppressWarnings("null")
 public class DetectionIngestionService {
+
+    private static final Logger log = LoggerFactory.getLogger(DetectionIngestionService.class);
 
     private final CameraRepository cameraRepository;
     private final VehicleRepository vehicleRepository;
@@ -57,8 +61,9 @@ public class DetectionIngestionService {
                 .orElseThrow(() -> new NoSuchElementException("Unknown camera: " + cameraId));
 
         Vehicle vehicle = null;
-        if (request.plateTextNormalized() != null && !request.plateTextNormalized().isBlank()) {
-            vehicle = resolveOrCreateVehicle(request.plateTextNormalized());
+        String normalizedPlate = request.plateTextNormalized();
+        if (normalizedPlate != null && !normalizedPlate.isBlank()) {
+            vehicle = resolveOrCreateVehicle(normalizedPlate);
         }
 
         VehicleDetection detection = new VehicleDetection(vehicle, camera, request.timestamp());
@@ -74,35 +79,52 @@ public class DetectionIngestionService {
         detection.setFrameNumber(request.frameNumber());
         VehicleDetection saved = detectionRepository.save(detection);
 
-        if (vehicle != null && vehicle.getPlate() != null) {
-            String plate = java.util.Objects.requireNonNull(vehicle.getPlate());
-            try {
-                Cache vehicleCache = cacheManager.getCache("vehicles");
-                if (vehicleCache != null) vehicleCache.evict(plate);
-                Cache trajectoryCache = cacheManager.getCache("trajectories");
-                if (trajectoryCache != null) trajectoryCache.evict(plate);
-            } catch (Exception ignored) {
+        if (vehicle != null) {
+            String plate = vehicle.getPlate();
+            if (plate != null) {
+                evictPlateCaches(plate);
             }
         }
 
         try {
             redisPubSubService.publishDetection(VehicleDetectionDto.from(saved));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("Redis pub/sub unavailable, skipping detection event: {}", e.getMessage());
         }
 
         return saved;
     }
 
+    /**
+     * Evicts stale cached entries for the given plate across vehicles and
+     * trajectories caches. Uses Objects.requireNonNull to prove non-null to the
+     * JDT null checker before passing into the Spring Cache API.
+     */
+    private void evictPlateCaches(String plate) {
+        try {
+            Cache vehicleCache = cacheManager.getCache("vehicles");
+            if (vehicleCache != null) {
+                vehicleCache.evict(Objects.requireNonNull(plate));
+            }
+            Cache trajectoryCache = cacheManager.getCache("trajectories");
+            if (trajectoryCache != null) {
+                trajectoryCache.evict(Objects.requireNonNull(plate));
+            }
+        } catch (Exception e) {
+            log.debug("Cache eviction skipped (Redis offline?): {}", e.getMessage());
+        }
+    }
+
     private Vehicle resolveOrCreateVehicle(String normalizedPlate) {
         return vehicleRepository.findByPlate(normalizedPlate).orElseGet(() -> {
-            Vehicle vehicle = new Vehicle(normalizedPlate);
+            Vehicle v = new Vehicle(normalizedPlate);
             vehicleRegistryService.lookup(normalizedPlate).ifPresent(record -> {
-                vehicle.setVehicleType(record.vehicleType());
-                vehicle.setMake(record.make());
-                vehicle.setModel(record.model());
-                vehicle.setColor(record.color());
+                v.setVehicleType(record.vehicleType());
+                v.setMake(record.make());
+                v.setModel(record.model());
+                v.setColor(record.color());
             });
-            return vehicleRepository.save(vehicle);
+            return vehicleRepository.save(v);
         });
     }
 }
