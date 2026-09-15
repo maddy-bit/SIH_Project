@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getVehicleRegistryRecord, fetchVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
+import { fetchVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
 import { generateRcPdf } from "@/lib/generateRcPdf";
 
 interface VehicleRegistryModalProps {
@@ -18,7 +18,8 @@ export function VehicleRegistryModal({
 }: VehicleRegistryModalProps) {
   const [queryPlate, setQueryPlate] = useState(initialPlate);
   const [activePlate, setActivePlate] = useState(initialPlate);
-  const [record, setRecord] = useState<IndianVehicleRcRecord>(() => getVehicleRegistryRecord(initialPlate));
+  const [record, setRecord] = useState<IndianVehicleRcRecord | null>(null);
+  const [errorInfo, setErrorInfo] = useState<{ code: string; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMasked, setIsMasked] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -28,13 +29,22 @@ export function VehicleRegistryModal({
     let cancelled = false;
     async function load() {
       setIsLoading(true);
-      try {
-        const live = await fetchVehicleRegistryRecord(activePlate);
-        if (!cancelled) setRecord(live);
-      } catch {
-        if (!cancelled) setRecord(getVehicleRegistryRecord(activePlate));
-      } finally {
-        if (!cancelled) setIsLoading(false);
+      setErrorInfo(null);
+      setRecord(null);
+
+      const res = await fetchVehicleRegistryRecord(activePlate);
+      if (!cancelled) {
+        if (res.success && res.data) {
+          setRecord(res.data);
+          setErrorInfo(null);
+        } else {
+          setRecord(null);
+          setErrorInfo({
+            code: res.error || "VEHICLE_NOT_FOUND",
+            message: res.message || `No registration records found for plate ${activePlate}.`,
+          });
+        }
+        setIsLoading(false);
       }
     }
     load();
@@ -45,11 +55,13 @@ export function VehicleRegistryModal({
 
   const handleSearchPlate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!queryPlate.trim()) return;
-    setActivePlate(queryPlate.trim().toUpperCase());
+    const clean = queryPlate.trim().toUpperCase();
+    if (!clean) return;
+    setActivePlate(clean);
   };
 
   const handleDownloadPdf = () => {
+    if (!record) return;
     setIsDownloading(true);
     try {
       generateRcPdf(record);
@@ -108,7 +120,7 @@ export function VehicleRegistryModal({
                     type="text"
                     value={queryPlate}
                     onChange={(e) => setQueryPlate(e.target.value.toUpperCase())}
-                    placeholder="Enter Indian Regn Number e.g. MH12AB1234"
+                    placeholder="Enter Indian Regn Number e.g. UP11BN5141, DL01AB1234"
                     className="w-full rounded-md border-2 border-slate-400 bg-white p-2.5 text-sm font-bold text-slate-950 uppercase tracking-widest focus:outline-none focus:border-slate-900 font-mono"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">🇮🇳 VAHAN</span>
@@ -123,255 +135,298 @@ export function VehicleRegistryModal({
               </form>
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="p-12 text-center space-y-3">
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+                <p className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                  Querying Government VAHAN 4.0 Central Database...
+                </p>
+                <p className="text-xs text-slate-500 font-mono">
+                  Plate: {activePlate} • Encrypted National RTO Gateway
+                </p>
+              </div>
+            )}
+
+            {/* Error State (Invalid plate, Not found, or Quota exceeded) */}
+            {!isLoading && errorInfo && (
+              <div className="p-8 text-center space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-3xl border border-red-200">
+                  {errorInfo.code === "INVALID_NUMBER_PLATE" ? "⚠️" : errorInfo.code === "API_QUOTA_EXCEEDED" ? "⏱️" : "🔍"}
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase text-slate-950 tracking-tight">
+                    {errorInfo.code === "INVALID_NUMBER_PLATE"
+                      ? "Invalid Registration Plate Number"
+                      : errorInfo.code === "API_QUOTA_EXCEEDED"
+                      ? "VAHAN API Request Limit Reached"
+                      : "Vehicle Not Found in Registry"}
+                  </h3>
+                  <p className="mt-2 text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                    {errorInfo.message}
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <span className="inline-block rounded-xs bg-slate-100 px-3 py-1.5 text-xs font-mono text-slate-600 border border-slate-300">
+                    Registration Number Queried: <strong className="text-slate-950 font-bold">{activePlate}</strong>
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Active Record Display */}
-            <div className="p-5 space-y-4 flex-1">
-              {/* Clean Status & Action Strip */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 rounded-sm">
-                    <span className={`h-2 w-2 rounded-full ${isLoading ? "bg-amber-500 animate-ping" : "bg-emerald-600 animate-pulse"}`} />
-                    <span>STATUS: {record.rcStatus}</span>
-                    <span className="text-slate-400">|</span>
-                    <span>{record.ownerSerial}</span>
-                  </span>
-                  <span className="text-[10px] font-mono font-bold text-slate-800 bg-slate-200 border border-slate-300 px-2 py-1 rounded-sm">
-                    {record.dataSource === "LIVE_PUBLIC_API" ? "⚡ LIVE PUBLIC API" : `🏛️ ${record.rtoCode} REGISTRY`}
-                  </span>
-                  <span className="text-xs font-bold text-slate-700 truncate max-w-[300px]">
-                    {record.registeringAuthority}
-                  </span>
-                </div>
+            {!isLoading && record && (
+              <>
+                <div className="p-5 space-y-4 flex-1">
+                  {/* Clean Status & Action Strip */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 rounded-sm">
+                        <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                        <span>STATUS: {record.rcStatus}</span>
+                        <span className="text-slate-400">|</span>
+                        <span>{record.ownerSerial}</span>
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-slate-800 bg-slate-200 border border-slate-300 px-2 py-1 rounded-sm">
+                        ⚡ LIVE PUBLIC API
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[300px]">
+                        {record.registeringAuthority}
+                      </span>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    disabled={isDownloading}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
-                  >
-                    <span>{isDownloading ? "⏳" : "📥"}</span>
-                    <span>{isDownloading ? "Generating PDF…" : "Download Official RC (PDF)"}</span>
-                  </button>
-
-                  <a
-                    href={record.vahanPortalUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2 rounded border border-slate-300 transition-colors"
-                  >
-                    <span>parivahan.gov.in</span>
-                    <span className="text-[9px]">↗</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Sub-tab Navigation */}
-              <div className="flex items-center gap-1.5 rounded-md bg-slate-100 p-1 border border-slate-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("overview")}
-                  className={`flex-1 py-1.5 px-3 rounded-xs font-bold transition-all cursor-pointer ${
-                    activeTab === "overview" ? "bg-slate-900 text-white shadow-xs" : "text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  Registration &amp; Ownership
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("technical")}
-                  className={`flex-1 py-1.5 px-3 rounded-xs font-bold transition-all cursor-pointer ${
-                    activeTab === "technical" ? "bg-slate-900 text-white shadow-xs" : "text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  Technical &amp; Engine Specs
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("compliance")}
-                  className={`flex-1 py-1.5 px-3 rounded-xs font-bold transition-all cursor-pointer ${
-                    activeTab === "compliance" ? "bg-slate-900 text-white shadow-xs" : "text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  Statutory Validities (Tax/PUC/Insurance)
-                </button>
-              </div>
-
-              {/* TAB 1: Registration & Ownership */}
-              {activeTab === "overview" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="rounded border border-slate-300 bg-white p-3 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Registering Authority (RTO)</span>
-                    <span className="font-bold text-slate-950 text-sm block">{record.registeringAuthority}</span>
-                    <span className="text-[10px] text-slate-600 block">RTO Code: {record.rtoCode} • State: {record.state}</span>
-                  </div>
-
-                  <div className="rounded border border-slate-300 bg-white p-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase">Registered Owner</span>
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setIsMasked(!isMasked)}
-                        className="text-[9px] text-sky-700 hover:text-sky-900 font-bold cursor-pointer underline"
+                        onClick={handleDownloadPdf}
+                        disabled={isDownloading}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
                       >
-                        {isMasked ? "Show Full" : "Mask"}
+                        <span>{isDownloading ? "⏳" : "📥"}</span>
+                        <span>{isDownloading ? "Generating PDF…" : "Download Official RC (PDF)"}</span>
                       </button>
+
+                      <a
+                        href={record.vahanPortalUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2 rounded border border-slate-300 transition-colors"
+                      >
+                        <span>parivahan.gov.in</span>
+                        <span className="text-[9px]">↗</span>
+                      </a>
                     </div>
-                    <span className="font-bold text-slate-950 text-sm block">
-                      {isMasked ? record.maskedOwnerName : record.ownerName}
-                    </span>
-                    <span className="text-[10px] text-slate-600 block">
-                      Father/Husband: {isMasked ? record.maskedFatherName : record.fatherHusbandName}
-                    </span>
                   </div>
 
-                  <div className="rounded border border-slate-300 bg-white p-3 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Registration Date &amp; Status</span>
-                    <span className="font-bold text-slate-950 block">{record.registrationDate} (ACTIVE)</span>
-                    <span className="text-[10px] text-slate-600 block">Status Certified on {record.rcStatusDate}</span>
+                  {/* Sub-tab Navigation */}
+                  <div className="flex items-center gap-1.5 rounded-md bg-slate-100 p-1 border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("overview")}
+                      className={`flex-1 py-1.5 px-3 rounded-xs font-bold transition-all cursor-pointer ${
+                        activeTab === "overview" ? "bg-slate-900 text-white shadow-xs" : "text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      Registration &amp; Ownership
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("technical")}
+                      className={`flex-1 py-1.5 px-3 rounded-xs font-bold transition-all cursor-pointer ${
+                        activeTab === "technical" ? "bg-slate-900 text-white shadow-xs" : "text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      Technical &amp; Engine Specs
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("compliance")}
+                      className={`flex-1 py-1.5 px-3 rounded-xs font-bold transition-all cursor-pointer ${
+                        activeTab === "compliance" ? "bg-slate-900 text-white shadow-xs" : "text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      Statutory Validities (Tax/PUC/Insurance)
+                    </button>
                   </div>
 
-                  <div className="rounded border border-slate-300 bg-white p-3 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Hypothecation (Bank Lien)</span>
-                    <span className="font-bold text-slate-950 block">{record.hypothecationBank ?? "None (Owned Clear)"}</span>
-                    <span className="text-[10px] text-emerald-700 font-bold block">Status: {record.financingStatus}</span>
-                  </div>
+                  {/* TAB 1: Registration & Ownership */}
+                  {activeTab === "overview" && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="p-3.5 rounded-md bg-slate-50 border border-slate-200 space-y-1">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Registering Authority (RTO)</span>
+                          <span className="font-black text-slate-900 text-sm block">{record.registeringAuthority}</span>
+                          <span className="text-[11px] text-slate-600 block">RTO Code: {record.rtoCode} • State: {record.state}</span>
+                        </div>
+                        <div className="p-3.5 rounded-md bg-slate-50 border border-slate-200 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase block">Registered Owner</span>
+                            <button
+                              type="button"
+                              onClick={() => setIsMasked(!isMasked)}
+                              className="text-[10px] text-blue-600 underline font-bold cursor-pointer"
+                            >
+                              {isMasked ? "Unmask" : "Mask"}
+                            </button>
+                          </div>
+                          <span className="font-black text-slate-900 text-sm block">
+                            {isMasked ? record.maskedOwnerName : record.ownerName}
+                          </span>
+                          <span className="text-[11px] text-slate-600 block">
+                            Father/Husband: {isMasked ? record.maskedFatherName : record.fatherHusbandName}
+                          </span>
+                        </div>
+                      </div>
 
-                  <div className="sm:col-span-2 rounded border border-slate-300 bg-white p-3 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Registered Address</span>
-                    <span className="font-medium text-slate-900 block font-sans">
-                      {isMasked ? record.maskedAddress : record.permanentAddress}
-                    </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Registration Date &amp; Status</span>
+                          <span className="font-bold text-slate-900">{record.registrationDate} ({record.rcStatus})</span>
+                          <span className="text-[10px] text-slate-500 block">Status Certified on {record.rcStatusDate}</span>
+                        </div>
+                        <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Hypothecation (Bank Lien)</span>
+                          <span className="font-bold text-slate-900">{record.hypothecationBank || "None (Unencumbered)"}</span>
+                          <span className={`text-[10px] font-bold block ${record.financingStatus === "HYPOTHECATED" ? "text-amber-700" : "text-emerald-700"}`}>
+                            Status: {record.financingStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-md bg-slate-50 border border-slate-200 text-xs">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">Registered Address</span>
+                        <span className="font-medium text-slate-800">
+                          {isMasked ? record.maskedAddress : record.permanentAddress}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: Technical & Engine Specs */}
+                  {activeTab === "technical" && (
+                    <div className="space-y-3 text-xs">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Maker (OEM)</span>
+                          <span className="font-bold text-slate-900 text-[11px] block truncate">{record.maker}</span>
+                        </div>
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Model Variant</span>
+                          <span className="font-bold text-slate-900 text-[11px] block truncate">{record.model}</span>
+                        </div>
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Vehicle Class</span>
+                          <span className="font-bold text-slate-900 text-[11px] block truncate">{record.vehicleClass}</span>
+                        </div>
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Fuel / Norms</span>
+                          <span className="font-bold text-slate-900 text-[11px] block truncate">{record.fuelType} • {record.emissionNorms}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Color</span>
+                          <span className="font-bold text-slate-900">{record.color}</span>
+                        </div>
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Displacement</span>
+                          <span className="font-bold text-slate-900">{record.cubicCapacity}</span>
+                        </div>
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Seating Cap.</span>
+                          <span className="font-bold text-slate-900">{record.seatingCapacity} Persons</span>
+                        </div>
+                        <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Wheelbase</span>
+                          <span className="font-bold text-slate-900">{record.wheelbase}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="p-3 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Chassis Number (VIN)</span>
+                          <span className="font-mono font-bold text-slate-900">{record.maskedChassisNumber}</span>
+                        </div>
+                        <div className="p-3 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Engine Number</span>
+                          <span className="font-mono font-bold text-slate-900">{record.maskedEngineNumber}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: Statutory Validities */}
+                  {activeTab === "compliance" && (
+                    <div className="space-y-3 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="p-3 rounded bg-slate-50 border border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase">Motor Insurance</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${record.insuranceStatus === "ACTIVE" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                              {record.insuranceStatus}
+                            </span>
+                          </div>
+                          <span className="font-bold text-slate-900 block mt-1">{record.insuranceCompany}</span>
+                          <span className="text-[10px] text-slate-500 block">Valid Upto: {record.insuranceUpto}</span>
+                          <span className="text-[9px] font-mono text-slate-400 block mt-0.5 truncate">Pol: {record.insurancePolicyNumber}</span>
+                        </div>
+
+                        <div className="p-3 rounded bg-slate-50 border border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase">PUC Certificate</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${record.puccStatus === "VALID" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                              {record.puccStatus}
+                            </span>
+                          </div>
+                          <span className="font-bold text-slate-900 block mt-1">Emission Compliant</span>
+                          <span className="text-[10px] text-slate-500 block">Valid Upto: {record.puccUpto}</span>
+                          <span className="text-[9px] font-mono text-slate-400 block mt-0.5 truncate">PUCC: {record.puccNumber}</span>
+                        </div>
+
+                        <div className="p-3 rounded bg-slate-50 border border-slate-200">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Road Tax &amp; Fitness</span>
+                          <span className="font-bold text-slate-900 block mt-1">{record.taxUpto}</span>
+                          <span className="text-[10px] text-slate-500 block">Fitness Upto: {record.fitnessUpto}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">National Electronic Toll (FASTag)</span>
+                          <span className="font-bold text-slate-900">{record.fastagBank}</span>
+                          <span className="text-[10px] font-mono text-slate-500 block">TAG ID: {record.fastagId}</span>
+                        </div>
+                        <div className="sm:text-right">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block">Challans &amp; Blacklist Status</span>
+                          <span className="font-bold text-emerald-700">{record.blacklistStatus}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="border-t border-slate-200 bg-slate-100 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-slate-600">
+                  <div>
+                    Digital Verification Hash: <span className="font-mono font-bold text-slate-900">{record.digitalVerificationKey}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 font-bold rounded hover:bg-slate-200 cursor-pointer text-xs"
+                    >
+                      Close
+                    </button>
                   </div>
                 </div>
-              )}
+              </>
+            )}
 
-              {/* TAB 2: Technical Specs */}
-              {activeTab === "technical" && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Maker</span>
-                    <span className="font-bold text-slate-950 block">{record.maker}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Model Name</span>
-                    <span className="font-bold text-slate-950 block">{record.model}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Vehicle Class</span>
-                    <span className="font-bold text-slate-950 block">{record.vehicleClass}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Fuel Type</span>
-                    <span className="font-bold text-slate-950 block">{record.fuelType}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Emission Standard</span>
-                    <span className="font-bold text-emerald-700 block">{record.emissionNorms}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Displacement (cc)</span>
-                    <span className="font-bold text-slate-950 block">{record.cubicCapacity}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Chassis Number</span>
-                    <span className="font-bold text-slate-950 block font-mono">
-                      {isMasked ? record.maskedChassisNumber : record.chassisNumber}
-                    </span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Engine Number</span>
-                    <span className="font-bold text-slate-950 block font-mono">
-                      {isMasked ? record.maskedEngineNumber : record.engineNumber}
-                    </span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Seating Capacity</span>
-                    <span className="font-bold text-slate-950 block">{record.seatingCapacity} Persons</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Unladen / Gross Weight</span>
-                    <span className="font-bold text-slate-950 block">{record.unladenWeight} / {record.grossWeight}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Wheelbase</span>
-                    <span className="font-bold text-slate-950 block">{record.wheelbase}</span>
-                  </div>
-                  <div className="rounded border border-slate-300 bg-white p-2.5">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Registered Color</span>
-                    <span className="font-bold text-slate-950 block">{record.color}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: Statutory Compliance */}
-              {activeTab === "compliance" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="rounded border border-slate-300 bg-emerald-50/50 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-600 font-bold uppercase">Fitness Validity</span>
-                      <span className="text-[9px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded-xs">
-                        ACTIVE
-                      </span>
-                    </div>
-                    <div className="font-bold text-slate-950 text-sm mt-1">Upto {record.fitnessUpto}</div>
-                    <div className="text-[10px] text-slate-600 mt-0.5">15-year statutory period from registration date</div>
-                  </div>
-
-                  <div className="rounded border border-slate-300 bg-white p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-600 font-bold uppercase">Motor Vehicle Tax</span>
-                      <span className="text-[9px] font-bold bg-sky-600 text-white px-1.5 py-0.5 rounded-xs">
-                        PAID
-                      </span>
-                    </div>
-                    <div className="font-bold text-slate-950 text-sm mt-1">{record.taxUpto}</div>
-                    <div className="text-[10px] text-slate-600 mt-0.5">One-time Life Time Tax paid at RTO</div>
-                  </div>
-
-                  <div className="rounded border border-slate-300 bg-white p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-600 font-bold uppercase">Insurance Validity</span>
-                      <span className="text-[9px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded-xs">
-                        {record.insuranceStatus}
-                      </span>
-                    </div>
-                    <div className="font-bold text-slate-950 text-sm mt-1 truncate">{record.insuranceCompany}</div>
-                    <div className="text-[10px] text-slate-600 mt-0.5">
-                      Policy: {record.insurancePolicyNumber} • Valid Upto {record.insuranceUpto}
-                    </div>
-                  </div>
-
-                  <div className="rounded border border-slate-300 bg-white p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-600 font-bold uppercase">PUCC (Pollution) Certificate</span>
-                      <span className="text-[9px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded-xs">
-                        {record.puccStatus}
-                      </span>
-                    </div>
-                    <div className="font-bold text-slate-950 text-sm mt-1">Certificate: {record.puccNumber}</div>
-                    <div className="text-[10px] text-slate-600 mt-0.5">Valid Upto {record.puccUpto}</div>
-                  </div>
-
-                  <div className="sm:col-span-2 rounded border border-slate-300 bg-slate-50 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] text-slate-500 font-bold uppercase block">Electronic Toll (FASTag ID)</span>
-                      <span className="font-bold text-slate-950 font-mono">{record.fastagId} ({record.fastagBank})</span>
-                    </div>
-                    <div className="sm:text-right">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase block">Challans &amp; Blacklist Status</span>
-                      <span className="font-bold text-emerald-700">{record.blacklistStatus}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-slate-200 bg-slate-100 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-slate-600">
-              <div>
-                Digital Verification Hash: <span className="font-mono font-bold text-slate-900">{record.digitalVerificationKey}</span>
-              </div>
-              <div className="flex items-center gap-2">
+            {/* Footer when no record is loaded */}
+            {!isLoading && !record && (
+              <div className="border-t border-slate-200 bg-slate-100 p-3.5 flex items-center justify-end">
                 <button
                   type="button"
                   onClick={onClose}
@@ -380,7 +435,7 @@ export function VehicleRegistryModal({
                   Close
                 </button>
               </div>
-            </div>
+            )}
           </motion.div>
         </div>
       )}

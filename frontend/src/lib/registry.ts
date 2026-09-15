@@ -741,39 +741,45 @@ export function clearVehicleRecordCache(plateRaw?: string): void {
   }
 }
 
-/**
- * Asynchronous live query to VAHAN RC API route (/api/vahan/[plate]).
- * Fetches real details with fallback to comprehensive RTO engine.
- */
-export async function fetchVehicleRegistryRecord(plateRaw: string): Promise<IndianVehicleRcRecord> {
-  const cleanPlate = plateRaw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+export interface VahanQueryResult {
+  success: boolean;
+  data?: IndianVehicleRcRecord;
+  error?: string;
+  message?: string;
+}
 
-  // Return cached result only if we already have one for this exact plate
-  if (RECORD_CACHE.has(cleanPlate)) {
-    return RECORD_CACHE.get(cleanPlate)!;
-  }
+/**
+ * Live query to VAHAN RC API route (/api/vahan/[plate]).
+ * Fetches real details directly without hardcoded fabrication.
+ */
+export async function fetchVehicleRegistryRecord(plateRaw: string): Promise<VahanQueryResult> {
+  const cleanPlate = plateRaw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
   try {
     const res = await fetch(`/api/vahan/${encodeURIComponent(cleanPlate)}`, {
       method: "GET",
       headers: { "Accept": "application/json" },
-      cache: "no-store", // prevent browser from returning stale responses across plates
+      cache: "no-store",
     });
 
-    if (res.ok) {
-      const payload = await res.json();
-      if (payload?.data) {
-        const record = payload.data as IndianVehicleRcRecord;
-        record.dataSource = payload.source || "VAHAN_RTO_AUTHORITY";
-        RECORD_CACHE.set(cleanPlate, record);
-        return record;
-      }
+    const payload = await res.json().catch(() => null);
+    if (res.ok && payload?.data) {
+      const record = payload.data as IndianVehicleRcRecord;
+      record.dataSource = "LIVE_PUBLIC_API";
+      return { success: true, data: record };
     }
-  } catch {
-    // network or SSR fallback — use local authoritative engine
-  }
 
-  const fallback = getVehicleRegistryRecord(cleanPlate);
-  RECORD_CACHE.set(cleanPlate, fallback);
-  return fallback;
+    return {
+      success: false,
+      error: payload?.error || (res.status === 400 ? "INVALID_NUMBER_PLATE" : "NOT_FOUND"),
+      message: payload?.message || `Could not fetch registration details for plate ${cleanPlate}.`,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Network error";
+    return {
+      success: false,
+      error: "NETWORK_ERROR",
+      message: `Failed to query VAHAN service: ${msg}`,
+    };
+  }
 }

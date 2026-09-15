@@ -26,10 +26,12 @@ export function VehicleRegistrySection({
     async function load() {
       setIsLoading(true);
       try {
-        const live = await fetchVehicleRegistryRecord(plateNumber);
-        if (!cancelled) setRecord(live);
+        const res = await fetchVehicleRegistryRecord(plateNumber);
+        if (!cancelled && res.success && res.data) {
+          setRecord(res.data);
+        }
       } catch {
-        if (!cancelled) setRecord(getVehicleRegistryRecord(plateNumber));
+        // retain existing display on error
       } finally {
         if (!cancelled) setIsLoading(false);
       }
