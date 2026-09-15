@@ -11,7 +11,7 @@ REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 
 try:
-    import redis.asyncio as aioredis
+    import redis.asyncio as aioredis  # type: ignore
     _HAS_REDIS = True
 except ImportError:
     _HAS_REDIS = False

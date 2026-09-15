@@ -142,9 +142,11 @@ function mapApiResponse(d: ApiData, fallback: IndianVehicleRcRecord): IndianVehi
 
     // ── RC Status ─────────────────────────────────────────────────────────────
     rcStatus:
-      rcStatusRaw === "ACTIVE" ? "VALID"
-        : rcStatusRaw === "BLACKLISTED" ? "BLACKLISTED"
-        : rcStatusRaw ?? fallback.rcStatus,
+      rcStatusRaw === "ACTIVE" ? "ACTIVE"
+        : rcStatusRaw === "SUSPENDED" ? "SUSPENDED"
+        : rcStatusRaw === "EXPIRED" ? "EXPIRED"
+        : rcStatusRaw === "CANCELLED" ? "CANCELLED"
+        : fallback.rcStatus,
     rcStatusDate:     fallback.rcStatusDate,
     registrationDate: normalizeDate(d.registration_date) ?? fallback.registrationDate,
     fitnessUpto:
@@ -213,7 +215,7 @@ function mapApiResponse(d: ApiData, fallback: IndianVehicleRcRecord): IndianVehi
     // ── Meta ──────────────────────────────────────────────────────────────────
     vahanPortalUrl:         "https://parivahan.gov.in/",
     digitalVerificationKey: fallback.digitalVerificationKey,
-    dataSource:             "VAHAN_LIVE",
+    dataSource:             "LIVE_PUBLIC_API",
   };
 }
 

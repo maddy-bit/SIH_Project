@@ -109,5 +109,6 @@ jobs:
           curl -sf http://localhost:8080/api/health
           curl -sf http://localhost:8080/api/cameras
           curl -sf http://localhost:8080/api/analytics/overview
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/vehicles/ZZ99ZZ9999)" = "404"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/cameras/CAM-99)" = "404"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/vehicles/ZZ99ZZ9999)" = "200"
           echo "All smoke tests passed successfully!"
