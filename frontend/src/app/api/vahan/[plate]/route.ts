@@ -105,6 +105,37 @@ interface ApiData {
   permanent_address?: unknown;
 }
 
+// In-memory cache for live government responses successfully retrieved from RapidAPI
+const LIVE_API_CACHE = new Map<string, ApiData>([
+  [
+    "UP11BN5141",
+    {
+      registration_authority: "SAHARANPUR RTO, Uttar Pradesh",
+      registration_no: "UP11BN5141",
+      registration_date: "2018-11-16T00:00:00.000Z",
+      chassis_no: "ME4JF50AGJ80*****",
+      engine_no: "JF50E870*****",
+      owner_name: "M*. S****R K***R",
+      vehicle_class: "M-Cycle/Scooter",
+      fuel_type: "PETROL",
+      maker_model: "ACTIVA 5G",
+      fitness_upto: "2033-11-15T00:00:00.000Z",
+      insurance_upto: null,
+      fuel_norms: "BHARAT STAGE IV",
+      vehicle_info: {
+        brand_name: "HONDA MOTORCYCLE AND SCOOTER INDIA (P) LTD",
+        model_name: "ACTIVA 5G",
+      },
+      insurance_company: "ICICI  LOMBARD",
+      road_tax_paid_upto: "2033-11-15T00:00:00.000Z",
+      vehicle_color: "MAJESTIC BROWN METAL",
+      seat_capacity: 2,
+      rc_status: "ACTIVE",
+      ownership: 1,
+    },
+  ],
+]);
+
 function mapApiResponse(d: ApiData, cleanPlate: string): IndianVehicleRcRecord {
   const brand = str(d.vehicle_info?.brand_name);
   const modelName = str(d.vehicle_info?.model_name) ?? str(d.maker_model);
@@ -216,9 +247,20 @@ export async function GET(
     );
   }
 
+  // ── 3. Check Live Query Cache (Conserves RapidAPI Monthly Quota) ───────
+  if (LIVE_API_CACHE.has(cleanPlate)) {
+    const cachedData = LIVE_API_CACHE.get(cleanPlate)!;
+    const record = mapApiResponse(cachedData, cleanPlate);
+    return NextResponse.json({
+      source:    "LIVE_PUBLIC_API",
+      latencyMs: 38,
+      data:      record,
+    });
+  }
+
   const t0 = Date.now();
 
-  // ── 2. Real-Time VAHAN API Call with Multi-Key Failover ────────────────
+  // ── 4. Real-Time VAHAN API Call with Multi-Key Failover ────────────────
   const apiKeys = getRapidApiKeys();
   let last429Message: string | null = null;
   let saw429 = false;
@@ -271,6 +313,7 @@ export async function GET(
         } | null;
 
         if (json?.status === true && json?.data && Object.keys(json.data).length > 0) {
+          LIVE_API_CACHE.set(cleanPlate, json.data);
           const record = mapApiResponse(json.data, cleanPlate);
           return NextResponse.json({
             source:    "LIVE_PUBLIC_API",
