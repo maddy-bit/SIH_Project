@@ -12,9 +12,18 @@ export const dynamic = "force-dynamic";
  * No hardcoded details are used.
  */
 
-const RAPIDAPI_KEY =
-  process.env.RAPIDAPI_VAHAN_KEY ||
-  "0724709417msh4efb2cee3613ee3p13687ajsn5c5258e6d4db";
+const DEFAULT_KEYS = [
+  "ed9bb104f5msh12c3cb721bd8e9cp17c550jsn43cc7df2cd47", // New primary key
+  "0724709417msh4efb2cee3613ee3p13687ajsn5c5258e6d4db", // Previous key (failover / reused after monthly quota reset)
+];
+
+function getRapidApiKeys(): string[] {
+  const envKey = process.env.RAPIDAPI_VAHAN_KEY?.trim();
+  const keys = envKey ? [envKey, ...DEFAULT_KEYS] : DEFAULT_KEYS;
+  // Deduplicate while preserving order
+  return Array.from(new Set(keys.filter((k) => typeof k === "string" && k.length > 10)));
+}
+
 const API_HOST     = "rto-vehicle-information-india.p.rapidapi.com";
 const API_URL      = `https://${API_HOST}/getVehicleInfo`;
 const CONSENT_TEXT =
@@ -209,41 +218,49 @@ export async function GET(
 
   const t0 = Date.now();
 
-  // ── 2. Real-Time VAHAN API Call ─────────────────────────────────────────
-  try {
-    const ctrl      = new AbortController();
-    const timeoutId = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  // ── 2. Real-Time VAHAN API Call with Multi-Key Failover ────────────────
+  const apiKeys = getRapidApiKeys();
+  let last429Message: string | null = null;
+  let saw429 = false;
 
-    const res = await fetch(API_URL, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: {
-        "Content-Type":    "application/json",
-        "x-rapidapi-host": API_HOST,
-        "x-rapidapi-key":  RAPIDAPI_KEY,
-      },
-      body: JSON.stringify({
-        vehicle_no:   cleanPlate,
-        consent:      "Y",
-        consent_text: CONSENT_TEXT,
-      }),
-      cache: "no-store",
-    }).catch(() => null);
+  for (let i = 0; i < apiKeys.length; i++) {
+    const currentKey = apiKeys[i];
+    try {
+      const ctrl      = new AbortController();
+      const timeoutId = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 
-    clearTimeout(timeoutId);
+      const res = await fetch(API_URL, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          "Content-Type":    "application/json",
+          "x-rapidapi-host": API_HOST,
+          "x-rapidapi-key":  currentKey,
+        },
+        body: JSON.stringify({
+          vehicle_no:   cleanPlate,
+          consent:      "Y",
+          consent_text: CONSENT_TEXT,
+        }),
+        cache: "no-store",
+      }).catch(() => null);
 
-    if (res) {
-      // 429 Quota Exceeded handling
+      clearTimeout(timeoutId);
+
+      if (!res) {
+        continue;
+      }
+
+      // Check for 429 Quota Exceeded
       if (res.status === 429) {
+        saw429 = true;
         const errJson = await res.json().catch(() => ({}));
-        return NextResponse.json(
-          {
-            error: "API_QUOTA_EXCEEDED",
-            message: errJson.message || "RapidAPI VAHAN monthly quota exceeded on current plan. Real vehicle data cannot be retrieved right now without upgrading the API plan.",
-            plate: cleanPlate,
-          },
-          { status: 429 }
+        last429Message = errJson.message || "RapidAPI monthly quota limit reached on current key.";
+        console.warn(
+          `[VAHAN] RapidAPI key ${currentKey.slice(0, 8)}... quota exceeded (429). Attempting fallback key (${i + 1}/${apiKeys.length})...`
         );
+        // Continue to next key in pool
+        continue;
       }
 
       if (res.ok) {
@@ -272,16 +289,23 @@ export async function GET(
           { status: 404 }
         );
       }
+    } catch (err: unknown) {
+      console.warn(`[VAHAN] Error with key ${currentKey.slice(0, 8)}...:`, err);
+      continue;
     }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Connection timeout";
+  }
+
+  // If all keys failed with 429 Quota Exceeded
+  if (saw429) {
     return NextResponse.json(
       {
-        error: "VAHAN_SERVICE_ERROR",
-        message: `Government VAHAN registry service error: ${msg}`,
+        error: "API_QUOTA_EXCEEDED",
+        message:
+          last429Message ||
+          "All configured RapidAPI VAHAN keys have reached their monthly quota limits. Quotas will reset automatically next month.",
         plate: cleanPlate,
       },
-      { status: 502 }
+      { status: 429 }
     );
   }
 

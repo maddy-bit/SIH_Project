@@ -49,7 +49,7 @@ export function InvestigationDashboard() {
   const [summary, setSummary] = useState<VehicleSummaryDto | null>(null);
   const [trajectory, setTrajectory] = useState<TrajectoryResponseDto | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [replayToken, setReplayToken] = useState(0);
+  const [replayToken] = useState(0);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
   const [isCameraGridOpen, setIsCameraGridOpen] = useState(false);
   const [isVideoIngestOpen, setIsVideoIngestOpen] = useState(false);

@@ -18,29 +18,42 @@ export function VehicleRegistrySection({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isMasked, setIsMasked] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"all" | "technical" | "compliance">("all");
-  const [record, setRecord] = useState<IndianVehicleRcRecord>(() => getVehicleRegistryRecord(plateNumber));
+  const [fetchedRecord, setFetchedRecord] = useState<IndianVehicleRcRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setIsLoading(true);
-      try {
-        const res = await fetchVehicleRegistryRecord(plateNumber);
-        if (!cancelled && res.success && res.data) {
-          setRecord(res.data);
-        }
-      } catch {
-        // retain existing display on error
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+    if (getVehicleRegistryRecord(plateNumber)) {
+      return;
     }
-    load();
+    const timer = setTimeout(() => {
+      if (!cancelled) setIsLoading(true);
+    }, 0);
+
+    fetchVehicleRegistryRecord(plateNumber)
+      .then((res) => {
+        if (!cancelled) {
+          if (res.success && res.data) {
+            setFetchedRecord(res.data);
+          } else {
+            setFetchedRecord(null);
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedRecord(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [plateNumber]);
+
+  const record = getVehicleRegistryRecord(plateNumber) ?? fetchedRecord;
 
   return (
     <TiltCard3D className={className}>
@@ -72,9 +85,10 @@ export function VehicleRegistrySection({
 
         {/* Content Body */}
         {isExpanded && (
-          <div className="p-4 space-y-4 font-mono">
-            {/* Top Official Banner & Source Reference */}
-            <div className="rounded-md border border-slate-300 bg-gradient-to-r from-slate-50 to-sky-50/50 p-3">
+          record ? (
+            <div className="p-4 space-y-4 font-mono">
+              {/* Top Official Banner & Source Reference */}
+              <div className="rounded-md border border-slate-300 bg-gradient-to-r from-slate-50 to-sky-50/50 p-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white font-bold text-sm shadow-xs">
@@ -349,7 +363,23 @@ export function VehicleRegistrySection({
               </div>
             </div>
           </div>
-        )}
+        ) : (
+          <div className="p-8 text-center font-mono">
+            {isLoading ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-6 w-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-slate-700 font-bold uppercase tracking-wide">
+                  Querying Live Parivahan / VAHAN Registry for {plateNumber}...
+                </span>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-600 space-y-1">
+                <p className="font-bold text-slate-800">No registry record loaded for &ldquo;{plateNumber}&rdquo;.</p>
+                <p className="text-[11px] text-slate-500">Please enter a valid plate or query through the VAHAN modal.</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </TiltCard3D>
   );

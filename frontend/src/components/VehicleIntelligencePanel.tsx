@@ -7,7 +7,7 @@ import { ConfidenceBadge } from "./ConfidenceBadge";
 import { formatDistanceKm, formatDurationMinutes, formatTimestamp } from "@/lib/format";
 import { TiltCard3D } from "./TiltCard3D";
 import { TrajectoryPredictionCard } from "./TrajectoryPredictionCard";
-import { getVehicleRegistryRecord } from "@/lib/registry";
+import { getVehicleRegistryRecord, fetchVehicleRegistryRecord, type IndianVehicleRcRecord } from "@/lib/registry";
 import { generateRcPdf } from "@/lib/generateRcPdf";
 
 const VehicleHologram3D = dynamic(
@@ -59,11 +59,34 @@ export function VehicleIntelligencePanel({ summary, trajectory }: VehicleIntelli
   const [activeTab, setActiveTab] = useState<"metrics" | "hologram" | "registry">("metrics");
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const rcRecord = getVehicleRegistryRecord(vehicle.plate);
+  const [fetchedRecord, setFetchedRecord] = useState<IndianVehicleRcRecord | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (getVehicleRegistryRecord(vehicle.plate)) {
+      return;
+    }
+    fetchVehicleRegistryRecord(vehicle.plate).then((res) => {
+      if (!cancelled && res.success && res.data) {
+        setFetchedRecord(res.data);
+      } else if (!cancelled && !res.success) {
+        setFetchedRecord(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicle.plate]);
+
+  const rcRecord = getVehicleRegistryRecord(vehicle.plate) ?? fetchedRecord;
 
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   const handleDownloadRc = () => {
+    if (!rcRecord) {
+      alert(`No official VAHAN registry record loaded for ${vehicle.plate}. Please query via the VAHAN modal.`);
+      return;
+    }
     setIsDownloading(true);
     try {
       generateRcPdf(rcRecord);
@@ -212,7 +235,7 @@ export function VehicleIntelligencePanel({ summary, trajectory }: VehicleIntelli
                   color={vehicle.color ?? "Silver"}
                 />
               </div>
-            ) : (
+            ) : rcRecord ? (
               /* VAHAN RC Spacious View */
               <div className="mt-3 space-y-3 font-mono">
                 <div className="flex items-center justify-between px-1">
@@ -284,7 +307,7 @@ export function VehicleIntelligencePanel({ summary, trajectory }: VehicleIntelli
                       Financier / Hypothecation Bank
                     </span>
                     <div className="mt-1 text-xs font-bold text-slate-800 leading-relaxed">
-                      {rcRecord.hypothecationBank}
+                      {rcRecord.hypothecationBank ?? "None (Clear Ownership)"}
                     </div>
                   </div>
                 </div>
@@ -309,6 +332,11 @@ export function VehicleIntelligencePanel({ summary, trajectory }: VehicleIntelli
                       : "Download Official Form 23 RC (PDF)"}
                   </span>
                 </button>
+              </div>
+            ) : (
+              <div className="mt-3 p-6 rounded-md border border-slate-300 bg-white text-center font-mono text-xs text-slate-600 space-y-2">
+                <p className="font-bold text-slate-800">No VAHAN registry record loaded for &ldquo;{vehicle.plate}&rdquo;.</p>
+                <p className="text-[11px] text-slate-500">Only the presentation dummy plate (MH12AB1234) or registered plates fetched live via the VAHAN API are displayed.</p>
               </div>
             )}
           </div>
