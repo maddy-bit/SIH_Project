@@ -61,8 +61,6 @@ export function InvestigationDashboard() {
     getCameras()
       .then(setCameras)
       .catch(() => {});
-    // Auto-search ET3633P on load for instant presentation ready state
-    handleSearch("ET3633P", "historical");
   }, []);
 
   useEffect(() => {

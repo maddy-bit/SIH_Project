@@ -34,7 +34,6 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
 
   function handlePresetClick(presetPlate: string) {
     setPlate(presetPlate);
-    onSearch(presetPlate, mode);
   }
 
   return (
