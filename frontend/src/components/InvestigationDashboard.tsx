@@ -54,12 +54,15 @@ export function InvestigationDashboard() {
   const [isCameraGridOpen, setIsCameraGridOpen] = useState(false);
   const [isVideoIngestOpen, setIsVideoIngestOpen] = useState(false);
   const [isRegistryModalOpen, setIsRegistryModalOpen] = useState(false);
+  const [customVideoUrls, setCustomVideoUrls] = useState<Record<string, string>>({});
   const liveCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     getCameras()
       .then(setCameras)
       .catch(() => {});
+    // Auto-search ET3633P on load for instant presentation ready state
+    handleSearch("ET3633P", "historical");
   }, []);
 
   useEffect(() => {
@@ -119,7 +122,11 @@ export function InvestigationDashboard() {
     mode: SearchMode,
     overrideVehicleType?: string,
     overrideColor?: string,
+    overrideVideoUrls?: Record<string, string>,
   ) {
+    if (overrideVideoUrls) {
+      setCustomVideoUrls(overrideVideoUrls);
+    }
     stopLive();
     setSearchState("searching");
     setErrorMessage(null);
@@ -326,9 +333,10 @@ export function InvestigationDashboard() {
           <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
           <EvidenceViewer
             point={selectedPoint}
-            targetPlate={summary?.vehicle.plate ?? "MH12AB1234"}
+            targetPlate={summary?.vehicle.plate ?? "ET3633P"}
             vehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
             vehicleColor={summary?.vehicle.color ?? trajectory?.vehicle.color ?? "Silver"}
+            customVideoUrls={customVideoUrls}
             selectedIndex={selectedIndex}
             totalPoints={points.length}
             onNextCheckpoint={() => {
@@ -357,14 +365,17 @@ export function InvestigationDashboard() {
       <VideoIngestionModal
         isOpen={isVideoIngestOpen}
         onClose={() => setIsVideoIngestOpen(false)}
-        onTargetDetected={(plate, vType, vColor) => handleSearch(plate, "historical", vType, vColor)}
+        onTargetDetected={(plate, vType, vColor, vUrls) => {
+          if (vUrls) setCustomVideoUrls(vUrls);
+          handleSearch(plate, "historical", vType, vColor, vUrls);
+        }}
       />
 
       {/* Indian Vehicle Registry VAHAN Modal */}
       <VehicleRegistryModal
         isOpen={isRegistryModalOpen}
         onClose={() => setIsRegistryModalOpen(false)}
-        initialPlate={summary?.vehicle.plate ?? "MH12AB1234"}
+        initialPlate={summary?.vehicle.plate ?? "ET3633P"}
       />
     </div>
   );

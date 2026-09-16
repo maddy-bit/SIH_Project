@@ -17,13 +17,13 @@ const MODES: { value: SearchMode; label: string; desc: string }[] = [
 ];
 
 const PRESETS = [
-  { plate: "MH12AB1234", desc: "Silver Sedan (4 Cams)", tag: "DEMO TARGET" },
+  { plate: "ET3633P", desc: "Silver Sedan (4 Cams)", tag: "DEMO TARGET" },
   { plate: "DL04CA2020", desc: "Black Sedan (CAM-02)", tag: "DECOY" },
   { plate: "KA05MH8899", desc: "Silver Hatch (CAM-05)", tag: "DECOY" },
 ];
 
 export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanelProps) {
-  const [plate, setPlate] = useState("MH12AB1234");
+  const [plate, setPlate] = useState("ET3633P");
   const [mode, setMode] = useState<SearchMode>("historical");
 
   function handleSubmit(e: React.FormEvent) {
@@ -72,7 +72,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
               <input
                 value={plate}
                 onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                placeholder="MH12AB1234"
+                placeholder="ET3633P"
                 spellCheck={false}
                 className="w-full bg-transparent px-3 py-2 font-mono text-lg sm:text-xl font-bold tracking-widest text-slate-950 placeholder-slate-400 outline-none uppercase min-w-0"
               />

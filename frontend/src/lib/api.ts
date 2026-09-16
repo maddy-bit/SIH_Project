@@ -158,9 +158,9 @@ export const SEED_CAMERAS: CameraDto[] = [
   { id: "CAM-12", name: "University Circle", latitude: 18.5529, longitude: 73.8291, direction: "SE", status: "OFFLINE", videoSource: "videos/cam12.mp4" }
 ];
 
-// Fallback demo scenario for MH12AB1234
+// Fallback demo scenario for ET3633P
 const DEMO_TRAJECTORY: TrajectoryResponseDto = {
-  vehicle: { plate: "MH12AB1234", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
+  vehicle: { plate: "ET3633P", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
   points: [
     {
       cameraId: "CAM-01",
@@ -226,7 +226,7 @@ const DEMO_TRAJECTORY: TrajectoryResponseDto = {
 };
 
 const DEMO_SUMMARY: VehicleSummaryDto = {
-  vehicle: { plate: "MH12AB1234", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
+  vehicle: { plate: "ET3633P", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
   firstSeen: "2026-08-30T18:14:23Z",
   lastSeen: "2026-08-30T18:48:02Z",
   cameraCount: 4,
@@ -338,7 +338,8 @@ export async function getVehicleSummary(plate: string): Promise<VehicleSummaryDt
   try {
     return await apiFetch<VehicleSummaryDto>(`/vehicles/${encodeURIComponent(plate)}`);
   } catch {
-    if (plate.toUpperCase().replace(/\s+/g, "") === "MH12AB1234") {
+    const clean = plate.toUpperCase().replace(/\s+/g, "");
+    if (clean === "ET3633P" || clean === "MH12AB1234") {
       return DEMO_SUMMARY;
     }
     if (plate.toUpperCase().includes("DL04CA2020")) {
@@ -373,7 +374,8 @@ export async function getVehicleTrajectory(plate: string): Promise<TrajectoryRes
   try {
     return await apiFetch<TrajectoryResponseDto>(`/vehicles/${encodeURIComponent(plate)}/trajectory`);
   } catch {
-    if (plate.toUpperCase().replace(/\s+/g, "") === "MH12AB1234") {
+    const clean = plate.toUpperCase().replace(/\s+/g, "");
+    if (clean === "ET3633P" || clean === "MH12AB1234") {
       return DEMO_TRAJECTORY;
     }
     throw new ApiError("Trajectory unavailable", 404);

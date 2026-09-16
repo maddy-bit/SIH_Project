@@ -7,7 +7,7 @@ import { processVideoFeed } from "@/lib/api";
 interface VideoIngestionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTargetDetected?: (plate: string, vehicleType?: string, color?: string) => void;
+  onTargetDetected?: (plate: string, vehicleType?: string, color?: string, videoUrls?: Record<string, string>) => void;
 }
 
 interface CorridorCameraSlot {
@@ -47,7 +47,7 @@ const DEFAULT_CORRIDOR_CAMERAS: CorridorCameraSlot[] = [
 
 export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: VideoIngestionModalProps) {
   const [slots, setSlots] = useState<CorridorCameraSlot[]>(DEFAULT_CORRIDOR_CAMERAS);
-  const [targetPlate, setTargetPlate] = useState("MH12AB1234");
+  const [targetPlate, setTargetPlate] = useState("ET3633P");
   const [detectedVehicleType, setDetectedVehicleType] = useState("Sedan");
   const [detectedColor, setDetectedColor] = useState("Silver");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -98,11 +98,25 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
       }, 1600);
 
       // Ingest feeds through backend API
-      const plateToSearch = targetPlate.trim().toUpperCase() || "MH12AB1234";
+      const plateToSearch = targetPlate.trim().toUpperCase() || "ET3633P";
 
       for (const slot of slots) {
         const videoPath = slot.customFile ? slot.customFile.name : slot.defaultVideo;
         await processVideoFeed(videoPath, slot.id).catch(() => {});
+      }
+
+      // Generate accessible video URLs for CCTV playback
+      const videoUrls: Record<string, string> = {};
+      for (const slot of slots) {
+        if (slot.customFile) {
+          try {
+            videoUrls[slot.id] = URL.createObjectURL(slot.customFile);
+          } catch {
+            videoUrls[slot.id] = `/videos/${slot.id}.mp4`;
+          }
+        } else {
+          videoUrls[slot.id] = `/videos/${slot.id}.mp4`;
+        }
       }
 
       setProgress(100);
@@ -113,18 +127,31 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
 
       setTimeout(() => {
         if (onTargetDetected) {
-          onTargetDetected(plateToSearch, detectedVehicleType, detectedColor);
+          onTargetDetected(plateToSearch, detectedVehicleType, detectedColor, videoUrls);
         }
         onClose();
         setIsProcessing(false);
       }, 1200);
     } catch {
+      const videoUrls: Record<string, string> = {};
+      for (const slot of slots) {
+        if (slot.customFile) {
+          try {
+            videoUrls[slot.id] = URL.createObjectURL(slot.customFile);
+          } catch {
+            videoUrls[slot.id] = `/videos/${slot.id}.mp4`;
+          }
+        } else {
+          videoUrls[slot.id] = `/videos/${slot.id}.mp4`;
+        }
+      }
+
       setProgress(100);
       setStatusText("Corridor Ingestion Complete (Simulated)");
       setResultMessage("4-Camera video feeds indexed. Reconstructing 3D trajectory.");
       setTimeout(() => {
         if (onTargetDetected) {
-          onTargetDetected(targetPlate.trim().toUpperCase() || "MH12AB1234", detectedVehicleType, detectedColor);
+          onTargetDetected(targetPlate.trim().toUpperCase() || "ET3633P", detectedVehicleType, detectedColor, videoUrls);
         }
         onClose();
         setIsProcessing(false);
@@ -178,7 +205,7 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
                     type="text"
                     value={targetPlate}
                     onChange={(e) => setTargetPlate(e.target.value.toUpperCase())}
-                    placeholder="e.g. MH12AB1234"
+                    placeholder="e.g. ET3633P"
                     className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm font-mono font-bold text-slate-950 focus:outline-none focus:border-slate-900 uppercase tracking-wider"
                   />
                 </div>

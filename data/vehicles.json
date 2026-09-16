@@ -1,4 +1,5 @@
 [
+  { "plate": "ET3633P", "vehicleType": "Sedan", "make": "Toyota", "model": "Prius", "color": "Silver" },
   { "plate": "MH12AB1234", "vehicleType": "Sedan", "make": "Toyota", "model": "Prius", "color": "Silver" },
   { "plate": "MH14CD5678", "vehicleType": "Sedan", "make": "Demo Motors", "model": "S2", "color": "Silver" },
   { "plate": "MH12EF9012", "vehicleType": "Hatchback", "make": "Demo Motors", "model": "H1", "color": "Red" },

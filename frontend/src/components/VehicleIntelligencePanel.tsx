@@ -336,7 +336,7 @@ export function VehicleIntelligencePanel({ summary, trajectory }: VehicleIntelli
             ) : (
               <div className="mt-3 p-6 rounded-md border border-slate-300 bg-white text-center font-mono text-xs text-slate-600 space-y-2">
                 <p className="font-bold text-slate-800">No VAHAN registry record loaded for &ldquo;{vehicle.plate}&rdquo;.</p>
-                <p className="text-[11px] text-slate-500">Only the presentation dummy plate (MH12AB1234) or registered plates fetched live via the VAHAN API are displayed.</p>
+                <p className="text-[11px] text-slate-500">Only the presentation dummy plate (ET3633P) or registered plates fetched live via the VAHAN API are displayed.</p>
               </div>
             )}
           </div>

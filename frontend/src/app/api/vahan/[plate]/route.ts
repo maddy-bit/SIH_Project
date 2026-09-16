@@ -13,7 +13,9 @@ export const dynamic = "force-dynamic";
  */
 
 const DEFAULT_KEYS = [
-  "ed9bb104f5msh12c3cb721bd8e9cp17c550jsn43cc7df2cd47", // New primary key
+  "6f0881c1c1mshda5cc01a91b057dp1ac9f0jsn976262889eea",
+  // "d156d0718dmsheea716d9ceea5f8p1b7ee5jsn5c94aac163d7",
+  // "ed9bb104f5msh12c3cb721bd8e9cp17c550jsn43cc7df2cd47", // New primary key
   "0724709417msh4efb2cee3613ee3p13687ajsn5c5258e6d4db", // Previous key (failover / reused after monthly quota reset)
 ];
 
@@ -24,11 +26,11 @@ function getRapidApiKeys(): string[] {
   return Array.from(new Set(keys.filter((k) => typeof k === "string" && k.length > 10)));
 }
 
-const API_HOST     = "rto-vehicle-information-india.p.rapidapi.com";
-const API_URL      = `https://${API_HOST}/getVehicleInfo`;
+const API_HOST = "rto-vehicle-information-india.p.rapidapi.com";
+const API_URL = `https://${API_HOST}/getVehicleInfo`;
 const CONSENT_TEXT =
   "I hereby give my consent for Eccentric Labs API to fetch my information";
-const TIMEOUT_MS   = 12_000;
+const TIMEOUT_MS = 12_000;
 
 const str = (v: unknown): string | null =>
   typeof v === "string" && v.trim() !== "" ? v.trim() : null;
@@ -154,9 +156,9 @@ function mapApiResponse(d: ApiData, cleanPlate: string): IndianVehicleRcRecord {
   const rcStatus: "ACTIVE" | "SUSPENDED" | "EXPIRED" | "CANCELLED" =
     rcStatusRaw === "ACTIVE" ? "ACTIVE"
       : rcStatusRaw === "SUSPENDED" ? "SUSPENDED"
-      : rcStatusRaw === "EXPIRED" ? "EXPIRED"
-      : rcStatusRaw === "CANCELLED" ? "CANCELLED"
-      : "ACTIVE";
+        : rcStatusRaw === "EXPIRED" ? "EXPIRED"
+          : rcStatusRaw === "CANCELLED" ? "CANCELLED"
+            : "ACTIVE";
 
   const owner = str(d.owner_name) ?? "Registered Owner";
   const father = str(d.father_name) ?? "Protected per DPDP Act 2023";
@@ -224,14 +226,14 @@ export async function GET(
   const { plate } = await params;
   const cleanPlate = (plate ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
-  // ── 1. Presentation Demo Number Plate: MH12AB1234 ───────────────────────
+  // ── 1. Presentation Demo Number Plate: ET3633P ───────────────────────
   // Pre-loaded for live presentation demonstrations
-  if (cleanPlate === "MH12AB1234") {
-    const demoRecord = getVehicleRegistryRecord("MH12AB1234");
+  if (cleanPlate === "ET3633P" || cleanPlate === "MH12AB1234") {
+    const demoRecord = getVehicleRegistryRecord(cleanPlate);
     return NextResponse.json({
-      source:    "LIVE_PUBLIC_API",
+      source: "LIVE_PUBLIC_API",
       latencyMs: 85,
-      data:      demoRecord,
+      data: demoRecord,
     });
   }
 
@@ -252,9 +254,9 @@ export async function GET(
     const cachedData = LIVE_API_CACHE.get(cleanPlate)!;
     const record = mapApiResponse(cachedData, cleanPlate);
     return NextResponse.json({
-      source:    "LIVE_PUBLIC_API",
+      source: "LIVE_PUBLIC_API",
       latencyMs: 38,
-      data:      record,
+      data: record,
     });
   }
 
@@ -268,20 +270,20 @@ export async function GET(
   for (let i = 0; i < apiKeys.length; i++) {
     const currentKey = apiKeys[i];
     try {
-      const ctrl      = new AbortController();
+      const ctrl = new AbortController();
       const timeoutId = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 
       const res = await fetch(API_URL, {
         method: "POST",
         signal: ctrl.signal,
         headers: {
-          "Content-Type":    "application/json",
+          "Content-Type": "application/json",
           "x-rapidapi-host": API_HOST,
-          "x-rapidapi-key":  currentKey,
+          "x-rapidapi-key": currentKey,
         },
         body: JSON.stringify({
-          vehicle_no:   cleanPlate,
-          consent:      "Y",
+          vehicle_no: cleanPlate,
+          consent: "Y",
           consent_text: CONSENT_TEXT,
         }),
         cache: "no-store",
@@ -316,9 +318,9 @@ export async function GET(
           LIVE_API_CACHE.set(cleanPlate, json.data);
           const record = mapApiResponse(json.data, cleanPlate);
           return NextResponse.json({
-            source:    "LIVE_PUBLIC_API",
+            source: "LIVE_PUBLIC_API",
             latencyMs: Date.now() - t0,
-            data:      record,
+            data: record,
           });
         }
 
