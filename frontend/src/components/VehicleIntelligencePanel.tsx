@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { TrajectoryResponseDto, VehicleSummaryDto } from "@/lib/api";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { formatDistanceKm, formatDurationMinutes, formatTimestamp } from "@/lib/format";
