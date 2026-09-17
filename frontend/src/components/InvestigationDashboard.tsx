@@ -329,25 +329,27 @@ export function InvestigationDashboard() {
         {/* Right Column: Timeline & Forensic CCTV Viewer */}
         <div className="flex flex-col gap-4 overflow-y-auto p-1 -m-1">
           <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
-          <EvidenceViewer
-            point={selectedPoint}
-            targetPlate={summary?.vehicle.plate ?? "ET3633P"}
-            vehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
-            vehicleColor={summary?.vehicle.color ?? trajectory?.vehicle.color ?? "Silver"}
-            customVideoUrls={customVideoUrls}
-            selectedIndex={selectedIndex}
-            totalPoints={points.length}
-            onNextCheckpoint={() => {
-              if (selectedIndex !== null && selectedIndex < points.length - 1) {
-                setSelectedIndex(selectedIndex + 1);
-              }
-            }}
-            onPrevCheckpoint={() => {
-              if (selectedIndex !== null && selectedIndex > 0) {
-                setSelectedIndex(selectedIndex - 1);
-              }
-            }}
-          />
+          {points.length > 0 && selectedPoint ? (
+            <EvidenceViewer
+              point={selectedPoint}
+              targetPlate={summary?.vehicle.plate ?? "ET3633P"}
+              vehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
+              vehicleColor={summary?.vehicle.color ?? trajectory?.vehicle.color ?? "Silver"}
+              customVideoUrls={customVideoUrls}
+              selectedIndex={selectedIndex}
+              totalPoints={points.length}
+              onNextCheckpoint={() => {
+                if (selectedIndex !== null && selectedIndex < points.length - 1) {
+                  setSelectedIndex(selectedIndex + 1);
+                }
+              }}
+              onPrevCheckpoint={() => {
+                if (selectedIndex !== null && selectedIndex > 0) {
+                  setSelectedIndex(selectedIndex - 1);
+                }
+              }}
+            />
+          ) : null}
         </div>
       </div>
 
