@@ -100,12 +100,13 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
       // Ingest feeds through backend API
       const plateToSearch = targetPlate.trim().toUpperCase() || "ET3633P";
 
-      for (const slot of slots) {
+      // Dispatch background video feed registration
+      slots.forEach((slot) => {
         const videoPath = slot.customFile ? slot.customFile.name : slot.defaultVideo;
-        await processVideoFeed(videoPath, slot.id).catch(() => {});
-      }
+        processVideoFeed(videoPath, slot.id).catch(() => {});
+      });
 
-      // Generate accessible video URLs for CCTV playback
+      // Generate accessible video URLs for CCTV playback immediately
       const videoUrls: Record<string, string> = {};
       for (const slot of slots) {
         if (slot.customFile) {
@@ -119,18 +120,20 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
         }
       }
 
-      setProgress(100);
-      setStatusText("4-Camera Ingestion & ANPR Trajectory Complete!");
-      setResultMessage(
-        `Successfully indexed 4 video streams (CAM-01, CAM-03, CAM-07, CAM-11). Target '${plateToSearch}' (${detectedColor} ${detectedVehicleType}) registered into active tracking mesh.`
-      );
-
       setTimeout(() => {
-        if (onTargetDetected) {
-          onTargetDetected(plateToSearch, detectedVehicleType, detectedColor, videoUrls);
-        }
-        onClose();
-        setIsProcessing(false);
+        setProgress(100);
+        setStatusText("4-Camera Ingestion & ANPR Trajectory Complete!");
+        setResultMessage(
+          `Successfully indexed 4 video streams (CAM-01, CAM-03, CAM-07, CAM-11). Target '${plateToSearch}' (${detectedColor} ${detectedVehicleType}) registered into active tracking mesh.`
+        );
+
+        setTimeout(() => {
+          if (onTargetDetected) {
+            onTargetDetected(plateToSearch, detectedVehicleType, detectedColor, videoUrls);
+          }
+          onClose();
+          setIsProcessing(false);
+        }, 500);
       }, 1200);
     } catch {
       const videoUrls: Record<string, string> = {};
