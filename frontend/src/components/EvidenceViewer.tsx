@@ -60,7 +60,7 @@ export function EvidenceViewer({
   // =========================================================================
   // REAL-TIME ML YOLOv8 PLATE DETECTION & TRACKING STATE
   // =========================================================================
-  const [isPlateDetected, setIsPlateDetected] = useState<boolean>(false);
+  const [rawPlateDetected, setRawPlateDetected] = useState<boolean>(false);
   const [plateBox, setPlateBox] = useState<{
     left: number;
     top: number;
@@ -68,12 +68,15 @@ export function EvidenceViewer({
     height: number;
   }>({ left: 38.0, top: 53.0, width: 14.5, height: 6.8 });
 
-  const [vehBox, setVehBox] = useState<{
+  const [rawVehBox, setRawVehBox] = useState<{
     left: number;
     top: number;
     width: number;
     height: number;
   } | null>(null);
+
+  const isPlateDetected = hasIngestedVideo && rawPlateDetected;
+  const vehBox = hasIngestedVideo ? rawVehBox : null;
 
   const [trackingConfidence, setTrackingConfidence] = useState<number>(0.968);
   const [modelTag, setModelTag] = useState<string>("YOLOv8");
@@ -81,8 +84,6 @@ export function EvidenceViewer({
   // Real-time inference loop: sends current video frame to backend ML model
   useEffect(() => {
     if (!hasIngestedVideo) {
-      setIsPlateDetected(false);
-      setVehBox(null);
       return;
     }
 
@@ -120,7 +121,7 @@ export function EvidenceViewer({
             const data = await res.json();
             if (data.detected && data.box) {
               consecutiveMisses = 0;
-              setIsPlateDetected(true);
+              setRawPlateDetected(true);
               setPlateBox((prev) => ({
                 left: +(prev.left * 0.35 + data.box.left * 0.65).toFixed(2),
                 top: +(prev.top * 0.35 + data.box.top * 0.65).toFixed(2),
@@ -134,13 +135,13 @@ export function EvidenceViewer({
                 setModelTag(data.model);
               }
               if (data.veh_box) {
-                setVehBox(data.veh_box);
+                setRawVehBox(data.veh_box);
               }
             } else {
               consecutiveMisses++;
               if (consecutiveMisses > 4) {
-                setIsPlateDetected(false);
-                setVehBox(null);
+                setRawPlateDetected(false);
+                setRawVehBox(null);
               }
             }
           }
