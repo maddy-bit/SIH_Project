@@ -9,7 +9,11 @@
  * 5. Surveillance Mesh Sensor Topology Graph Generation
  */
 
-import { CAMERA_PAIR_PATHS, Coordinate } from "./hardcodedPaths";
+import {
+  CAMERA_PAIR_PATHS,
+  getRoadRouteBetweenPoints,
+  Coordinate,
+} from "./hardcodedPaths";
 import type { CameraDto, TrajectoryPointDto } from "./api";
 
 export type { Coordinate };
@@ -335,7 +339,7 @@ export function solveSpatiotemporalTrajectory(
   }
 
   const transitions: SpatiotemporalTransitionMetrics[] = [];
-  const corridorControlPoints: Coordinate[] = [];
+  const segments: Array<{ coords: Coordinate[]; isHardcoded: boolean }> = [];
 
   let totalDistKm = 0;
   let totalTimeSec = 0;
@@ -346,69 +350,87 @@ export function solveSpatiotemporalTrajectory(
     const w1 = normalized[i];
     const w2 = normalized[i + 1];
 
-    const transition = evaluateSpatiotemporalTransition(w1, w2);
-    transitions.push(transition);
+    const pStart: Coordinate = [w1.longitude, w1.latitude];
+    const pEnd: Coordinate = [w2.longitude, w2.latitude];
 
+    // Check pre-baked highway / corridor road path
+    const pairKey = `${w1.cameraId}->${w2.cameraId}`;
+    const baked =
+      CAMERA_PAIR_PATHS[pairKey] ||
+      getRoadRouteBetweenPoints(pStart, pEnd, w1.cameraId, w2.cameraId);
+
+    let transition = evaluateSpatiotemporalTransition(w1, w2);
+
+    if (baked && baked.length >= 2) {
+      // Calculate true on-road path distance
+      let roadDistKm = 0;
+      for (let k = 0; k < baked.length - 1; k++) {
+        roadDistKm += haversineDistanceKm(baked[k], baked[k + 1]);
+      }
+      const elapsedHours = Math.max(1, transition.elapsedSeconds) / 3600.0;
+      const roadSpeedKmh = roadDistKm / elapsedHours;
+
+      transition = {
+        ...transition,
+        distanceKm: +roadDistKm.toFixed(3),
+        impliedSpeedKmh: +roadSpeedKmh.toFixed(1),
+      };
+
+      segments.push({ coords: baked, isHardcoded: true });
+    } else {
+      // Intermediate camera node expansion along corridor for non-hardcoded segments
+      const intermediateNodes = findCorridorIntermediateNodes(pStart, pEnd, cameraNetwork);
+      const segmentNodes = [pStart, ...intermediateNodes, pEnd];
+      segments.push({ coords: segmentNodes, isHardcoded: false });
+    }
+
+    transitions.push(transition);
     totalDistKm += transition.distanceKm;
     totalTimeSec += transition.elapsedSeconds;
     plausibilitySum += transition.kinematicPlausibility;
     if (transition.isAnomaly) hasAnomalies = true;
+  }
 
-    const pStart: Coordinate = [w1.longitude, w1.latitude];
-    const pEnd: Coordinate = [w2.longitude, w2.latitude];
+  // Assemble full route coordinates without spline distortion on hardcoded road paths
+  const routeCoordinates: Coordinate[] = [];
 
-    // Check pre-baked highway pair paths
-    const pairKey = `${w1.cameraId}->${w2.cameraId}`;
-    if (CAMERA_PAIR_PATHS[pairKey]) {
-      const baked = CAMERA_PAIR_PATHS[pairKey];
-      if (i === 0) {
-        corridorControlPoints.push(...baked);
-      } else {
-        corridorControlPoints.push(...baked.slice(1));
-      }
-      continue;
-    }
+  for (let s = 0; s < segments.length; s++) {
+    const seg = segments[s];
+    let segCoords: Coordinate[];
 
-    // Intermediate camera node expansion along corridor
-    const intermediateNodes = findCorridorIntermediateNodes(pStart, pEnd, cameraNetwork);
-
-    const segmentNodes = [pStart, ...intermediateNodes, pEnd];
-    if (i === 0) {
-      corridorControlPoints.push(...segmentNodes);
+    if (seg.isHardcoded) {
+      // Strictly maintain exact road coordinates on actual asphalt
+      segCoords = seg.coords;
+    } else if (seg.coords.length <= 2) {
+      segCoords = seg.coords;
     } else {
-      corridorControlPoints.push(...segmentNodes.slice(1));
-    }
-  }
-
-  // Deduplicate consecutive identical control points
-  const cleanControlPoints: Coordinate[] = [];
-  for (const pt of corridorControlPoints) {
-    const prev = cleanControlPoints[cleanControlPoints.length - 1];
-    if (!prev || Math.abs(prev[0] - pt[0]) > 1e-6 || Math.abs(prev[1] - pt[1]) > 1e-6) {
-      cleanControlPoints.push(pt);
-    }
-  }
-
-  // Generate Centripetal Catmull-Rom Spline
-  const splineRoute: Coordinate[] = [];
-  const n = cleanControlPoints.length;
-
-  if (n <= 2) {
-    splineRoute.push(...cleanControlPoints);
-  } else {
-    for (let i = 0; i < n - 1; i++) {
-      // Clamped endpoints for boundary curvature tangents
-      const p0 = i > 0 ? cleanControlPoints[i - 1] : cleanControlPoints[0];
-      const p1 = cleanControlPoints[i];
-      const p2 = cleanControlPoints[i + 1];
-      const p3 = i + 2 < n ? cleanControlPoints[i + 2] : p2;
-
-      const seg = catmullRomCentripetal(p0, p1, p2, p3, 14, 0.5);
-      if (i === 0) {
-        splineRoute.push(...seg);
-      } else {
-        splineRoute.push(...seg.slice(1));
+      // Spline only for un-hardcoded corridor transitions to avoid sharp chords
+      segCoords = [];
+      const n = seg.coords.length;
+      for (let i = 0; i < n - 1; i++) {
+        const p0 = i > 0 ? seg.coords[i - 1] : seg.coords[0];
+        const p1 = seg.coords[i];
+        const p2 = seg.coords[i + 1];
+        const p3 = i + 2 < n ? seg.coords[i + 2] : p2;
+        const sub = catmullRomCentripetal(p0, p1, p2, p3, 10, 0.5);
+        if (i === 0) segCoords.push(...sub);
+        else segCoords.push(...sub.slice(1));
       }
+    }
+
+    if (s === 0) {
+      routeCoordinates.push(...segCoords);
+    } else {
+      routeCoordinates.push(...segCoords.slice(1));
+    }
+  }
+
+  // Deduplicate consecutive identical coordinates
+  const cleanRoute: Coordinate[] = [];
+  for (const pt of routeCoordinates) {
+    const prev = cleanRoute[cleanRoute.length - 1];
+    if (!prev || Math.abs(prev[0] - pt[0]) > 1e-6 || Math.abs(prev[1] - pt[1]) > 1e-6) {
+      cleanRoute.push(pt);
     }
   }
 
@@ -416,7 +438,7 @@ export function solveSpatiotemporalTrajectory(
   const overallPlausibility = transitions.length > 0 ? plausibilitySum / transitions.length : 1.0;
 
   return {
-    routeCoordinates: splineRoute,
+    routeCoordinates: cleanRoute,
     transitions,
     totalDistanceKm: +totalDistKm.toFixed(2),
     totalDurationSeconds: totalTimeSec,
@@ -472,3 +494,4 @@ export function buildSpatiotemporalMesh(
 
   return edges;
 }
+

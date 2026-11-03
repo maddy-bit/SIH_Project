@@ -6,7 +6,7 @@ import * as maplibregl from "maplibre-gl";
 // lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
 import { fetchRoadRoute } from "@/lib/routing";
-import { solveSpatiotemporalTrajectory, buildSpatiotemporalMesh } from "@/lib/spatiotemporalGraph";
+import { solveSpatiotemporalTrajectory } from "@/lib/spatiotemporalGraph";
 import { resolveRtoArea, WHOLE_INDIA_CENTER, WHOLE_INDIA_ZOOM } from "@/lib/rtoDirectory";
 
 // High-performance Google Maps raster tile styles with pre-baked WebGL vector route layers.
@@ -377,45 +377,10 @@ export function InvestigationMap({
           setTimeout(() => setOrQueueInitialRoute(), 200);
         }
 
-        // Restore mesh links if available
-        if (cameras.length > 0) {
-          const meshFeatures: GeoJSON.Feature[] = [];
-          for (let i = 0; i < cameras.length - 1; i++) {
-            meshFeatures.push({
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: [
-                  [cameras[i].longitude, cameras[i].latitude],
-                  [cameras[i + 1].longitude, cameras[i + 1].latitude],
-                ],
-              },
-              properties: {},
-            });
-          }
-          const meshGeojson: GeoJSON.FeatureCollection = {
-            type: "FeatureCollection",
-            features: meshFeatures,
-          };
-
-          const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-          if (meshSrc) {
-            meshSrc.setData(meshGeojson);
-          } else {
-            map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
-            if (!map.getLayer("camera-mesh-layer")) {
-              map.addLayer({
-                id: "camera-mesh-layer",
-                type: "line",
-                source: MESH_LINKS_SOURCE_ID,
-                paint: {
-                  "line-color": "#0284c7",
-                  "line-width": 1.5,
-                  "line-opacity": 0.35,
-                },
-              });
-            }
-          }
+        // Keep camera mesh empty (no direct chords between cameras)
+        const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+        if (meshSrc) {
+          meshSrc.setData({ type: "FeatureCollection", features: [] });
         }
       } catch (err) {
         console.error("Error restoring route layers after style switch:", err);
@@ -477,59 +442,10 @@ export function InvestigationMap({
 
     if (displayedCameras.length === 0) return;
 
-    // 1. Mesh links between adjacent cameras
-    const meshFeatures: GeoJSON.Feature[] = [];
-    for (let i = 0; i < displayedCameras.length - 1; i++) {
-      meshFeatures.push({
-        type: "Feature",
-        geometry: {
-          type: "LineString",
-          coordinates: [
-            [displayedCameras[i].longitude, displayedCameras[i].latitude],
-            [displayedCameras[i + 1].longitude, displayedCameras[i + 1].latitude],
-          ],
-        },
-        properties: {},
-      });
-    }
-
-    const meshGeojson: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: meshFeatures,
-    };
-
-    const setOrQueueMesh = () => {
-      const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-      if (meshSrc) {
-        meshSrc.setData(meshGeojson);
-        return true;
-      }
-      if (map.isStyleLoaded()) {
-        try {
-          map.addSource(MESH_LINKS_SOURCE_ID, { type: "geojson", data: meshGeojson });
-          if (!map.getLayer("camera-mesh-layer")) {
-            map.addLayer({
-              id: "camera-mesh-layer",
-              type: "line",
-              source: MESH_LINKS_SOURCE_ID,
-              paint: {
-                "line-color": "#0284c7",
-                "line-width": 1.5,
-                "line-opacity": 0.35,
-              },
-            });
-          }
-          return true;
-        } catch (err) {
-          console.error("FAILED TO ADD MESH LAYER:", err);
-        }
-      }
-      return false;
-    };
-
-    if (!setOrQueueMesh()) {
-      map.once("styledata", () => setOrQueueMesh());
-      setTimeout(() => setOrQueueMesh(), 200);
+    // Keep camera mesh empty so no direct lines appear between cameras
+    const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+    if (meshSrc) {
+      meshSrc.setData({ type: "FeatureCollection", features: [] });
     }
 
     // 2. Render sleek tactical CCTV camera pins for cameras NOT in active trajectory
@@ -626,15 +542,9 @@ export function InvestigationMap({
         if (svgPathRef.current) svgPathRef.current.setAttribute("d", "");
       }
 
-      if (displayedCameras.length > 1 && svgMeshRef.current) {
-        const meshEdges = buildSpatiotemporalMesh(displayedCameras, 5.0);
-        let meshD = "";
-        for (const [pt1, pt2] of meshEdges) {
-          const p1 = map.project(pt1);
-          const p2 = map.project(pt2);
-          meshD += `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)} `;
-        }
-        svgMeshRef.current.setAttribute("d", meshD);
+      // Keep mesh lines empty (no direct paths between cameras)
+      if (svgMeshRef.current) {
+        svgMeshRef.current.setAttribute("d", "");
       }
     };
 

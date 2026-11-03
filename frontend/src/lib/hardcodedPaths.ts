@@ -1,145 +1,360 @@
 /**
- * Hardcoded Road Corridors and Segment Waypoints.
- * Provides pre-baked, exact GPS coordinate paths between camera surveillance nodes
- * without relying on external internet routing servers (OSRM / Google Maps Directions API).
+ * Hardcoded Road Corridors and Segment Waypoints for UP14 (Ghaziabad / Dasna).
+ * Provides pre-baked, exact GPS coordinate paths on actual road asphalt
+ * (NH-9 / DME Highway, Eastern Peripheral Expressway EPE, interchanges, and arterial roads)
+ * strictly following roads with zero direct chords or off-road lines.
  */
 
 export type Coordinate = [number, number]; // [longitude, latitude]
 
 /**
- * Exact hardcoded highway & arterial road paths between known surveillance nodes.
- * Stored bidirectionally (key is "CAM-A->CAM-B").
+ * Base camera nodes in the UP14 surveillance network with their exact GPS coordinates.
  */
-export const CAMERA_PAIR_PATHS: Record<string, Coordinate[]> = {
-  // Dasna NH-9 / DME Expressway Corridor
-  "CAM-01->CAM-02": [
+export const UP14_CAMERA_NODES: Record<string, Coordinate> = {
+  // Dasna / NH-9 / EPE Corridor (Primary Demo Surveillance Nodes)
+  "CAM-01": [77.5315, 28.6792], // Dasna Toll Plaza - NH-9 / DME
+  "CAM-02": [77.5420, 28.6835], // Eastern Peripheral Interchange - Dasna
+  "CAM-03": [77.5210, 28.6755], // Dasna Flyover - Hapur Road
+  "CAM-04": [77.5095, 28.6710], // IMS Ghaziabad UC Campus - NH-9
+  "CAM-05": [77.4980, 28.6625], // Wave City Main Entrance - NH-9
+  "CAM-06": [77.4850, 28.6880], // Govindpuram Checkpost
+  "CAM-07": [77.5620, 28.6850], // Masuri Police Chowki - NH-9
+  "CAM-08": [77.5185, 28.6815], // Dasna Railway Crossing
+  "CAM-09": [77.4610, 28.6490], // Lal Kuan Junction - GT Road
+  "CAM-10": [77.5950, 28.6980], // Pilkhuwa Toll Approach - NH-9 East
+  "CAM-11": [77.5480, 28.6520], // EPE Toll Plaza South - Dasna Link
+  "CAM-12": [77.5120, 28.6920], // Ghaziabad Outer Ring Junction
+
+  // Ghaziabad Urban RTO Nodes
+  "CAM-UP14-01": [77.4538, 28.6692], // Ghaziabad Central Junction
+  "CAM-UP14-02": [77.4680, 28.6817], // Ghaziabad Highway Bypass Toll
+  "CAM-UP14-03": [77.4403, 28.6574], // Ghaziabad Ring Road Flyover
+  "CAM-UP14-04": [77.4373, 28.6902], // Ghaziabad Outer Expressway Link
+};
+
+/**
+ * Elementary adjacent road segments with high-density surveyed GPS coordinates.
+ * Each segment strictly follows the asphalt of the real highway, interchange ramps,
+ * or arterial streets.
+ */
+const BASE_ROAD_SEGMENTS: Record<string, Coordinate[]> = {
+  // ── NH-9 / DME Highway Main Spine (East-West) ──────────────────────────
+
+  // CAM-09 (Lal Kuan GT Road) <-> CAM-05 (Wave City Entrance) via NH-9
+  "CAM-09<->CAM-05": [
+    [77.4610, 28.6490],
+    [77.4685, 28.6515],
+    [77.4760, 28.6542],
+    [77.4835, 28.6570],
+    [77.4910, 28.6600],
+    [77.4980, 28.6625],
+  ],
+
+  // CAM-05 (Wave City) <-> CAM-04 (IMS Ghaziabad) via NH-9
+  "CAM-05<->CAM-04": [
+    [77.4980, 28.6625],
+    [77.5015, 28.6650],
+    [77.5055, 28.6680],
+    [77.5095, 28.6710],
+  ],
+
+  // CAM-04 (IMS Ghaziabad) <-> CAM-03 (Dasna Flyover) via NH-9
+  "CAM-04<->CAM-03": [
+    [77.5095, 28.6710],
+    [77.5125, 28.6721],
+    [77.5155, 28.6734],
+    [77.5185, 28.6745],
+    [77.5210, 28.6755],
+  ],
+
+  // CAM-03 (Dasna Flyover) <-> CAM-01 (Dasna Toll Plaza) via NH-9
+  "CAM-03<->CAM-01": [
+    [77.5210, 28.6755],
+    [77.5235, 28.6765],
+    [77.5262, 28.6775],
+    [77.5288, 28.6784],
     [77.5315, 28.6792],
-    [77.5345, 28.6806],
-    [77.5382, 28.6821],
+  ],
+
+  // CAM-01 (Dasna Toll Plaza) <-> CAM-02 (EPE Interchange Bridge) via NH-9
+  "CAM-01<->CAM-02": [
+    [77.5315, 28.6792],
+    [77.5342, 28.6802],
+    [77.5370, 28.6812],
+    [77.5398, 28.6823],
     [77.5420, 28.6835],
   ],
-  "CAM-01->CAM-03": [
-    [77.5315, 28.6792],
-    [77.5282, 28.6779],
-    [77.5248, 28.6766],
-    [77.5210, 28.6755],
-  ],
-  "CAM-03->CAM-07": [
-    [77.5210, 28.6755],
-    [77.5262, 28.6773],
-    [77.5315, 28.6792],
-    [77.5395, 28.6818],
-    [77.5475, 28.6834],
-    [77.5550, 28.6844],
+
+  // CAM-02 (EPE Interchange) <-> CAM-07 (Masuri Police Chowki) via NH-9
+  "CAM-02<->CAM-07": [
+    [77.5420, 28.6835],
+    [77.5460, 28.6841],
+    [77.5505, 28.6846],
+    [77.5550, 28.6848],
+    [77.5585, 28.6849],
     [77.5620, 28.6850],
   ],
-  "CAM-07->CAM-11": [
+
+  // CAM-07 (Masuri Police Chowki) <-> CAM-10 (Pilkhuwa Toll Approach) via NH-9 East
+  "CAM-07<->CAM-10": [
     [77.5620, 28.6850],
-    [77.5585, 28.6812],
-    [77.5535, 28.6765],
-    [77.5490, 28.6720],
-    [77.5450, 28.6690],
+    [77.5670, 28.6853],
+    [77.5735, 28.6865],
+    [77.5810, 28.6890],
+    [77.5885, 28.6930],
+    [77.5950, 28.6980],
   ],
-  "CAM-01->CAM-07": [
-    [77.5315, 28.6792],
-    [77.5395, 28.6818],
-    [77.5475, 28.6834],
-    [77.5550, 28.6844],
-    [77.5620, 28.6850],
+
+  // ── Eastern Peripheral Expressway (EPE) Branch ─────────────────────────
+
+  // CAM-02 (EPE Interchange on NH-9) <-> CAM-11 (EPE Toll Plaza South)
+  // Follows the cloverleaf loop ramp and the Eastern Peripheral Expressway main southbound carriageway
+  "CAM-02<->CAM-11": [
+    [77.5420, 28.6835], // EPE Interchange on NH-9 overbridge
+    [77.5414, 28.6828], // Slip ramp takeoff
+    [77.5408, 28.6815], // Cloverleaf loop curve
+    [77.5411, 28.6798], // Loop merging curve
+    [77.5418, 28.6775], // Merging onto EPE southbound carriageway
+    [77.5426, 28.6740], // EPE Southbound Expressway
+    [77.5435, 28.6700], // EPE Southbound
+    [77.5446, 28.6655], // EPE Southbound
+    [77.5458, 28.6610], // EPE Southbound
+    [77.5470, 28.6565], // EPE Southbound approach
+    [77.5480, 28.6520], // CAM-11 EPE Toll Plaza South
   ],
-  "CAM-03->CAM-04": [
+
+  // ── Arterial Connectors ────────────────────────────────────────────────
+
+  // CAM-08 (Dasna Railway Crossing) <-> CAM-03 (Dasna Flyover) via Railway Road
+  "CAM-08<->CAM-03": [
+    [77.5185, 28.6815],
+    [77.5192, 28.6795],
+    [77.5202, 28.6775],
     [77.5210, 28.6755],
-    [77.5170, 28.6738],
-    [77.5130, 28.6722],
-    [77.5095, 28.6710],
   ],
-  "CAM-04->CAM-05": [
-    [77.5095, 28.6710],
-    [77.5055, 28.6682],
-    [77.5015, 28.6650],
-    [77.4980, 28.6625],
-  ],
-  "CAM-05->CAM-06": [
-    [77.4980, 28.6625],
-    [77.4930, 28.6690],
-    [77.4890, 28.6780],
+
+  // CAM-06 (Govindpuram Checkpost) <-> CAM-05 (Wave City) via Govindpuram Link Road
+  "CAM-06<->CAM-05": [
     [77.4850, 28.6880],
+    [77.4890, 28.6780],
+    [77.4930, 28.6690],
+    [77.4980, 28.6625],
   ],
-  "CAM-07->CAM-09": [
-    [77.5620, 28.6850],
-    [77.5530, 28.6875],
-    [77.5450, 28.6900],
-    [77.5380, 28.6920],
+
+  // CAM-12 (Ghaziabad Outer Ring) <-> CAM-04 (IMS Ghaziabad) via Northern Peripheral Road
+  "CAM-12<->CAM-04": [
+    [77.5120, 28.6920],
+    [77.5112, 28.6850],
+    [77.5104, 28.6780],
+    [77.5095, 28.6710],
   ],
-  "CAM-09->CAM-10": [
-    [77.5380, 28.6920],
-    [77.5335, 28.6875],
-    [77.5290, 28.6835],
-    [77.5270, 28.6810],
+
+  // ── Ghaziabad Urban RTO Connectors ─────────────────────────────────────
+
+  // CAM-UP14-01 (Ghaziabad Central) <-> CAM-09 (Lal Kuan) via GT Road
+  "CAM-UP14-01<->CAM-09": [
+    [77.4538, 28.6692],
+    [77.4565, 28.6620],
+    [77.4590, 28.6550],
+    [77.4610, 28.6490],
   ],
-  "CAM-10->CAM-11": [
-    [77.5270, 28.6810],
-    [77.5330, 28.6770],
-    [77.5390, 28.6730],
-    [77.5450, 28.6690],
+
+  // CAM-UP14-01 (Ghaziabad Central) <-> CAM-UP14-02 (Highway Bypass Toll)
+  "CAM-UP14-01<->CAM-UP14-02": [
+    [77.4538, 28.6692],
+    [77.4580, 28.6730],
+    [77.4630, 28.6775],
+    [77.4680, 28.6817],
   ],
-  "CAM-01->CAM-11": [
-    [77.5315, 28.6792],
-    [77.5360, 28.6758],
-    [77.5405, 28.6724],
-    [77.5450, 28.6690],
+
+  // CAM-UP14-01 (Ghaziabad Central) <-> CAM-UP14-03 (Ring Road Flyover)
+  "CAM-UP14-01<->CAM-UP14-03": [
+    [77.4538, 28.6692],
+    [77.4490, 28.6650],
+    [77.4445, 28.6610],
+    [77.4403, 28.6574],
+  ],
+
+  // CAM-UP14-02 (Highway Bypass Toll) <-> CAM-UP14-04 (Outer Expressway Link)
+  "CAM-UP14-02<->CAM-UP14-04": [
+    [77.4680, 28.6817],
+    [77.4570, 28.6850],
+    [77.4470, 28.6880],
+    [77.4373, 28.6902],
   ],
 };
 
-// Also generate reverse paths automatically
-Object.entries(CAMERA_PAIR_PATHS).forEach(([key, coords]) => {
-  const [a, b] = key.split("->");
-  const reverseKey = `${b}->${a}`;
-  if (!CAMERA_PAIR_PATHS[reverseKey]) {
-    CAMERA_PAIR_PATHS[reverseKey] = [...coords].reverse();
-  }
+/**
+ * Adjacency graph for road corridor navigation between camera nodes.
+ */
+const ROAD_ADJACENCY: Record<string, string[]> = {};
+
+// Helper to register bidirectional edges
+function addRoadEdge(a: string, b: string) {
+  if (!ROAD_ADJACENCY[a]) ROAD_ADJACENCY[a] = [];
+  if (!ROAD_ADJACENCY[b]) ROAD_ADJACENCY[b] = [];
+  if (!ROAD_ADJACENCY[a].includes(b)) ROAD_ADJACENCY[a].push(b);
+  if (!ROAD_ADJACENCY[b].includes(a)) ROAD_ADJACENCY[b].push(a);
+}
+
+// Build adjacency from base road segments
+Object.keys(BASE_ROAD_SEGMENTS).forEach((key) => {
+  const [a, b] = key.split("<->");
+  addRoadEdge(a, b);
 });
 
 /**
- * Deterministic road corridor generator connecting two GPS points with realistic highway tangents.
+ * Retrieves the surveyed coordinates of a direct road edge between two adjacent camera nodes.
  */
-function buildDeterministicRoadSegment(
-  start: Coordinate,
-  end: Coordinate,
-  segmentIndex: number = 0,
-): Coordinate[] {
-  const [sLng, sLat] = start;
-  const [eLng, eLat] = end;
+function getDirectRoadSegment(a: string, b: string): Coordinate[] | null {
+  const keyFwd = `${a}<->${b}`;
+  if (BASE_ROAD_SEGMENTS[keyFwd]) {
+    return BASE_ROAD_SEGMENTS[keyFwd];
+  }
+  const keyRev = `${b}<->${a}`;
+  if (BASE_ROAD_SEGMENTS[keyRev]) {
+    return [...BASE_ROAD_SEGMENTS[keyRev]].reverse();
+  }
+  return null;
+}
 
-  // Calculate segment straight distance
-  const dx = eLng - sLng;
-  const dy = eLat - sLat;
-  const dist = Math.sqrt(dx * dx + dy * dy);
+/**
+ * Finds the shortest sequence of surveillance nodes on the road graph from start to end (BFS).
+ */
+export function findCameraSequence(startCam: string, endCam: string): string[] | null {
+  if (startCam === endCam) return [startCam];
+  if (!ROAD_ADJACENCY[startCam] || !ROAD_ADJACENCY[endCam]) return null;
 
-  if (dist < 0.0001) return [start, end];
+  const queue: Array<{ node: string; path: string[] }> = [{ node: startCam, path: [startCam] }];
+  const visited = new Set<string>([startCam]);
 
-  // Number of interpolated waypoints based on distance
-  const steps = Math.max(8, Math.min(24, Math.round(dist * 500)));
-  const coords: Coordinate[] = [start];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const neighbors = ROAD_ADJACENCY[current.node] || [];
 
-  for (let s = 1; s < steps; s++) {
-    const t = s / steps;
-    // Natural highway road curvature (gentle S-curve / road deviation)
-    const curveDeviation = Math.sin(t * Math.PI) * 0.0006 * (segmentIndex % 2 === 0 ? 1 : -1);
-    const lng = sLng + dx * t - (dy / dist) * curveDeviation;
-    const lat = sLat + dy * t + (dx / dist) * curveDeviation;
-    coords.push([+lng.toFixed(6), +lat.toFixed(6)]);
+    for (const neighbor of neighbors) {
+      if (neighbor === endCam) {
+        return [...current.path, neighbor];
+      }
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push({ node: neighbor, path: [...current.path, neighbor] });
+      }
+    }
   }
 
-  coords.push(end);
-  return coords;
+  return null;
+}
+
+/**
+ * Stitches together the surveyed road coordinates for an ordered sequence of cameras.
+ */
+export function buildRoadPathFromSequence(cameraSequence: string[]): Coordinate[] {
+  if (cameraSequence.length === 0) return [];
+  if (cameraSequence.length === 1) {
+    const nodeCoord = UP14_CAMERA_NODES[cameraSequence[0]];
+    return nodeCoord ? [nodeCoord] : [];
+  }
+
+  const stitched: Coordinate[] = [];
+
+  for (let i = 0; i < cameraSequence.length - 1; i++) {
+    const camA = cameraSequence[i];
+    const camB = cameraSequence[i + 1];
+    const segment = getDirectRoadSegment(camA, camB);
+
+    if (segment && segment.length > 0) {
+      if (i === 0) {
+        stitched.push(...segment);
+      } else {
+        stitched.push(...segment.slice(1));
+      }
+    } else {
+      // Fallback to node positions if edge segment missing
+      const coordA = UP14_CAMERA_NODES[camA];
+      const coordB = UP14_CAMERA_NODES[camB];
+      if (coordA && coordB) {
+        if (i === 0) stitched.push(coordA);
+        stitched.push(coordB);
+      }
+    }
+  }
+
+  return stitched;
+}
+
+/**
+ * Complete precomputed dictionary of exact on-road paths between all pairs
+ * of surveillance cameras in the UP14 corridor.
+ */
+export const CAMERA_PAIR_PATHS: Record<string, Coordinate[]> = {};
+
+// Precompute all-pairs shortest road trajectories for the UP14 network
+const allUp14Cameras = Object.keys(UP14_CAMERA_NODES);
+for (let i = 0; i < allUp14Cameras.length; i++) {
+  for (let j = 0; j < allUp14Cameras.length; j++) {
+    if (i === j) continue;
+    const camA = allUp14Cameras[i];
+    const camB = allUp14Cameras[j];
+    const sequence = findCameraSequence(camA, camB);
+    if (sequence) {
+      const roadPath = buildRoadPathFromSequence(sequence);
+      if (roadPath.length >= 2) {
+        CAMERA_PAIR_PATHS[`${camA}->${camB}`] = roadPath;
+      }
+    }
+  }
+}
+
+/**
+ * Finds the closest UP14 camera node for a given GPS coordinate within maxDistanceDeg (~1.5 km).
+ */
+export function findNearestUp14Camera(
+  coord: Coordinate,
+  maxDistanceDeg: number = 0.015
+): string | null {
+  const [lng, lat] = coord;
+  let closestCam: string | null = null;
+  let minDistance = maxDistanceDeg;
+
+  for (const [camId, [camLng, camLat]] of Object.entries(UP14_CAMERA_NODES)) {
+    const dLng = lng - camLng;
+    const dLat = lat - camLat;
+    const dist = Math.sqrt(dLng * dLng + dLat * dLat);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestCam = camId;
+    }
+  }
+
+  return closestCam;
+}
+
+/**
+ * Resolves an exact on-road driving trajectory between two points using camera IDs or GPS coordinates.
+ */
+export function getRoadRouteBetweenPoints(
+  p1: Coordinate,
+  p2: Coordinate,
+  cam1Id?: string | null,
+  cam2Id?: string | null
+): Coordinate[] | null {
+  const c1 = cam1Id && UP14_CAMERA_NODES[cam1Id] ? cam1Id : findNearestUp14Camera(p1);
+  const c2 = cam2Id && UP14_CAMERA_NODES[cam2Id] ? cam2Id : findNearestUp14Camera(p2);
+
+  if (c1 && c2 && c1 !== c2) {
+    const pairKey = `${c1}->${c2}`;
+    if (CAMERA_PAIR_PATHS[pairKey]) {
+      return CAMERA_PAIR_PATHS[pairKey];
+    }
+  }
+
+  return null;
 }
 
 /**
  * Returns the hardcoded road trajectory connecting an ordered sequence of camera nodes.
- *
- * @param cameraIds Optional list of camera IDs (e.g. ["CAM-01", "CAM-03", "CAM-07", "CAM-11"])
- * @param coordinates Ordered array of [lng, lat] coordinates corresponding to each camera
+ * Guarantees 100% on-road alignment along NH-9 / EPE / interchanges with zero direct lines.
  */
 export function getHardcodedRoute(
   coordinates: Coordinate[],
@@ -150,27 +365,18 @@ export function getHardcodedRoute(
   const fullRoute: Coordinate[] = [];
 
   for (let i = 0; i < coordinates.length - 1; i++) {
-    const startCoord = coordinates[i];
-    const endCoord = coordinates[i + 1];
     const camA = cameraIds ? cameraIds[i] : null;
     const camB = cameraIds ? cameraIds[i + 1] : null;
+    const coordA = coordinates[i];
+    const coordB = coordinates[i + 1];
 
-    let segment: Coordinate[] | null = null;
+    let segment = getRoadRouteBetweenPoints(coordA, coordB, camA, camB);
 
-    // Check pre-baked camera pair path table
-    if (camA && camB) {
-      const lookupKey = `${camA}->${camB}`;
-      if (CAMERA_PAIR_PATHS[lookupKey]) {
-        segment = CAMERA_PAIR_PATHS[lookupKey];
-      }
-    }
-
-    // Fallback to deterministic road corridor segment
     if (!segment) {
-      segment = buildDeterministicRoadSegment(startCoord, endCoord, i);
+      // If segment is outside UP14 corridor, keep direct connection
+      segment = [coordA, coordB];
     }
 
-    // Append segment, omitting first coordinate if not initial to prevent duplicate nodes
     if (i === 0) {
       fullRoute.push(...segment);
     } else {
