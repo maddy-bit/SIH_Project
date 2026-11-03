@@ -779,7 +779,7 @@ export function InvestigationMap({
     return () => {
       isCancelled = true;
     };
-  }, [effectivePoints, displayedCameras, isConstructed, mapReady, activeLayer, onSelectPoint]);
+  }, [effectivePoints, displayedCameras, cameras, isConstructed, mapReady, activeLayer, onSelectPoint]);
 
   // Smooth camera navigation based on entered plate and construct state
   useEffect(() => {

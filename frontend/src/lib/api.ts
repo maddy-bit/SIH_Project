@@ -766,7 +766,7 @@ export async function detectPlateFromImage(
   imageBase64?: string,
   videoPath?: string,
 ): Promise<DetectPlateResult> {
-  const payload: Record<string, any> = {};
+  const payload: Record<string, string> = {};
   if (imageBase64) payload.image = imageBase64;
   if (videoPath) {
     payload.videoPath = videoPath;
