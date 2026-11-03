@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   processVideoFeed,
@@ -65,6 +65,70 @@ const DEFAULT_SLOTS: DynamicVideoSlot[] = [
   },
 ];
 
+// Helper to extract frame from video element or use video path
+async function extractFrameFromSlot(slot: DynamicVideoSlot): Promise<{ base64?: string; videoPath?: string }> {
+  const videoPath = slot.customFile ? undefined : slot.defaultVideo;
+  const videoSrc = slot.customPreviewUrl || (slot.customFile ? URL.createObjectURL(slot.customFile) : `/${slot.defaultVideo}`);
+
+  if (typeof window === "undefined") return { videoPath };
+
+  try {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const video = document.createElement("video");
+      video.crossOrigin = "anonymous";
+      video.muted = true;
+      video.preload = "auto";
+      video.src = videoSrc;
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("Video frame timeout"));
+      }, 6000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        video.onloadeddata = null;
+        video.onseeked = null;
+        video.onerror = null;
+      }
+
+      video.onloadeddata = () => {
+        video.currentTime = Math.min(3.0, (video.duration || 6) * 0.5);
+      };
+
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 360;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+            cleanup();
+            resolve(dataUrl);
+            return;
+          }
+          cleanup();
+          reject(new Error("Canvas context failed"));
+        } catch (e) {
+          cleanup();
+          reject(e);
+        }
+      };
+
+      video.onerror = () => {
+        cleanup();
+        reject(new Error("Video loading failed"));
+      };
+    });
+
+    return { base64, videoPath };
+  } catch {
+    return { videoPath };
+  }
+}
+
 export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: VideoIngestionModalProps) {
   const [slots, setSlots] = useState<DynamicVideoSlot[]>(DEFAULT_SLOTS);
   const [targetPlate, setTargetPlate] = useState("UP14 AN 7225");
@@ -92,44 +156,7 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
 
   const fileInputBatchRef = useRef<HTMLInputElement | null>(null);
 
-  // Synchronize slot cameras when target plate RTO changes
-  useEffect(() => {
-    updateCamerasForPlate(targetPlate, slots.length);
-  }, [targetPlate]);
-
-  // When modal opens or first video changes, predict plate directly from YOLO ML model
-  useEffect(() => {
-    if (!isOpen) return;
-    let isCancelled = false;
-
-    async function autoPredict() {
-      try {
-        const slot = slots[0];
-        if (!slot) return;
-        const { base64, videoPath } = await extractFrameFromSlot(slot);
-        const result = await detectPlateFromImage(base64, videoPath);
-        if (!isCancelled && result && result.detected && result.plate) {
-          setTargetPlate(result.plate);
-          if (result.vehicleType) setDetectedVehicleType(result.vehicleType);
-          if (result.color) setDetectedColor(result.color);
-          setMlDetectionState({
-            detected: true,
-            plate: result.plate,
-            confidence: result.confidence || 0.92,
-            model: result.model || "YOLOv8s + EasyOCR",
-            box: result.box || { left: 42.0, top: 60.8, width: 16.9, height: 5.6 },
-          });
-        }
-      } catch {}
-    }
-
-    autoPredict();
-    return () => {
-      isCancelled = true;
-    };
-  }, [isOpen, slots[0]?.defaultVideo, slots[0]?.customFile]);
-
-  function updateCamerasForPlate(plate: string, count: number) {
+  const updateCamerasForPlate = useCallback((plate: string, count?: number) => {
     const rto = resolveRtoArea(plate);
     let matchedCams: CameraDto[] = [];
 
@@ -165,7 +192,47 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
       }
       return next;
     });
+  }, []);
+
+  const [prevTargetPlate, setPrevTargetPlate] = useState(targetPlate);
+  if (targetPlate !== prevTargetPlate) {
+    setPrevTargetPlate(targetPlate);
+    updateCamerasForPlate(targetPlate);
   }
+
+  const firstSlot = slots[0];
+  const firstSlotDefaultVideo = firstSlot?.defaultVideo;
+  const firstSlotCustomFile = firstSlot?.customFile;
+
+  // When modal opens or first video changes, predict plate directly from YOLO ML model
+  useEffect(() => {
+    if (!isOpen || !firstSlot) return;
+    let isCancelled = false;
+
+    async function autoPredict() {
+      try {
+        const { base64, videoPath } = await extractFrameFromSlot(firstSlot);
+        const result = await detectPlateFromImage(base64, videoPath);
+        if (!isCancelled && result && result.detected && result.plate) {
+          setTargetPlate(result.plate);
+          if (result.vehicleType) setDetectedVehicleType(result.vehicleType);
+          if (result.color) setDetectedColor(result.color);
+          setMlDetectionState({
+            detected: true,
+            plate: result.plate,
+            confidence: result.confidence || 0.92,
+            model: result.model || "YOLOv8s + EasyOCR",
+            box: result.box || { left: 42.0, top: 60.8, width: 16.9, height: 5.6 },
+          });
+        }
+      } catch {}
+    }
+
+    autoPredict();
+    return () => {
+      isCancelled = true;
+    };
+  }, [isOpen, firstSlot, firstSlotDefaultVideo, firstSlotCustomFile]);
 
   // Quick preset count selector (1 to 6 videos)
   function handleSetVideoCount(count: number) {
@@ -241,70 +308,6 @@ export function VideoIngestionModal({ isOpen, onClose, onTargetDetected }: Video
 
     setSlots(newSlots);
   };
-
-  // Helper to extract frame from video element or use video path
-  async function extractFrameFromSlot(slot: DynamicVideoSlot): Promise<{ base64?: string; videoPath?: string }> {
-    const videoPath = slot.customFile ? undefined : slot.defaultVideo;
-    const videoSrc = slot.customPreviewUrl || (slot.customFile ? URL.createObjectURL(slot.customFile) : `/${slot.defaultVideo}`);
-
-    if (typeof window === "undefined") return { videoPath };
-
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const video = document.createElement("video");
-        video.crossOrigin = "anonymous";
-        video.muted = true;
-        video.preload = "auto";
-        video.src = videoSrc;
-
-        const timeout = setTimeout(() => {
-          cleanup();
-          reject(new Error("Video frame timeout"));
-        }, 6000);
-
-        function cleanup() {
-          clearTimeout(timeout);
-          video.onloadeddata = null;
-          video.onseeked = null;
-          video.onerror = null;
-        }
-
-        video.onloadeddata = () => {
-          video.currentTime = Math.min(3.0, (video.duration || 6) * 0.5);
-        };
-
-        video.onseeked = () => {
-          try {
-            const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 360;
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-              cleanup();
-              resolve(dataUrl);
-              return;
-            }
-            cleanup();
-            reject(new Error("Canvas context failed"));
-          } catch (e) {
-            cleanup();
-            reject(e);
-          }
-        };
-
-        video.onerror = () => {
-          cleanup();
-          reject(new Error("Video loading failed"));
-        };
-      });
-
-      return { base64, videoPath };
-    } catch {
-      return { videoPath };
-    }
-  }
 
   // Run ML model detection on a video frame
   async function runMlPlateDetection() {

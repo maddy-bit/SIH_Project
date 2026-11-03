@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { TiltCard3D } from "./TiltCard3D";
 import { resolveRtoArea } from "@/lib/rtoDirectory";
 
@@ -28,14 +28,14 @@ const PRESETS = [
 
 export function VehicleSearchPanel({ onSearch, isSearching, currentPlate, onPlateChange }: VehicleSearchPanelProps) {
   const [plate, setPlate] = useState(currentPlate ?? "");
+  const [prevCurrentPlate, setPrevCurrentPlate] = useState(currentPlate);
   const [mode, setMode] = useState<SearchMode>("historical");
 
   // Keep internal plate in sync if parent updates it (e.g. after video ingestion)
-  useEffect(() => {
-    if (currentPlate !== undefined && currentPlate !== plate) {
-      setPlate(currentPlate);
-    }
-  }, [currentPlate]);
+  if (currentPlate !== undefined && currentPlate !== prevCurrentPlate) {
+    setPrevCurrentPlate(currentPlate);
+    setPlate(currentPlate);
+  }
 
   const activeRto = resolveRtoArea(plate);
 
