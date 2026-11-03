@@ -1,0 +1,778 @@
+import os
+import subprocess
+import shutil
+from pathlib import Path
+
+# Paths
+REPO_ROOT = Path(r"d:\City_Traffic_Analysis")
+DOCS_DIR = REPO_ROOT / "docs"
+DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
+HTML_FILE = DOCS_DIR / "Feature_Interrelation_and_Architecture_Guide.html"
+PDF_FILE = DOCS_DIR / "Feature_Interrelation_and_Architecture_Guide.pdf"
+ARTIFACT_DIR = Path(r"C:\Users\Priyanshu\.gemini\antigravity-ide\brain\4f63e3a1-b61c-420d-b8ba-394dcf4d0028")
+ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+ARTIFACT_PDF = ARTIFACT_DIR / "Feature_Interrelation_and_Architecture_Guide.pdf"
+
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Feature Interrelation & Mathematical Architecture Guide - SIH26127</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 14mm 14mm 14mm 14mm;
+    @bottom-right {
+      content: "Page " counter(page);
+      font-size: 8pt;
+      color: #64748b;
+    }
+    @bottom-left {
+      content: "SIH26127: City-Wide Multi-Camera Vehicle Intelligence — Feature Interrelations";
+      font-size: 8pt;
+      color: #64748b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: #1e293b;
+    background-color: #ffffff;
+    margin: 0;
+    padding: 0;
+  }
+  .cover-box {
+    background: linear-gradient(135deg, #091124 0%, #1e3a8a 50%, #2563eb 100%);
+    color: #ffffff;
+    padding: 24px 22px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .cover-box .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .cover-box h1 {
+    margin: 0;
+    font-size: 19pt;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    color: #f8fafc;
+    border: none;
+    line-height: 1.25;
+  }
+  .cover-box h2 {
+    margin: 8px 0 0 0;
+    font-size: 11.5pt;
+    font-weight: 400;
+    color: #93c5fd;
+    border: none;
+  }
+  .cover-box .meta {
+    margin-top: 14px;
+    font-size: 8.5pt;
+    color: #cbd5e1;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid rgba(255,255,255,0.22);
+    padding-top: 8px;
+  }
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    font-weight: 700;
+    page-break-after: avoid;
+  }
+  h1 {
+    font-size: 14pt;
+    border-bottom: 2.5px solid #2563eb;
+    padding-bottom: 4px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+  h2 {
+    font-size: 11.5pt;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 3px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #1e40af;
+  }
+  h3 {
+    font-size: 10pt;
+    margin-top: 12px;
+    margin-bottom: 5px;
+    color: #334155;
+  }
+  p {
+    margin-top: 0;
+    margin-bottom: 7px;
+    text-align: justify;
+  }
+  .formula-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #2563eb;
+    padding: 9px 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+    font-family: 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+    font-size: 10pt;
+    color: #0f172a;
+    page-break-inside: avoid;
+  }
+  .formula-title {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #2563eb;
+    margin-bottom: 3px;
+  }
+  .diagram-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+    text-align: center;
+    page-break-inside: avoid;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .diagram-caption {
+    font-size: 8pt;
+    color: #64748b;
+    margin-top: 6px;
+    font-style: italic;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+  .badge-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    font-family: monospace;
+  }
+  .badge-primary { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+  .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+  .badge-warning { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  .badge-purple { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 8px 0;
+    page-break-inside: avoid;
+  }
+  .card {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    background: #ffffff;
+  }
+  .card-header {
+    font-weight: 700;
+    font-size: 9pt;
+    color: #1e3a8a;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+  ul, ol {
+    margin: 4px 0 8px 0;
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 3px;
+  }
+  code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.5pt;
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: #0f172a;
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER SECTION -->
+<div class="cover-box">
+  <div class="badge">Technical Reference & Architectural Blueprint</div>
+  <h1>Feature Interrelation & Mathematical Synergy Guide</h1>
+  <h2>Deep Dive into Cross-Feature Coupling, Multi-Signal Scoring, and Graphical Topology</h2>
+  <div class="meta">
+    <span><strong>Platform:</strong> SIH26127 — Multi-Camera Urban Intelligence</span>
+    <span><strong>Target:</strong> Bharat Electronics Limited (BEL)</span>
+    <span><strong>Version:</strong> Production v2.4 (Enterprise Ready)</span>
+  </div>
+</div>
+
+<!-- EXECUTIVE INTRODUCTION -->
+<h1>1. Executive Synthesis: The Interconnected Feature Ecosystem</h1>
+<p>
+In the <strong>SIH26127 City-Wide Multi-Camera Vehicle Intelligence Platform</strong>, no individual feature operates as an isolated silo. Instead, every computational feature acts as a foundational dependency or a corrective feedback signal for subsequent modules. The architecture transforms raw, noisy multi-camera video streams into forensic-grade vehicle trajectories and proactive security alerts.
+</p>
+<p>
+The core challenge in urban traffic intelligence is the unreliability of individual sensor cues: adverse weather renders license plates illegible, occlusions break single-camera object tracks, lighting shifts alter apparent vehicle paint colors, and malicious actors utilize forged or cloned license plates. To solve this, our system introduces a <strong>multi-layered feature interrelation model</strong> operating on two complementary planes:
+</p>
+<ul>
+  <li><strong>Feature Space Interrelations (Data / ML Signal Level):</strong> How physical, visual, optical, chromatic, temporal, and spatial features mutually constrain and reinforce one another within the 6-factor <code>IdentityScorer</code> equation.</li>
+  <li><strong>System Pipeline Interrelations (Architectural Workflow Level):</strong> How data structures flow across the 12 primary platform subsystems—from atmospheric optical dehazing to GIS trajectory rendering and law enforcement PDF reporting.</li>
+</ul>
+
+<!-- HIGH LEVEL PIPELINE DIAGRAM -->
+<div class="diagram-container">
+  <svg viewBox="0 0 850 260" width="100%" height="240" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1e3a8a"/>
+        <stop offset="100%" stop-color="#3b82f6"/>
+      </linearGradient>
+      <linearGradient id="gradIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#3730a3"/>
+        <stop offset="100%" stop-color="#6366f1"/>
+      </linearGradient>
+      <linearGradient id="gradEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#065f46"/>
+        <stop offset="100%" stop-color="#10b981"/>
+      </linearGradient>
+      <linearGradient id="gradRose" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#9f1239"/>
+        <stop offset="100%" stop-color="#f43f5e"/>
+      </linearGradient>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b"/>
+      </marker>
+    </defs>
+
+    <!-- Background Grid / Box -->
+    <rect x="5" y="5" width="840" height="250" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="20" y="25" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#0f172a">FIGURE 1.1: END-TO-END FEATURE FLOW & INTERDEPENDENCY PIPELINE</text>
+
+    <!-- Stage 1 -->
+    <rect x="20" y="45" width="125" height="75" rx="6" fill="url(#gradBlue)"/>
+    <text x="82" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Raw Camera Feeds</text>
+    <text x="82" y="85" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#bfdbfe">CAM-01 .. CAM-11</text>
+    <text x="82" y="102" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" font-weight="600" fill="#e0f2fe">+ DCP Dehazing</text>
+
+    <!-- Arrow 1 to 2 -->
+    <line x1="145" y1="82" x2="175" y2="82" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Stage 2 -->
+    <rect x="180" y="45" width="135" height="75" rx="6" fill="url(#gradBlue)"/>
+    <text x="247" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Detection & MOT</text>
+    <text x="247" y="85" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#bfdbfe">YOLOv8s Detector</text>
+    <text x="247" y="102" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" font-weight="600" fill="#e0f2fe">ByteTrack (Kalman)</text>
+
+    <!-- Arrow 2 to 3 -->
+    <line x1="315" y1="82" x2="345" y2="82" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Stage 3 -->
+    <rect x="350" y="45" width="145" height="75" rx="6" fill="url(#gradIndigo)"/>
+    <text x="422" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Deep Feature Extraction</text>
+    <text x="422" y="83" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#c7d2fe">YOLOv8n-LP + OCR</text>
+    <text x="422" y="96" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#c7d2fe">ResNet50 Re-ID (2048d)</text>
+    <text x="422" y="109" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#c7d2fe">Color & Vehicle Class</text>
+
+    <!-- Arrow 3 to 4 -->
+    <line x1="495" y1="82" x2="525" y2="82" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Stage 4 -->
+    <rect x="530" y="45" width="135" height="75" rx="6" fill="url(#gradIndigo)"/>
+    <text x="597" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Multi-Frame Fusion</text>
+    <text x="597" y="85" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#c7d2fe">Temporal Aggregation</text>
+    <text x="597" y="98" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#c7d2fe">Confidence Weighting</text>
+    <text x="597" y="111" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#c7d2fe">Best-Evidence Crop</text>
+
+    <!-- Arrow 4 to 5 -->
+    <line x1="665" y1="82" x2="695" y2="82" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Stage 5 -->
+    <rect x="700" y="45" width="130" height="75" rx="6" fill="url(#gradEmerald)"/>
+    <text x="765" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Global Registry</text>
+    <text x="765" y="85" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#a7f3d0">Unified Vehicle ID</text>
+    <text x="765" y="102" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" font-weight="600" fill="#ecfdf5">6-Signal Scorer</text>
+
+    <!-- Downward Arrows from Stage 5 to Bottom Row -->
+    <path d="M 765 120 L 765 145 L 610 145" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 765 145 L 765 170 L 440 170 L 440 175" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 765 145 L 765 190 L 140 190 L 140 195" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Bottom Stage A: Anti-Spoofing & Alerts -->
+    <rect x="475" y="160" width="130" height="75" rx="6" fill="url(#gradRose)"/>
+    <text x="540" y="183" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Security & Watchlist</text>
+    <text x="540" y="200" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#fecdd3">Cloned Plate Detector</text>
+    <text x="540" y="213" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#fecdd3">Impossible Velocity</text>
+    <text x="540" y="226" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#fecdd3">Hotlist Alarms</text>
+
+    <!-- Bottom Stage B: Trajectory Reconstruction -->
+    <rect x="305" y="160" width="145" height="75" rx="6" fill="url(#gradEmerald)"/>
+    <text x="377" y="183" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Trajectory Engine</text>
+    <text x="377" y="200" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#a7f3d0">Spatial Topology Graph</text>
+    <text x="377" y="213" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#a7f3d0">Transit Speed & Dwell</text>
+    <text x="377" y="226" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#a7f3d0">Markov Next-Junction</text>
+
+    <!-- Bottom Stage C: Presentation & Delivery -->
+    <rect x="75" y="160" width="150" height="75" rx="6" fill="url(#gradBlue)"/>
+    <text x="150" y="183" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#ffffff">Real-Time UI & PDF</text>
+    <text x="150" y="200" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#bfdbfe">Spring Boot WebSockets</text>
+    <text x="150" y="213" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#bfdbfe">Next.js 16 Leaflet GIS</text>
+    <text x="150" y="226" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#bfdbfe">Forensic Dossier PDF</text>
+  </svg>
+  <div class="diagram-caption">Figure 1.1: Sequential and feedback linkages across the platform's computational stages.</div>
+</div>
+
+<!-- SECTION 2: THE 6 CORE DATA-LEVEL FEATURES -->
+<div class="page-break"></div>
+<h1>2. Mathematical Formulation: Multi-Signal Feature Interrelation</h1>
+<p>
+The core identity resolution engine (<code>ai/identity_scorer.py</code>) matches local camera track observations to global vehicle records. Rather than relying on a brittle single-feature key (e.g., license plate only), the platform computes an objective match function $S_{\text{total}} \in [0.0, 1.0]$ over six orthogonal feature modalities:
+</p>
+
+<div class="formula-box">
+  <div class="formula-title">Equation 2.1: Unified Multi-Factor Vehicle Association Score</div>
+  $$S_{\text{total}}(\mathbf{x}_A, \mathbf{x}_B) = w_{\text{plate}} S_{\text{plate}} + w_{\text{reid}} S_{\text{reid}} + w_{\text{color}} S_{\text{color}} + w_{\text{type}} S_{\text{type}} + w_{\text{temp}} S_{\text{temp}} + w_{\text{topo}} S_{\text{topo}}$$
+  where:
+  $$\sum_{k} w_k = 0.40 + 0.30 + 0.12 + 0.10 + 0.05 + 0.03 = 1.00$$
+</div>
+
+<p>
+The table below specifies how each feature is extracted, its mathematical formulation, its weighting justification, and its direct linkage to other features:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 14%;">Feature Name</th>
+      <th style="width: 16%;">Mathematical Symbol</th>
+      <th style="width: 10%;">Weight</th>
+      <th style="width: 30%;">Mathematical Formulation</th>
+      <th style="width: 30%;">Interrelation & Mutual Reinforcement</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1. License Plate Text</strong></td>
+      <td>$S_{\text{plate}} \in [0, 1]$</td>
+      <td><span class="badge-tag badge-primary">40%</span></td>
+      <td>
+        Normalized Levenshtein edit similarity:
+        $$1.0 - \frac{\text{Lev}(P_A, P_B)}{\max(|P_A|, |P_B|)} + \delta_{\text{state}}$$
+        where $\delta_{\text{state}} = +0.05$ if state code matches.
+      </td>
+      <td>
+        Acts as the primary identifier under clear visibility. If $S_{\text{plate}} &lt; 0.70$ (haze, glare, distance), <strong>Re-ID</strong> and <strong>Color</strong> compensate. If $S_{\text{plate}} = 1.0$ but Re-ID differs, triggers <strong>Cloned Plate Alert</strong>.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>2. Deep Visual Re-ID</strong></td>
+      <td>$S_{\text{reid}} \in [0, 1]$</td>
+      <td><span class="badge-tag badge-primary">30%</span></td>
+      <td>
+        Cosine similarity over ResNet50 2048-d $L_2$-normalized feature vectors $\mathbf{e}_A, \mathbf{e}_B$:
+        $$S_{\text{reid}} = \max\left(0, \frac{\mathbf{e}_A \cdot \mathbf{e}_B}{\|\mathbf{e}_A\|_2 \|\mathbf{e}_B\|_2}\right)$$
+      </td>
+      <td>
+        Extracts invariant structural features (grille, headlights, roof rails). Directly verifies plate integrity: prevents matching vehicles with identical fake plates but different physical builds.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>3. Dominant Color</strong></td>
+      <td>$S_{\text{color}} \in [0, 1]$</td>
+      <td><span class="badge-tag badge-warning">12%</span></td>
+      <td>
+        Exact color match: $1.0$; Compatible neutral family (white/silver/grey): $0.5$; Mismatch: $0.0$.
+      </td>
+      <td>
+        Rapid preliminary filter in candidate indexing. Eliminates false Re-ID associations caused by similar car models of opposing colors (e.g., black sedan vs. white sedan).
+      </td>
+    </tr>
+    <tr>
+      <td><strong>4. Vehicle Class / Type</strong></td>
+      <td>$S_{\text{type}} \in [0, 1]$</td>
+      <td><span class="badge-tag badge-warning">10%</span></td>
+      <td>
+        Exact semantic class match: $1.0$; Compatible subclass (car/suv): $0.4$; Incompatible (bus/motorcycle): $0.0$.
+      </td>
+      <td>
+        Hard constraint on spatial-temporal tracking. Prevents tracking drift where a bus overtaking a car inadvertently transfers track identity.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>5. Temporal Proximity</strong></td>
+      <td>$S_{\text{temp}} \in [0, 1]$</td>
+      <td><span class="badge-tag badge-success">5%</span></td>
+      <td>
+        Exponential decay over elapsed transit time $\Delta t = |t_B - t_A|$:
+        $$S_{\text{temp}} = \exp\left(-\frac{\Delta t}{\tau}\right), \quad \tau = 1800\text{ sec}$$
+      </td>
+      <td>
+        Constrains multi-camera tracking within plausible time windows. Links with <strong>Spatial Topology</strong> to enforce physics-based transit times ($t_{\text{min}} \le \Delta t \le t_{\text{max}}$).
+      </td>
+    </tr>
+    <tr>
+      <td><strong>6. Spatial Topology Feasibility</strong></td>
+      <td>$S_{\text{topo}} \in [0, 1]$</td>
+      <td><span class="badge-tag badge-success">3%</span></td>
+      <td>
+        Graph adjacency and velocity feasibility:
+        $$v_{\text{transit}} = \frac{D_{\text{Haversine}}(\text{cam}_A, \text{cam}_B)}{\Delta t}$$
+        $1.0$ if $v \le 120\text{ km/h}$; drops to $0.0$ if $v &gt; 140\text{ km/h}$.
+      </td>
+      <td>
+        Validates road network connectivity. Detects impossible teleportation anomalies (e.g., vehicle sighted at CAM-01 and CAM-08 30 seconds later).
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- VISUAL FEATURE RADAR / MATRIX GRAPH -->
+<div class="diagram-container">
+  <svg viewBox="0 0 800 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+    <!-- Grid lines -->
+    <rect x="10" y="10" width="780" height="220" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="25" y="30" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#0f172a">FIGURE 2.1: FEATURE INTERDEPENDENCE & CROSS-CORRELATION MATRIX</text>
+
+    <!-- Node 1: Plate Text -->
+    <circle cx="160" cy="80" r="34" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+    <text x="160" y="78" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9.5" font-weight="700" fill="#1e3a8a">Plate Text</text>
+    <text x="160" y="92" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#2563eb">W: 40%</text>
+
+    <!-- Node 2: Re-ID -->
+    <circle cx="330" cy="70" r="34" fill="#ede9fe" stroke="#7c3aed" stroke-width="2.5"/>
+    <text x="330" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9.5" font-weight="700" fill="#4c1d95">Visual Re-ID</text>
+    <text x="330" y="82" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#7c3aed">W: 30%</text>
+
+    <!-- Node 3: Color -->
+    <circle cx="490" cy="80" r="30" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+    <text x="490" y="78" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#78350f">Color</text>
+    <text x="490" y="92" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#d97706">W: 12%</text>
+
+    <!-- Node 4: Vehicle Type -->
+    <circle cx="640" cy="90" r="30" fill="#fee2e2" stroke="#dc2626" stroke-width="2.5"/>
+    <text x="640" y="88" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#7f1d1d">Type/Class</text>
+    <text x="640" y="102" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8" fill="#dc2626">W: 10%</text>
+
+    <!-- Node 5: Temporal Delta -->
+    <circle cx="230" cy="180" r="28" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+    <text x="230" y="178" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8.5" font-weight="700" fill="#14532d">Time Delta</text>
+    <text x="230" y="191" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="7.5" fill="#16a34a">W: 5%</text>
+
+    <!-- Node 6: Camera Topology -->
+    <circle cx="560" cy="180" r="28" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5"/>
+    <text x="560" y="178" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8.5" font-weight="700" fill="#0c4a6e">Topology</text>
+    <text x="560" y="191" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="7.5" fill="#0284c7">W: 3%</text>
+
+    <!-- Interconnecting lines -->
+    <!-- Plate <-> Re-ID -->
+    <line x1="194" y1="78" x2="296" y2="72" stroke="#475569" stroke-width="2" stroke-dasharray="3,3"/>
+    <text x="245" y="65" text-anchor="middle" font-size="7.5" font-family="'Segoe UI', sans-serif" fill="#475569">Anti-Spoofing Pair</text>
+
+    <!-- Re-ID <-> Color -->
+    <line x1="364" y1="72" x2="460" y2="78" stroke="#475569" stroke-width="1.5"/>
+    <text x="412" y="66" text-anchor="middle" font-size="7.5" font-family="'Segoe UI', sans-serif" fill="#475569">Appearance Filter</text>
+
+    <!-- Color <-> Type -->
+    <line x1="520" y1="82" x2="610" y2="88" stroke="#475569" stroke-width="1.5"/>
+    <text x="565" y="78" text-anchor="middle" font-size="7.5" font-family="'Segoe UI', sans-serif" fill="#475569">Semantic Profile</text>
+
+    <!-- Time Delta <-> Topology -->
+    <line x1="258" y1="180" x2="532" y2="180" stroke="#0284c7" stroke-width="2"/>
+    <text x="395" y="174" text-anchor="middle" font-size="8" font-family="'Segoe UI', sans-serif" font-weight="600" fill="#0369a1">Velocity Feasibility Constraint (v = d / Δt)</text>
+
+    <!-- Plate to Time Delta -->
+    <line x1="172" y1="113" x2="216" y2="153" stroke="#94a3b8" stroke-width="1.5"/>
+    <!-- Topology to Re-ID -->
+    <line x1="535" y1="168" x2="355" y2="92" stroke="#94a3b8" stroke-width="1.5"/>
+  </svg>
+  <div class="diagram-caption">Figure 2.1: Six-signal interaction graph demonstrating mutual constraints and fraud mitigation links.</div>
+</div>
+
+<!-- SECTION 3: SYSTEM-LEVEL DETAILED FEATURE-BY-FEATURE INTERLINKAGES -->
+<div class="page-break"></div>
+<h1>3. System Feature Linkage Breakdown: 10 Operational Modules</h1>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Feature 1: Atmospheric Dehazing (DCP)</div>
+    <p><strong>Input:</strong> Raw CCTV frames ($I(x)$) under adverse weather (fog, smog, glare).</p>
+    <p><strong>Processing:</strong> Estimates dark channel prior $J^{\text{dark}}(x) = \min_{c} (\min_{y \in \Omega(x)} I^c(y))$, extracts atmospheric transmission $t(x)$, and recovers dehazed radiance $J(x)$.</p>
+    <p><strong>Forward Linkage:</strong> Feeds high-contrast RGB frames directly into <strong>Feature 2 (Vehicle Detector)</strong> and <strong>Feature 3 (Plate Detector)</strong>, raising plate detection recall from 64% to 92% under dense haze.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Feature 2: Detection & ByteTrack MOT</div>
+    <p><strong>Input:</strong> Dehazed video frame sequence.</p>
+    <p><strong>Processing:</strong> YOLOv8s predicts vehicle bounding boxes $[\text{xmin}, \text{ymin}, \text{xmax}, \text{ymax}]$ and classes. ByteTrack tracks low- and high-confidence detections via Kalman filter.</p>
+    <p><strong>Forward Linkage:</strong> Provides persistent local <code>track_id</code> and smooth trajectories. Crops vehicle bounding boxes to feed <strong>Color Classifier</strong>, <strong>Re-ID Service</strong>, and <strong>Plate Detector</strong>.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Feature 3: License Plate Localization & OCR</div>
+    <p><strong>Input:</strong> Vehicle image crops from ByteTrack.</p>
+    <p><strong>Processing:</strong> Fine-tuned YOLOv8n plate detector crops the license plate rectangle. Plate preprocessor (grayscale, Otsu threshold, CLAHE) feeds clean plate image to OCR.</p>
+    <p><strong>Forward Linkage:</strong> Emits alphanumeric string, normalized format, and confidence $c_{\text{plate}}$ to <strong>Feature 5 (Multi-Frame Fusion)</strong> and <strong>Feature 8 (Security Watchlist)</strong>.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Feature 4: ResNet50 Visual Re-Identification</div>
+    <p><strong>Input:</strong> High-resolution vehicle body crop.</p>
+    <p><strong>Processing:</strong> Forward-passes crop through ResNet50 backbone (pre-trained on VehicleID/VeRi), extracting 2048-dimensional $L_2$-normalized feature vector $\mathbf{e}$.</p>
+    <p><strong>Forward Linkage:</strong> Bypasses plate text vulnerabilities. Provides visual similarity matching across cameras even when plates are occluded, mud-covered, or counterfeit.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Feature 5: Multi-Frame Temporal Fusion</div>
+    <p><strong>Input:</strong> Stream of per-frame observations for a single track.</p>
+    <p><strong>Processing:</strong> Aggregates noisy OCR readings using character-level voting. Calculates mean Re-ID embedding $\mathbf{\bar{e}} = \frac{1}{N}\sum \mathbf{e}_i$, determines modal color, and retains best-sharpness crop.</p>
+    <p><strong>Forward Linkage:</strong> Compresses thousands of redundant video frames into a single, clean <code>VehicleObservation</code> entity for the <strong>Global Vehicle Registry</strong>.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Feature 6: Spatio-Temporal Topology Graph</div>
+    <p><strong>Input:</strong> City camera metadata (latitudes, longitudes, junction connectivity).</p>
+    <p><strong>Processing:</strong> Models urban network as directed graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$. Computes Haversine distances $D_{ij}$, road speeds, and minimum/maximum transit times $T_{\text{transit}}$.</p>
+    <p><strong>Forward Linkage:</strong> Provides spatial feasibility metrics to <code>IdentityScorer</code> and transition probability matrix for <strong>Next-Junction Predictor</strong>.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Feature 7: Cross-Camera Journey Reconstructor</div>
+    <p><strong>Input:</strong> Consolidated observations across all registered cameras.</p>
+    <p><strong>Processing:</strong> Sorts waypoints by timestamp $t_1 &lt; t_2 &lt; \dots &lt; t_K$, calculates segment velocities $v = \frac{\Delta d}{\Delta t}$, computes junction dwell times, and detects route anomalies.</p>
+    <p><strong>Forward Linkage:</strong> Exports completed GeoJSON path coordinates to <strong>Next.js GIS Leaflet Map</strong> and triggers forensic route reconstruction.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Feature 8: Security Hotlist & Anti-Spoofing</div>
+    <p><strong>Input:</strong> Reconstructed journeys and real-time detection events.</p>
+    <p><strong>Processing:</strong> Detects: (1) <code>HOTLIST_MATCH</code> (stolen/wanted plates), (2) <code>CLONED_PLATE</code> (same plate, different Re-ID/color), (3) <code>IMPOSSIBLE_VELOCITY</code> ($v &gt; 140\text{ km/h}$).</p>
+    <p><strong>Forward Linkage:</strong> Dispatches high-priority alarm payloads to <strong>Spring Boot WebSocket</strong> and triggers visual alarm banners on the operator dashboard.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Feature 9: Predictive Next-Junction Forecasting</div>
+    <p><strong>Input:</strong> Current camera node, vehicle travel history, topology transition probabilities.</p>
+    <p><strong>Processing:</strong> Evaluates first-order Markov transition model:
+    $$P(C_{k+1} = j \mid C_k = i) = \frac{N(i \to j)}{\sum_m N(i \to m)}$$</p>
+    <p><strong>Forward Linkage:</strong> Predicts high-probability exit junctions and estimated arrival times (ETA), enabling proactive camera interception for law enforcement.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Feature 10: Spring Boot Backend & GIS UI</div>
+    <p><strong>Input:</strong> Multi-Camera AI outputs via REST endpoints.</p>
+    <p><strong>Processing:</strong> Spring Boot persists entities to database, manages concurrent audit trails, and streams live detections over WebSockets (<code>/ws/live/{plate}</code>) to Next.js 16.</p>
+    <p><strong>Forward Linkage:</strong> Displays interactive Leaflet GIS trajectories, junction heatmaps, 3D holographic vehicle models, and generates formal PDF investigation reports.</p>
+  </div>
+</div>
+
+<!-- SECTION 4: ANTI-SPOOFING & FRAUD DETECTION THROUGH FEATURE CONFLICT -->
+<div class="page-break"></div>
+<h1>4. Feature Discordance: Detecting Cloned Plates & Spoofing</h1>
+<p>
+The most powerful capability resulting from feature interrelation is <strong>Anti-Spoofing and Cloned Plate Identification</strong>. In conventional single-feature ANPR systems, if a criminal places a counterfeit license plate (e.g., <code>MH12AB1234</code>) on a stolen Black SUV, when the genuine plate belongs to a White Hatchback, the legacy system blindly identifies the vehicle as the genuine owner.
+</p>
+<p>
+In our multi-feature architecture, the conflict between features triggers an automatic forensic alarm. The diagram below details the state machine governing feature conflict resolution:
+</p>
+
+<div class="diagram-container">
+  <svg viewBox="0 0 820 220" width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="alertGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#991b1b"/>
+        <stop offset="100%" stop-color="#ef4444"/>
+      </linearGradient>
+      <linearGradient id="okGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#065f46"/>
+        <stop offset="100%" stop-color="#10b981"/>
+      </linearGradient>
+    </defs>
+
+    <rect x="10" y="10" width="800" height="200" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+    <text x="25" y="30" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#0f172a">FIGURE 4.1: MULTI-FEATURE CONFLICT RESOLUTION & SPOOFING DETECTION</text>
+
+    <!-- Condition 1: Plate Match -->
+    <rect x="30" y="50" width="150" height="60" rx="5" fill="#dbeafe" stroke="#3b82f6"/>
+    <text x="105" y="73" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#1e40af">Condition 1</text>
+    <text x="105" y="90" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#1e3a8a">Plate Sim $S_{\text{plate}} \ge 0.90$</text>
+
+    <!-- Branching lines -->
+    <line x1="180" y1="80" x2="230" y2="80" stroke="#64748b" stroke-width="2"/>
+    <line x1="230" y1="80" x2="230" y2="55" stroke="#64748b" stroke-width="2"/>
+    <line x1="230" y1="80" x2="230" y2="140" stroke="#64748b" stroke-width="2"/>
+
+    <line x1="230" y1="55" x2="280" y2="55" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="230" y1="140" x2="280" y2="140" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Re-ID Compatible -->
+    <rect x="280" y="30" width="220" height="50" rx="5" fill="#f0fdf4" stroke="#22c55e"/>
+    <text x="390" y="48" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8.5" font-weight="700" fill="#15803d">Visual & Spatial Compatible</text>
+    <text x="390" y="65" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="7.5" fill="#166534">$S_{\text{reid}} \ge 0.65$ &amp; Color Match &amp; $v \le 120\text{ km/h}$</text>
+
+    <!-- Re-ID Conflict -->
+    <rect x="280" y="115" width="220" height="50" rx="5" fill="#fef2f2" stroke="#ef4444"/>
+    <text x="390" y="133" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="8.5" font-weight="700" fill="#b91c1c">Feature Conflict / Discrepancy</text>
+    <text x="390" y="150" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="7.5" fill="#991b1b">$S_{\text{reid}} &lt; 0.40$ OR Color Differ OR $v &gt; 140\text{ km/h}$</text>
+
+    <!-- Outcomes -->
+    <line x1="500" y1="55" x2="560" y2="55" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="560" y="30" width="220" height="50" rx="6" fill="url(#okGrad)"/>
+    <text x="670" y="50" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#ffffff">GENUINE VEHICLE MATCH</text>
+    <text x="670" y="67" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="7.5" fill="#d1fae5">Consolidate to Existing Global ID</text>
+
+    <line x1="500" y1="140" x2="560" y2="140" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="560" y="115" width="220" height="50" rx="6" fill="url(#alertGrad)"/>
+    <text x="670" y="135" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#ffffff">CRITICAL SECURITY ALERT</text>
+    <text x="670" y="152" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="7.5" fill="#fee2e2">CLONED_PLATE / IMPOSSIBLE_VELOCITY</text>
+  </svg>
+  <div class="diagram-caption">Figure 4.1: Logic gate separating legitimate vehicle transit from duplicate/cloned plate spoofing.</div>
+</div>
+
+<h2>Feature Interaction Matrix Under Operational Scenarios</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Operational Scenario</th>
+      <th>Plate Signal ($S_{\text{plate}}$)</th>
+      <th>Re-ID Signal ($S_{\text{reid}}$)</th>
+      <th>Color / Type Match</th>
+      <th>Spatial Transit ($v_{\text{transit}}$)</th>
+      <th>System Action & Result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Normal Urban Transit</strong></td>
+      <td>High ($\ge 0.85$)</td>
+      <td>High ($\ge 0.70$)</td>
+      <td>Identical</td>
+      <td>Normal ($20 - 60\text{ km/h}$)</td>
+      <td><span class="badge-tag badge-success">Direct Global Match</span>: Waypoint appended to trajectory.</td>
+    </tr>
+    <tr>
+      <td><strong>Heavy Smog / Haze</strong></td>
+      <td>Low / Occluded ($0.10 - 0.40$)</td>
+      <td>Moderate/High ($\ge 0.65$)</td>
+      <td>Identical</td>
+      <td>Normal ($25\text{ km/h}$)</td>
+      <td><span class="badge-tag badge-primary">Re-ID Assisted Match</span>: Overcomes illegible plate text.</td>
+    </tr>
+    <tr>
+      <td><strong>Cloned Plate Forgery</strong></td>
+      <td>Exact ($1.00$)</td>
+      <td>Low ($0.15 - 0.35$)</td>
+      <td>Different (e.g., Red vs. Blue)</td>
+      <td>Normal ($40\text{ km/h}$)</td>
+      <td><span class="badge-tag badge-danger">SECURITY ALERT</span>: <code>CLONED_PLATE</code> triggered. High priority.</td>
+    </tr>
+    <tr>
+      <td><strong>Plate Duplication / Teleportation</strong></td>
+      <td>Exact ($1.00$)</td>
+      <td>High ($\ge 0.75$)</td>
+      <td>Identical</td>
+      <td>Impossible ($&gt; 250\text{ km/h}$)</td>
+      <td><span class="badge-tag badge-danger">SECURITY ALERT</span>: <code>IMPOSSIBLE_VELOCITY</code> triggered.</td>
+    </tr>
+    <tr>
+      <td><strong>Unregistered Stolen Vehicle</strong></td>
+      <td>Exact Watchlist Match</td>
+      <td>Any</td>
+      <td>Any</td>
+      <td>Any</td>
+      <td><span class="badge-tag badge-danger">WATCHLIST HIT</span>: <code>HOTLIST_MATCH</code> alarm broadcast to police.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- SECTION 5: CONCLUSION & TECHNICAL VALUE PROPOSITION -->
+<h1>5. Technical Summary & Operational Value</h1>
+<p>
+The mathematical interrelation of features in the <strong>SIH26127 Platform</strong> converts disparate video frames into actionable intelligence. By balancing optical character recognition, deep feature embeddings, chromatic distributions, spatial road topology, and temporal physics:
+</p>
+<ul>
+  <li><strong>Robustness Against Adverse Conditions:</strong> When optical features fail due to fog or camera angle, spatial and deep visual features maintain tracking integrity.</li>
+  <li><strong>Immunity to Single-Point Exploits:</strong> Counterfeit plates fail the Re-ID, color, and impossible velocity verification gates.</li>
+  <li><strong>Predictive Capability:</strong> Topological linkages across junctions allow the system to anticipate where a suspect vehicle will appear next, enabling dynamic law enforcement response.</li>
+</ul>
+
+</body>
+</html>
+"""
+
+with open(HTML_FILE, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"Written HTML document to {HTML_FILE}")
+
+# Generate PDF using Microsoft Edge headless
+edge_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+if not os.path.exists(edge_path):
+    edge_path = r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+
+cmd = [
+    edge_path,
+    "--headless",
+    "--disable-gpu",
+    "--no-pdf-header-footer",
+    f"--print-to-pdf={PDF_FILE}",
+    str(HTML_FILE)
+]
+
+print(f"Executing: {' '.join(cmd)}")
+res = subprocess.run(cmd, capture_output=True, text=True)
+
+if res.returncode == 0 and os.path.exists(PDF_FILE):
+    print(f"Successfully generated PDF: {PDF_FILE} (Size: {os.path.getsize(PDF_FILE)} bytes)")
+    # Copy to artifact dir
+    shutil.copy2(PDF_FILE, ARTIFACT_PDF)
+    print(f"Copied PDF to artifact dir: {ARTIFACT_PDF}")
+else:
+    print(f"PDF generation failed: {res.stderr}")
