@@ -10,7 +10,7 @@ export type Coordinate = [number, number]; // [longitude, latitude]
  * Exact hardcoded highway & arterial road paths between known surveillance nodes.
  * Stored bidirectionally (key is "CAM-A->CAM-B").
  */
-const CAMERA_PAIR_PATHS: Record<string, Coordinate[]> = {
+export const CAMERA_PAIR_PATHS: Record<string, Coordinate[]> = {
   // Dasna NH-9 / DME Expressway Corridor
   "CAM-01->CAM-02": [
     [77.5315, 28.6792],

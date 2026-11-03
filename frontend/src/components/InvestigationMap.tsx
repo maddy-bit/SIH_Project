@@ -6,7 +6,7 @@ import * as maplibregl from "maplibre-gl";
 // lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
 import { fetchRoadRoute } from "@/lib/routing";
-import { getHardcodedRoute } from "@/lib/hardcodedPaths";
+import { solveSpatiotemporalTrajectory, buildSpatiotemporalMesh } from "@/lib/spatiotemporalGraph";
 import { resolveRtoArea, WHOLE_INDIA_CENTER, WHOLE_INDIA_ZOOM } from "@/lib/rtoDirectory";
 
 // High-performance Google Maps raster tile styles with pre-baked WebGL vector route layers.
@@ -626,11 +626,12 @@ export function InvestigationMap({
         if (svgPathRef.current) svgPathRef.current.setAttribute("d", "");
       }
 
-      if (cameras.length > 1 && svgMeshRef.current) {
+      if (displayedCameras.length > 1 && svgMeshRef.current) {
+        const meshEdges = buildSpatiotemporalMesh(displayedCameras, 5.0);
         let meshD = "";
-        for (let i = 0; i < cameras.length - 1; i++) {
-          const p1 = map.project([cameras[i].longitude, cameras[i].latitude]);
-          const p2 = map.project([cameras[i + 1].longitude, cameras[i + 1].latitude]);
+        for (const [pt1, pt2] of meshEdges) {
+          const p1 = map.project(pt1);
+          const p2 = map.project(pt2);
           meshD += `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)} `;
         }
         svgMeshRef.current.setAttribute("d", meshD);
@@ -716,13 +717,13 @@ export function InvestigationMap({
     };
 
     const cameraIds = effectivePoints.map((p) => p.cameraId);
-    // Immediately render hardcoded route using camera coordinates and IDs
-    const immediateRoute = getHardcodedRoute(rawWaypoints, cameraIds);
-    applyRouteGeojson(immediateRoute);
+    // Immediately calculate route via Spatiotemporal Graph Trajectory Algorithm
+    const stResult = solveSpatiotemporalTrajectory(effectivePoints, cameras);
+    applyRouteGeojson(stResult.routeCoordinates);
 
-    // Update with hardcoded road coordinates
+    // Update with asynchronous corridor traversal
     let isCancelled = false;
-    fetchRoadRoute(rawWaypoints, cameraIds).then((roadCoords) => {
+    fetchRoadRoute(effectivePoints, cameraIds, cameras).then((roadCoords) => {
       if (isCancelled || !mapRef.current) return;
       applyRouteGeojson(roadCoords);
       updateSvgRouteRef.current?.();
@@ -1115,8 +1116,8 @@ export function InvestigationMap({
             <div className="rounded-md border border-emerald-500 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 text-xs font-mono text-emerald-100 shadow-xl flex items-center gap-2">
               <span className="text-sm">🛰️</span>
               <div>
-                <span className="font-bold text-emerald-400">Trajectory Route Reconstructed:</span>{" "}
-                <span>3D route linked across {effectivePoints.length} camera checkpoints.</span>
+                <span className="font-bold text-emerald-400">Spatiotemporal Graph Trajectory:</span>{" "}
+                <span>Centripetal Catmull-Rom spline ({effectivePoints.length} camera checkpoints)</span>
               </div>
             </div>
           )}
