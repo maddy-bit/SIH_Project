@@ -58,9 +58,9 @@ ingest:
   username: ${INGEST_USERNAME:ingest}
   password: ${INGEST_PASSWORD:change-me-in-production}
 
-# Base URL of the Python AI microservice (Live Render URL)
+# Base URL of the Python AI microservice
 ai-service:
-  base-url: ${AI_SERVICE_URL:https://city-ai-engine.onrender.com}
+  base-url: ${AI_SERVICE_URL:http://localhost:8000}
 
 # Seed data and evidence frames
 app:

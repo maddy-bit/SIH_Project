@@ -86,6 +86,22 @@ public class AiProxyController {
         }
     }
 
+    @PostMapping("/detect-plate")
+    public ResponseEntity<?> detectPlate(@RequestBody Map<String, Object> body) {
+        try {
+            String url = aiServiceBaseUrl + "/detect-plate";
+            Object response = restTemplate.postForObject(url, body, Object.class);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.warn("Unable to post /detect-plate to AI service ({}): {}", aiServiceBaseUrl, e.getMessage());
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("success", false);
+            fallback.put("detected", false);
+            fallback.put("message", "AI service detection temporarily unavailable: " + e.getMessage());
+            return ResponseEntity.ok(fallback);
+        }
+    }
+
     @GetMapping("/security-alerts")
     public ResponseEntity<?> getSecurityAlerts() {
         try {

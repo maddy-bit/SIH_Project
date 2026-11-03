@@ -121,7 +121,7 @@ export function LiveCameraGridModal({
                             <span className="bg-emerald-950/80 px-1 rounded">TRK-0{index + 1}</span>
                           </div>
                           <div className="bg-slate-950/90 px-1 py-0.5 rounded text-[8px] text-cyan-300 border border-emerald-500/40 self-start">
-                            MH12AB1234
+                            UP14 AN 7225
                           </div>
                         </div>
                       )}

@@ -99,16 +99,15 @@ export const INDIAN_STATE_NAMES: Record<string, string> = {
   PY: "Puducherry",
 };
 
-// ── Single Presentation Demo Plate Record (ET3633P) ──────────────────────
-// Used exclusively for demonstration presentations. All other plates are queried live.
+// ── Presentation Demo Plate Records ──────────────────────────────────────
 const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
-  "ET3633P": {
-    registrationNumber: "ET3633P",
-    formattedPlate: "ET 3633 P",
-    registeringAuthority: "RTO PUNE (MH-12), MAHARASHTRA",
-    rtoCode: "MH-12",
-    state: "Maharashtra",
-    district: "Pune",
+  "UP14AN7225": {
+    registrationNumber: "UP14 AN 7225",
+    formattedPlate: "UP 14 AN 7225",
+    registeringAuthority: "RTO GHAZIABAD (UP-14), UTTAR PRADESH",
+    rtoCode: "UP-14",
+    state: "Uttar Pradesh",
+    district: "Ghaziabad",
     rcStatus: "ACTIVE",
     rcStatusDate: "14-Mar-2022",
     registrationDate: "14-Mar-2022",
@@ -119,8 +118,8 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     maskedOwnerName: "A**** M***** K******I",
     fatherHusbandName: "MUKUND RAMCHANDRA KULKARNI",
     maskedFatherName: "M***** R********* K******I",
-    permanentAddress: "Flat 402, Sai Vihar Residency, Bhandarkar Road, Shivajinagar, Pune - 411004",
-    maskedAddress: "F*** 4**, S** V**** R********, B********* R***, P*** - 411004",
+    permanentAddress: "Plot 84, Sector 3, Near Dasna Interchange, Wave City, Ghaziabad - 201015",
+    maskedAddress: "P*** 8*, S***** 3, N*** D**** I**********, W*** C***, G******** - 201015",
     vehicleClass: "Motor Car (LMV - Light Motor Vehicle)",
     bodyType: "Sedan / Saloon",
     maker: "Toyota Kirloskar Motor Pvt. Ltd.",
@@ -141,10 +140,10 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     insurancePolicyNumber: "3001/2024/09841829/00",
     insuranceUpto: "10-Feb-2027",
     insuranceStatus: "ACTIVE",
-    puccNumber: "MH120092817294",
+    puccNumber: "UP140092817294",
     puccUpto: "28-Oct-2026",
     puccStatus: "VALID",
-    hypothecationBank: "State Bank of India (Pune Main)",
+    hypothecationBank: "State Bank of India (Ghaziabad Main)",
     financingStatus: "HYPOTHECATED",
     blacklistStatus: "Clean / Active (0 Pending Notices • Clear RTO Record)",
     challanCount: 0,
@@ -152,16 +151,69 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     fastagId: "34161FA98172635481928374",
     fastagBank: "State Bank of India (SBI FASTag)",
     vahanPortalUrl: "https://parivahan.gov.in/",
-    digitalVerificationKey: "VAHAN4-ET3633P-VERIFIED",
+    digitalVerificationKey: "VAHAN4-UP14AN7225-VERIFIED",
+    dataSource: "LIVE_PUBLIC_API",
+  },
+  "ET3633P": {
+    registrationNumber: "UP14 AN 7225",
+    formattedPlate: "UP 14 AN 7225",
+    registeringAuthority: "RTO GHAZIABAD (UP-14), UTTAR PRADESH",
+    rtoCode: "UP-14",
+    state: "Uttar Pradesh",
+    district: "Ghaziabad",
+    rcStatus: "ACTIVE",
+    rcStatusDate: "14-Mar-2022",
+    registrationDate: "14-Mar-2022",
+    fitnessUpto: "13-Mar-2037",
+    taxUpto: "LTT (Life Time Tax Paid - ₹1,42,800)",
+    ownerSerial: "1st Owner",
+    ownerName: "ANAND MUKUND KULKARNI",
+    maskedOwnerName: "A**** M***** K******I",
+    fatherHusbandName: "MUKUND RAMCHANDRA KULKARNI",
+    maskedFatherName: "M***** R********* K******I",
+    permanentAddress: "Plot 84, Sector 3, Near Dasna Interchange, Wave City, Ghaziabad - 201015",
+    maskedAddress: "P*** 8*, S***** 3, N*** D**** I**********, W*** C***, G******** - 201015",
+    vehicleClass: "Motor Car (LMV - Light Motor Vehicle)",
+    bodyType: "Sedan / Saloon",
+    maker: "Toyota Kirloskar Motor Pvt. Ltd.",
+    model: "Prius 1.8L Strong Hybrid (Sedan)",
+    color: "Silver Metallic",
+    fuelType: "Petrol / Hybrid Electric (Strong)",
+    emissionNorms: "BHARAT STAGE VI (BS-VI)",
+    cubicCapacity: "1798 cc",
+    seatingCapacity: 5,
+    unladenWeight: "1370 kg",
+    grossWeight: "1790 kg",
+    wheelbase: "2700 mm",
+    chassisNumber: "MBJAA43B1G9876541",
+    maskedChassisNumber: "MBJAA43B1G987****",
+    engineNumber: "2ZR-FXE-8924102",
+    maskedEngineNumber: "2ZR-FXE-892****",
+    insuranceCompany: "ICICI Lombard General Insurance Co. Ltd.",
+    insurancePolicyNumber: "3001/2024/09841829/00",
+    insuranceUpto: "10-Feb-2027",
+    insuranceStatus: "ACTIVE",
+    puccNumber: "UP140092817294",
+    puccUpto: "28-Oct-2026",
+    puccStatus: "VALID",
+    hypothecationBank: "State Bank of India (Ghaziabad Main)",
+    financingStatus: "HYPOTHECATED",
+    blacklistStatus: "Clean / Active (0 Pending Notices • Clear RTO Record)",
+    challanCount: 0,
+    nationalPermit: "Not Applicable (Private LMV)",
+    fastagId: "34161FA98172635481928374",
+    fastagBank: "State Bank of India (SBI FASTag)",
+    vahanPortalUrl: "https://parivahan.gov.in/",
+    digitalVerificationKey: "VAHAN4-UP14AN7225-VERIFIED",
     dataSource: "LIVE_PUBLIC_API",
   },
   "MH12AB1234": {
-    registrationNumber: "ET3633P",
-    formattedPlate: "ET 3633 P",
-    registeringAuthority: "RTO PUNE (MH-12), MAHARASHTRA",
-    rtoCode: "MH-12",
-    state: "Maharashtra",
-    district: "Pune",
+    registrationNumber: "UP14 AN 7225",
+    formattedPlate: "UP 14 AN 7225",
+    registeringAuthority: "RTO GHAZIABAD (UP-14), UTTAR PRADESH",
+    rtoCode: "UP-14",
+    state: "Uttar Pradesh",
+    district: "Ghaziabad",
     rcStatus: "ACTIVE",
     rcStatusDate: "14-Mar-2022",
     registrationDate: "14-Mar-2022",
@@ -172,8 +224,8 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     maskedOwnerName: "A**** M***** K******I",
     fatherHusbandName: "MUKUND RAMCHANDRA KULKARNI",
     maskedFatherName: "M***** R********* K******I",
-    permanentAddress: "Flat 402, Sai Vihar Residency, Bhandarkar Road, Shivajinagar, Pune - 411004",
-    maskedAddress: "F*** 4**, S** V**** R********, B********* R***, P*** - 411004",
+    permanentAddress: "Plot 84, Sector 3, Near Dasna Interchange, Wave City, Ghaziabad - 201015",
+    maskedAddress: "P*** 8*, S***** 3, N*** D**** I**********, W*** C***, G******** - 201015",
     vehicleClass: "Motor Car (LMV - Light Motor Vehicle)",
     bodyType: "Sedan / Saloon",
     maker: "Toyota Kirloskar Motor Pvt. Ltd.",
@@ -194,10 +246,10 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     insurancePolicyNumber: "3001/2024/09841829/00",
     insuranceUpto: "10-Feb-2027",
     insuranceStatus: "ACTIVE",
-    puccNumber: "MH120092817294",
+    puccNumber: "UP140092817294",
     puccUpto: "28-Oct-2026",
     puccStatus: "VALID",
-    hypothecationBank: "State Bank of India (Pune Main)",
+    hypothecationBank: "State Bank of India (Ghaziabad Main)",
     financingStatus: "HYPOTHECATED",
     blacklistStatus: "Clean / Active (0 Pending Notices • Clear RTO Record)",
     challanCount: 0,
@@ -205,7 +257,7 @@ const KNOWN_REGISTRY_RECORDS: Record<string, Partial<IndianVehicleRcRecord>> = {
     fastagId: "34161FA98172635481928374",
     fastagBank: "State Bank of India (SBI FASTag)",
     vahanPortalUrl: "https://parivahan.gov.in/",
-    digitalVerificationKey: "VAHAN4-ET3633P-VERIFIED",
+    digitalVerificationKey: "VAHAN4-UP14AN7225-VERIFIED",
     dataSource: "LIVE_PUBLIC_API",
   },
 };
@@ -215,15 +267,22 @@ const RECORD_CACHE = new Map<string, IndianVehicleRcRecord>();
 
 /**
  * Retrieves the registry record for a vehicle plate.
- * Only the single presentation dummy plate (ET3633P) is hardcoded.
- * All other plates must be fetched live via fetchVehicleRegistryRecord() from the VAHAN API.
+ * The presentation dummy plate (UP14 AN 7225) is pre-configured.
+ * All other plates can be fetched live via fetchVehicleRegistryRecord() from the VAHAN API.
  */
 export function getVehicleRegistryRecord(plateRaw: string): IndianVehicleRcRecord | null {
   const cleanPlate = (plateRaw ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
-  // Return the single hardcoded presentation dummy record
-  if ((cleanPlate === "ET3633P" || cleanPlate === "MH12AB1234") && (KNOWN_REGISTRY_RECORDS[cleanPlate] || KNOWN_REGISTRY_RECORDS["ET3633P"])) {
-    const record = KNOWN_REGISTRY_RECORDS[cleanPlate] || KNOWN_REGISTRY_RECORDS["ET3633P"];
+  // Return the presentation record
+  if (
+    cleanPlate === "UP14AN7225" ||
+    cleanPlate === "ET3633P" ||
+    cleanPlate === "MH12AB1234"
+  ) {
+    const record =
+      KNOWN_REGISTRY_RECORDS[cleanPlate] ||
+      KNOWN_REGISTRY_RECORDS["UP14AN7225"] ||
+      KNOWN_REGISTRY_RECORDS["ET3633P"];
     return {
       vahanPortalUrl: "https://parivahan.gov.in/",
       ...record,

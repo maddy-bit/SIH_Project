@@ -6,6 +6,8 @@ import * as maplibregl from "maplibre-gl";
 // lightningcss native-binding crash on Linux CI runners.
 import type { CameraDto, TrajectoryPointDto } from "@/lib/api";
 import { fetchRoadRoute } from "@/lib/routing";
+import { getHardcodedRoute } from "@/lib/hardcodedPaths";
+import { resolveRtoArea, WHOLE_INDIA_CENTER, WHOLE_INDIA_ZOOM } from "@/lib/rtoDirectory";
 
 // High-performance Google Maps raster tile styles with pre-baked WebGL vector route layers.
 // Pre-baking route and mesh sources directly inside the style specification guarantees
@@ -139,6 +141,8 @@ interface InvestigationMapProps {
   selectedIndex: number | null;
   onSelectPoint: (index: number) => void;
   replayToken: number;
+  enteredPlate?: string;
+  isConstructed?: boolean;
 }
 
 export function InvestigationMap({
@@ -147,6 +151,8 @@ export function InvestigationMap({
   selectedIndex,
   onSelectPoint,
   replayToken,
+  enteredPlate = "",
+  isConstructed = false,
 }: InvestigationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -169,6 +175,37 @@ export function InvestigationMap({
   const svgPathRef = useRef<SVGPathElement | null>(null);
   const updateSvgRouteRef = useRef<(() => void) | null>(null);
 
+  // Active RTO area resolution from entered plate
+  const activeArea = useMemo(() => resolveRtoArea(enteredPlate), [enteredPlate]);
+
+  // Dynamically filter cameras:
+  // 1. If not constructed and no plate entered: show NO cameras (clean whole India map)
+  // 2. If not constructed and plate entered: show ONLY cameras near that RTO area
+  // 3. If constructed: show cameras on trajectory and nearby
+  const displayedCameras = useMemo(() => {
+    if (!isConstructed && !enteredPlate.trim()) {
+      return [];
+    }
+    if (activeArea) {
+      const filtered = cameras.filter((c) => {
+        if (activeArea.camIdPrefixes.some((p) => c.id.startsWith(p))) return true;
+        const dLat = c.latitude - activeArea.center[1];
+        const dLng = c.longitude - activeArea.center[0];
+        return dLat * dLat + dLng * dLng < 0.30; // within vicinity
+      });
+      if (filtered.length > 0) return filtered;
+    }
+    if (isConstructed && points.length > 0) {
+      const activeIds = new Set(points.map((p) => p.cameraId));
+      const onRoute = cameras.filter((c) => activeIds.has(c.id));
+      if (onRoute.length > 0) return onRoute;
+    }
+    if (enteredPlate.trim() && !isConstructed) {
+      return cameras.slice(0, 12);
+    }
+    return cameras;
+  }, [cameras, activeArea, enteredPlate, isConstructed, points]);
+
   // Dynamically resolve points coordinates against active cameras array
   // so that moving or updating any camera immediately updates trajectory points & route
   const effectivePoints = useMemo(() => {
@@ -185,17 +222,17 @@ export function InvestigationMap({
     });
   }, [points, cameras]);
 
-  // Initialize map with robust raster tile config & 3D pitch capability
+  // Initialize map with Whole Indian Map initially by default
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASEMAP_STYLES[activeLayer],
-      center: [73.8350, 18.5350], // Pune City Camera Network
-      zoom: 12.5,
-      pitch: 50, // 3D Isometric View by default
-      bearing: -18,
+      center: WHOLE_INDIA_CENTER, // Whole Indian Map initially
+      zoom: WHOLE_INDIA_ZOOM,
+      pitch: 0,
+      bearing: 0,
       attributionControl: { compact: true },
     });
 
@@ -423,22 +460,33 @@ export function InvestigationMap({
   // Render camera network mesh and tactical camera pins
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady || cameras.length === 0) return;
+    if (!map || !mapReady) return;
 
     // Clear old camera markers
     cameraMarkersRef.current.forEach((m) => m.remove());
     cameraMarkersRef.current = [];
 
+    // If whole India overview (no plate entered and not constructed), show NO cameras
+    if (!isConstructed && !enteredPlate.trim()) {
+      const meshSrc = map.getSource(MESH_LINKS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (meshSrc) {
+        meshSrc.setData({ type: "FeatureCollection", features: [] });
+      }
+      return;
+    }
+
+    if (displayedCameras.length === 0) return;
+
     // 1. Mesh links between adjacent cameras
     const meshFeatures: GeoJSON.Feature[] = [];
-    for (let i = 0; i < cameras.length - 1; i++) {
+    for (let i = 0; i < displayedCameras.length - 1; i++) {
       meshFeatures.push({
         type: "Feature",
         geometry: {
           type: "LineString",
           coordinates: [
-            [cameras[i].longitude, cameras[i].latitude],
-            [cameras[i + 1].longitude, cameras[i + 1].latitude],
+            [displayedCameras[i].longitude, displayedCameras[i].latitude],
+            [displayedCameras[i + 1].longitude, displayedCameras[i + 1].latitude],
           ],
         },
         properties: {},
@@ -485,9 +533,11 @@ export function InvestigationMap({
     }
 
     // 2. Render sleek tactical CCTV camera pins for cameras NOT in active trajectory
-    const activeCameraIds = new Set(effectivePoints.map((p) => p.cameraId));
+    const activeCameraIds = isConstructed
+      ? new Set(effectivePoints.map((p) => p.cameraId))
+      : new Set<string>();
 
-    cameras.forEach((camera) => {
+    displayedCameras.forEach((camera) => {
       if (activeCameraIds.has(camera.id)) return; // Checkpoint badge rendered separately
 
       const el = document.createElement("div");
@@ -527,7 +577,7 @@ export function InvestigationMap({
 
       cameraMarkersRef.current.push(marker);
     });
-  }, [cameras, effectivePoints, mapReady, activeLayer]);
+  }, [displayedCameras, effectivePoints, isConstructed, enteredPlate, mapReady, activeLayer]);
 
   // Render trajectory route line along real roads and numbered checkpoint badges
   useEffect(() => {
@@ -538,7 +588,7 @@ export function InvestigationMap({
     markersRef.current = [];
     checkpointElementsRef.current = [];
 
-    if (effectivePoints.length === 0) {
+    if (!isConstructed || effectivePoints.length === 0) {
       roadCoordinatesRef.current = [];
       if (map.getSource(ROUTE_SOURCE_ID)) {
         (map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource).setData({
@@ -546,6 +596,9 @@ export function InvestigationMap({
           features: [],
         });
       }
+      if (svgCasingRef.current) svgCasingRef.current.setAttribute("d", "");
+      if (svgGlowRef.current) svgGlowRef.current.setAttribute("d", "");
+      if (svgPathRef.current) svgPathRef.current.setAttribute("d", "");
       return;
     }
 
@@ -662,12 +715,14 @@ export function InvestigationMap({
       setTimeout(setRouteData, 1200);
     };
 
-    // Immediately render initial route using current camera waypoints
-    applyRouteGeojson(rawWaypoints);
+    const cameraIds = effectivePoints.map((p) => p.cameraId);
+    // Immediately render hardcoded route using camera coordinates and IDs
+    const immediateRoute = getHardcodedRoute(rawWaypoints, cameraIds);
+    applyRouteGeojson(immediateRoute);
 
-    // Fetch real road routing asynchronously and update line to follow actual roads
+    // Update with hardcoded road coordinates
     let isCancelled = false;
-    fetchRoadRoute(rawWaypoints).then((roadCoords) => {
+    fetchRoadRoute(rawWaypoints, cameraIds).then((roadCoords) => {
       if (isCancelled || !mapRef.current) return;
       applyRouteGeojson(roadCoords);
       updateSvgRouteRef.current?.();
@@ -710,7 +765,7 @@ export function InvestigationMap({
     });
 
     // Auto-fit bounds to encompass all checkpoints cleanly on initial target reconstruct
-    if (effectivePoints.length > 1 && isInitialReconstructRef.current) {
+    if (isConstructed && effectivePoints.length > 1 && isInitialReconstructRef.current) {
       isInitialReconstructRef.current = false;
       const bounds = new maplibregl.LngLatBounds();
       effectivePoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
@@ -724,7 +779,44 @@ export function InvestigationMap({
     return () => {
       isCancelled = true;
     };
-  }, [effectivePoints, cameras, mapReady, activeLayer, onSelectPoint]);
+  }, [effectivePoints, displayedCameras, isConstructed, mapReady, activeLayer, onSelectPoint]);
+
+  // Smooth camera navigation based on entered plate and construct state
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    if (!isConstructed && !enteredPlate.trim()) {
+      // Standby / whole India panoramic view
+      map.easeTo({
+        center: WHOLE_INDIA_CENTER,
+        zoom: WHOLE_INDIA_ZOOM,
+        pitch: 0,
+        bearing: 0,
+        duration: 900,
+      });
+    } else if (!isConstructed && enteredPlate.trim()) {
+      // Area vicinity preview (user entered plate)
+      const targetCenter = activeArea ? activeArea.center : [77.5284, 28.6788] as [number, number];
+      const targetZoom = activeArea ? activeArea.zoom : 12.5;
+      map.flyTo({
+        center: targetCenter,
+        zoom: targetZoom,
+        pitch: 45,
+        bearing: -15,
+        duration: 1200,
+      });
+    } else if (isConstructed && effectivePoints.length > 1) {
+      // Reconstructed route: auto-fit bounds
+      const bounds = new maplibregl.LngLatBounds();
+      effectivePoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
+      map.fitBounds(bounds, {
+        padding: { top: 85, bottom: 85, left: 75, right: 75 },
+        maxZoom: 13.5,
+        duration: 1000,
+      });
+    }
+  }, [isConstructed, enteredPlate, activeArea, effectivePoints, mapReady]);
 
   // Update checkpoint visual active state without re-creating DOM markers (zero jitter)
   useEffect(() => {
@@ -839,7 +931,7 @@ export function InvestigationMap({
   const handleResetView = () => {
     const map = mapRef.current;
     if (!map) return;
-    if (effectivePoints.length > 1) {
+    if (isConstructed && effectivePoints.length > 1) {
       const bounds = new maplibregl.LngLatBounds();
       effectivePoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
       map.fitBounds(bounds, {
@@ -847,12 +939,20 @@ export function InvestigationMap({
         maxZoom: 13.5,
         duration: 900,
       });
-    } else {
+    } else if (activeArea && enteredPlate.trim()) {
       map.easeTo({
-        center: [73.8350, 18.5350],
-        zoom: 12.5,
+        center: activeArea.center,
+        zoom: activeArea.zoom,
         pitch: pitchMode === "2D" ? 0 : pitchMode === "3D" ? 50 : 65,
         bearing: pitchMode === "2D" ? 0 : -18,
+        duration: 900,
+      });
+    } else {
+      map.easeTo({
+        center: WHOLE_INDIA_CENTER,
+        zoom: WHOLE_INDIA_ZOOM,
+        pitch: 0,
+        bearing: 0,
         duration: 900,
       });
     }
@@ -862,15 +962,31 @@ export function InvestigationMap({
     <div className="flex flex-col gap-2.5 w-full">
       {/* Dedicated Map Top Control Bar (Above Map Box / Section) */}
       <div className="flex items-center justify-between gap-3 rounded-lg border-1.5 border-slate-400 bg-white px-3.5 py-2">
-        {/* Left: 3D Smart City Mesh Badge */}
+        {/* Left: Dynamic Surveillance Status Badge */}
         <div className="flex items-center gap-2">
-          <span className="flex h-2.5 w-2.5 rounded-full bg-slate-700" />
+          <span
+            className={`flex h-2.5 w-2.5 rounded-full ${
+              isConstructed
+                ? "bg-emerald-600 animate-ping"
+                : enteredPlate.trim()
+                  ? "bg-amber-500 animate-pulse"
+                  : "bg-slate-500"
+            }`}
+          />
           <div className="flex items-center gap-1.5 font-mono leading-none">
-            <span className="text-[11px] font-extrabold tracking-wider text-slate-900">
-              PUNE 3D MESH
+            <span className="text-[11px] font-extrabold tracking-wider text-slate-950">
+              {isConstructed
+                ? `⚡ ${activeArea?.city.toUpperCase() ?? "TARGET"} 3D CORRIDOR`
+                : enteredPlate.trim()
+                  ? `📍 ${activeArea?.code ?? "RTO"} ${activeArea?.city.toUpperCase() ?? "AREA"} VICINITY`
+                  : "🇮🇳 ALL-INDIA SURVEILLANCE GRID"}
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300 font-bold">
-              {cameras.length} NODES
+              {isConstructed
+                ? `${effectivePoints.length} CHECKPOINTS`
+                : enteredPlate.trim()
+                  ? `${displayedCameras.length} CAMERAS IN VICINITY`
+                  : "STANDBY"}
             </span>
           </div>
         </div>
@@ -961,7 +1077,7 @@ export function InvestigationMap({
           <button
             type="button"
             onClick={handleResetView}
-            title="Fit Route to Bounds"
+            title="Reset or Fit View"
             className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 transition-all cursor-pointer"
           >
             🎯 Fit
@@ -975,11 +1091,43 @@ export function InvestigationMap({
         className="relative w-full overflow-hidden rounded-lg border-1.5 border-slate-400 bg-slate-100"
         style={{ height: "560px" }}
       >
+        {/* Tactical Status Banner Overlay */}
+        <div className="pointer-events-none absolute top-3 left-3 z-30 select-none max-w-[85%]">
+          {!isConstructed && !enteredPlate.trim() ? (
+            <div className="rounded-md border border-slate-600 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 text-xs font-mono text-slate-200 shadow-xl flex items-center gap-2">
+              <span className="text-sm">🇮🇳</span>
+              <div>
+                <span className="font-bold text-sky-400">All-India Panoramic Grid:</span>{" "}
+                <span>Enter vehicle plate to focus vicinity cameras, or ingest video to generate trajectory.</span>
+              </div>
+            </div>
+          ) : !isConstructed && enteredPlate.trim() ? (
+            <div className="rounded-md border border-amber-500 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 text-xs font-mono text-amber-100 shadow-xl flex items-center gap-2">
+              <span className="text-sm">📍</span>
+              <div>
+                <span className="font-bold text-amber-400">
+                  {activeArea ? `${activeArea.code} (${activeArea.city})` : "Area"} Vicinity Focused:
+                </span>{" "}
+                <span>{displayedCameras.length} CCTV cameras in range. Click <strong className="text-white underline">⚡ Reconstruct 3D Trajectory</strong> or <strong className="text-white underline">📹 Ingest Video</strong> to build route.</span>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-emerald-500 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 text-xs font-mono text-emerald-100 shadow-xl flex items-center gap-2">
+              <span className="text-sm">🛰️</span>
+              <div>
+                <span className="font-bold text-emerald-400">Trajectory Route Reconstructed:</span>{" "}
+                <span>3D route linked across {effectivePoints.length} camera checkpoints.</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Tactical HUD Corner Reticles */}
         <div className="pointer-events-none absolute top-2 left-2 z-10 h-3.5 w-3.5 border-t-2 border-l-2 border-slate-600" />
         <div className="pointer-events-none absolute top-2 right-2 z-10 h-3.5 w-3.5 border-t-2 border-r-2 border-slate-600" />
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-3.5 w-3.5 border-b-2 border-l-2 border-slate-600" />
         <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-3.5 w-3.5 border-b-2 border-r-2 border-slate-600" />
+
         {/* Real-time Google Maps Navigation Route SVG Overlay */}
         <svg
           className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
@@ -1032,39 +1180,37 @@ export function InvestigationMap({
           />
         </svg>
 
-
-
-      {/* 3D Camera Hover Telemetry Card */}
-      {hoveredCamera && (
-        <div className="pointer-events-none absolute bottom-5 left-5 z-20 w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur-2xl shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-xs" />
-              <span className="font-mono text-xs font-black text-slate-900">{hoveredCamera.id}</span>
+        {/* 3D Camera Hover Telemetry Card */}
+        {hoveredCamera && (
+          <div className="pointer-events-none absolute bottom-5 left-5 z-20 w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur-2xl shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-xs" />
+                <span className="font-mono text-xs font-black text-slate-900">{hoveredCamera.id}</span>
+              </div>
+              <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                {hoveredCamera.status}
+              </span>
             </div>
-            <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-              {hoveredCamera.status}
-            </span>
+
+            <div className="mt-2 text-xs font-bold text-slate-800">{hoveredCamera.name}</div>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[10px] text-slate-600 font-mono bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+              <div>Facing: <span className="text-sky-700 font-bold">{hoveredCamera.direction}</span></div>
+              <div>Optical: <span className="text-slate-800 font-semibold">4K UHD</span></div>
+              <div>Lat: <span className="text-slate-700">{hoveredCamera.latitude.toFixed(4)}</span></div>
+              <div>Lng: <span className="text-slate-700">{hoveredCamera.longitude.toFixed(4)}</span></div>
+            </div>
           </div>
+        )}
 
-          <div className="mt-2 text-xs font-bold text-slate-800">{hoveredCamera.name}</div>
-
-          <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[10px] text-slate-600 font-mono bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-            <div>Facing: <span className="text-sky-700 font-bold">{hoveredCamera.direction}</span></div>
-            <div>Optical: <span className="text-slate-800 font-semibold">4K UHD</span></div>
-            <div>Lat: <span className="text-slate-700">{hoveredCamera.latitude.toFixed(4)}</span></div>
-            <div>Lng: <span className="text-slate-700">{hoveredCamera.longitude.toFixed(4)}</span></div>
+        {/* Route Checkpoints Detected Badge */}
+        {isConstructed && points.length > 0 && (
+          <div className="absolute bottom-5 right-5 z-10 flex items-center gap-2.5 rounded-md border-1.5 border-slate-400 bg-white px-3.5 py-2 text-xs font-mono text-slate-900">
+            <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span className="font-bold text-slate-900">{points.length} Checkpoints Connected</span>
           </div>
-        </div>
-      )}
-
-      {/* Route Checkpoints Detected Badge */}
-      {points.length > 0 && (
-        <div className="absolute bottom-5 right-5 z-10 flex items-center gap-2.5 rounded-md border-1.5 border-slate-400 bg-white px-3.5 py-2 text-xs font-mono text-slate-900">
-          <span className="h-2 w-2 rounded-full bg-slate-800" />
-          <span className="font-bold text-slate-900">{points.length} Checkpoints Connected</span>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

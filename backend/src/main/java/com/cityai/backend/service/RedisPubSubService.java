@@ -46,10 +46,12 @@ public class RedisPubSubService implements MessageListener {
     @PostConstruct
     public void init() {
         try {
-            // Cast to Topic to satisfy the @NonNull Topic parameter in Spring Data Redis API
-            Topic topic = Objects.requireNonNull(detectionTopic, "detectionTopic must not be null");
-            listenerContainer.addMessageListener(this, topic);
-            log.info("Subscribed to Redis detection topic: {}", detectionTopic.getTopic());
+            try (RedisConnection connection = connectionFactory.getConnection()) {
+                Topic topic = Objects.requireNonNull(detectionTopic, "detectionTopic must not be null");
+                listenerContainer.addMessageListener(this, topic);
+                listenerContainer.start();
+                log.info("Subscribed to Redis detection topic: {}", detectionTopic.getTopic());
+            }
         } catch (Exception e) {
             log.warn("Could not register Redis message listener (Redis may be offline): {}", e.getMessage());
         }

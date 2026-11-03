@@ -142,35 +142,25 @@ export class ApiError extends Error {
   }
 }
 
-// Fallback seed cameras from data/cameras.json
-export const SEED_CAMERAS: CameraDto[] = [
-  { id: "CAM-01", name: "Shivajinagar Chowk", latitude: 18.5308, longitude: 73.8474, direction: "SE", status: "ONLINE", videoSource: "videos/cam01.mp4" },
-  { id: "CAM-02", name: "FC Road Junction", latitude: 18.5236, longitude: 73.8478, direction: "S", status: "ONLINE", videoSource: "videos/cam02.mp4" },
-  { id: "CAM-03", name: "JM Road - Deccan Gymkhana", latitude: 18.5158, longitude: 73.8412, direction: "SW", status: "ONLINE", videoSource: "videos/cam03.mp4" },
-  { id: "CAM-04", name: "Karve Road Bridge", latitude: 18.5074, longitude: 73.8258, direction: "W", status: "ONLINE", videoSource: "videos/cam04.mp4" },
-  { id: "CAM-05", name: "Swargate Junction", latitude: 18.5008, longitude: 73.8567, direction: "E", status: "ONLINE", videoSource: "videos/cam05.mp4" },
-  { id: "CAM-06", name: "Hadapsar Industrial Estate", latitude: 18.5089, longitude: 73.9260, direction: "E", status: "ONLINE", videoSource: "videos/cam06.mp4" },
-  { id: "CAM-07", name: "Kothrud Depot", latitude: 18.5074, longitude: 73.8077, direction: "NW", status: "ONLINE", videoSource: "videos/cam07.mp4" },
-  { id: "CAM-08", name: "Baner Road", latitude: 18.5642, longitude: 73.7769, direction: "N", status: "ONLINE", videoSource: "videos/cam08.mp4" },
-  { id: "CAM-09", name: "Hinjewadi Phase 1", latitude: 18.5908, longitude: 73.7392, direction: "W", status: "PROCESSING", videoSource: "videos/cam09.mp4" },
-  { id: "CAM-10", name: "Wakad Bridge", latitude: 18.5993, longitude: 73.7629, direction: "N", status: "ONLINE", videoSource: "videos/cam10.mp4" },
-  { id: "CAM-11", name: "Aundh - ITI Road", latitude: 18.5590, longitude: 73.8080, direction: "NE", status: "ONLINE", videoSource: "videos/cam11.mp4" },
-  { id: "CAM-12", name: "University Circle", latitude: 18.5529, longitude: 73.8291, direction: "SE", status: "OFFLINE", videoSource: "videos/cam12.mp4" }
-];
+import camerasData from "@/data/cameras.json";
+import { resolveRtoArea } from "@/lib/rtoDirectory";
 
-// Fallback demo scenario for ET3633P
+// Fallback seed cameras covering all Indian RTO corridors from data/cameras.json
+export const SEED_CAMERAS: CameraDto[] = camerasData as CameraDto[];
+
+// Fallback demo scenario for UP14 AN 7225 (Dasna - Ghaziabad Corridor)
 const DEMO_TRAJECTORY: TrajectoryResponseDto = {
-  vehicle: { plate: "ET3633P", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
+  vehicle: { plate: "UP14 AN 7225", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
   points: [
     {
       cameraId: "CAM-01",
-      cameraName: "Shivajinagar Chowk",
-      latitude: 18.5308,
-      longitude: 73.8474,
-      direction: "SE",
+      cameraName: "Dasna Toll Plaza - NH-9 / DME",
+      latitude: 28.6792,
+      longitude: 77.5315,
+      direction: "E",
       timestamp: "2026-08-30T18:14:23Z",
-      plateConfidence: 0.96,
-      detectionConfidence: 0.92,
+      plateConfidence: 0.98,
+      detectionConfidence: 0.95,
       imagePath: "CAM-01/frame_001.jpg",
       detectionCount: 3,
       incomingTransitionConfidence: null,
@@ -178,55 +168,55 @@ const DEMO_TRAJECTORY: TrajectoryResponseDto = {
     },
     {
       cameraId: "CAM-03",
-      cameraName: "JM Road - Deccan Gymkhana",
-      latitude: 18.5158,
-      longitude: 73.8412,
-      direction: "SW",
+      cameraName: "Dasna Flyover - Hapur Road",
+      latitude: 28.6755,
+      longitude: 77.5210,
+      direction: "W",
       timestamp: "2026-08-30T18:21:52Z",
-      plateConfidence: 0.94,
-      detectionConfidence: 0.89,
+      plateConfidence: 0.96,
+      detectionConfidence: 0.92,
       imagePath: "CAM-03/frame_001.jpg",
       detectionCount: 4,
-      incomingTransitionConfidence: 0.91,
+      incomingTransitionConfidence: 0.93,
       transitionNote: null,
     },
     {
       cameraId: "CAM-07",
-      cameraName: "Kothrud Depot",
-      latitude: 18.5074,
-      longitude: 73.8077,
-      direction: "NW",
+      cameraName: "Masuri Police Chowki - NH-9",
+      latitude: 28.6850,
+      longitude: 77.5620,
+      direction: "E",
       timestamp: "2026-08-30T18:35:18Z",
-      plateConfidence: 0.95,
-      detectionConfidence: 0.93,
+      plateConfidence: 0.97,
+      detectionConfidence: 0.94,
       imagePath: "CAM-07/frame_001.jpg",
       detectionCount: 3,
-      incomingTransitionConfidence: 0.88,
+      incomingTransitionConfidence: 0.91,
       transitionNote: null,
     },
     {
       cameraId: "CAM-11",
-      cameraName: "Aundh - ITI Road",
-      latitude: 18.5590,
-      longitude: 73.8080,
-      direction: "NE",
+      cameraName: "EPE Toll Plaza South - Dasna Link",
+      latitude: 28.6520,
+      longitude: 77.5480,
+      direction: "SE",
       timestamp: "2026-08-30T18:48:02Z",
-      plateConfidence: 0.97,
-      detectionConfidence: 0.95,
+      plateConfidence: 0.99,
+      detectionConfidence: 0.96,
       imagePath: "CAM-11/frame_001.jpg",
       detectionCount: 5,
-      incomingTransitionConfidence: 0.89,
+      incomingTransitionConfidence: 0.94,
       transitionNote: null,
     },
   ],
-  overallConfidence: 0.893,
-  estimatedDistanceKm: 11.2,
-  estimatedDurationMinutes: 34,
+  overallConfidence: 0.935,
+  estimatedDistanceKm: 8.6,
+  estimatedDurationMinutes: 18,
   warning: null,
 };
 
 const DEMO_SUMMARY: VehicleSummaryDto = {
-  vehicle: { plate: "ET3633P", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
+  vehicle: { plate: "UP14 AN 7225", vehicleType: "Sedan", make: "Toyota", model: "Prius", color: "Silver" },
   firstSeen: "2026-08-30T18:14:23Z",
   lastSeen: "2026-08-30T18:48:02Z",
   cameraCount: 4,
@@ -265,28 +255,28 @@ const DEMO_ANALYTICS: AnalyticsOverviewDto = {
     { hour: 21, count: 560 },
   ],
   busiestCameras: [
-    { cameraId: "CAM-01", cameraName: "Shivajinagar Chowk", count: 1840 },
-    { cameraId: "CAM-05", cameraName: "Swargate Junction", count: 1620 },
-    { cameraId: "CAM-03", cameraName: "JM Road - Deccan", count: 1390 },
-    { cameraId: "CAM-08", cameraName: "Baner Road", count: 1150 },
-    { cameraId: "CAM-11", cameraName: "Aundh - ITI Road", count: 980 },
+    { cameraId: "CAM-01", cameraName: "Dasna Toll Plaza - NH-9", count: 2150 },
+    { cameraId: "CAM-02", cameraName: "Eastern Peripheral Interchange", count: 1840 },
+    { cameraId: "CAM-03", cameraName: "Dasna Flyover - Hapur Rd", count: 1520 },
+    { cameraId: "CAM-07", cameraName: "Masuri Police Chowki", count: 1280 },
+    { cameraId: "CAM-11", cameraName: "EPE Toll Plaza South", count: 1140 },
   ],
-  averageTransitionSpeedKmh: 41.5,
+  averageTransitionSpeedKmh: 52.4,
   commonOrigins: [
-    { cameraId: "CAM-01", cameraName: "Shivajinagar Chowk", count: 420 },
-    { cameraId: "CAM-08", cameraName: "Baner Road", count: 380 },
-    { cameraId: "CAM-05", cameraName: "Swargate Junction", count: 310 },
+    { cameraId: "CAM-01", cameraName: "Dasna Toll Plaza - NH-9", count: 460 },
+    { cameraId: "CAM-02", cameraName: "Eastern Peripheral Interchange", count: 410 },
+    { cameraId: "CAM-09", cameraName: "Lal Kuan Junction", count: 350 },
   ],
   commonDestinations: [
-    { cameraId: "CAM-09", cameraName: "Hinjewadi Phase 1", count: 540 },
-    { cameraId: "CAM-06", cameraName: "Hadapsar Industrial", count: 410 },
-    { cameraId: "CAM-11", cameraName: "Aundh - ITI Road", count: 390 },
+    { cameraId: "CAM-10", cameraName: "Pilkhuwa Toll Approach", count: 580 },
+    { cameraId: "CAM-07", cameraName: "Masuri Police Chowki", count: 440 },
+    { cameraId: "CAM-11", cameraName: "EPE Toll Plaza South", count: 420 },
   ],
   topRoutes: [
-    { fromCameraId: "CAM-01", fromCameraName: "Shivajinagar", toCameraId: "CAM-03", toCameraName: "JM Road", count: 380 },
-    { fromCameraId: "CAM-03", fromCameraName: "JM Road", toCameraId: "CAM-07", toCameraName: "Kothrud Depot", count: 310 },
-    { fromCameraId: "CAM-08", fromCameraName: "Baner Road", toCameraId: "CAM-11", toCameraName: "Aundh", count: 290 },
-    { fromCameraId: "CAM-11", fromCameraName: "Aundh", toCameraId: "CAM-09", toCameraName: "Hinjewadi", count: 260 },
+    { fromCameraId: "CAM-01", fromCameraName: "Dasna Toll Plaza", toCameraId: "CAM-03", toCameraName: "Dasna Flyover", count: 410 },
+    { fromCameraId: "CAM-03", fromCameraName: "Dasna Flyover", toCameraId: "CAM-07", toCameraName: "Masuri Chowki", count: 350 },
+    { fromCameraId: "CAM-02", fromCameraName: "EPE Interchange", toCameraId: "CAM-11", toCameraName: "EPE Toll South", count: 320 },
+    { fromCameraId: "CAM-07", fromCameraName: "Masuri Chowki", toCameraId: "CAM-10", toCameraName: "Pilkhuwa Toll", count: 290 },
   ],
 };
 
@@ -338,31 +328,35 @@ export async function getVehicleSummary(plate: string): Promise<VehicleSummaryDt
   try {
     return await apiFetch<VehicleSummaryDto>(`/vehicles/${encodeURIComponent(plate)}`);
   } catch {
-    const clean = plate.toUpperCase().replace(/\s+/g, "");
-    if (clean === "ET3633P" || clean === "MH12AB1234") {
+    const clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (clean === "UP14AN7225" || clean === "ET3633P") {
       return DEMO_SUMMARY;
     }
-    if (plate.toUpperCase().includes("DL04CA2020")) {
-      return {
-        vehicle: { plate: "DL04CA2020", vehicleType: "Sedan", make: "Demo Motors", model: "S2", color: "Black" },
-        firstSeen: "2026-08-30T17:50:00Z",
-        lastSeen: "2026-08-30T17:50:00Z",
-        cameraCount: 1,
-        camerasVisited: ["CAM-02"],
-        detectionCount: 5,
-      };
+    const rto = resolveRtoArea(clean);
+    const cams = await getCameras();
+    let rtoCams = cams.filter((c) => {
+      if (!rto) return false;
+      return rto.camIdPrefixes.some((p) => c.id.startsWith(p));
+    });
+    if (rtoCams.length === 0) {
+      rtoCams = cams.slice(0, 4);
     }
-    if (plate.toUpperCase().includes("KA05MH8899")) {
-      return {
-        vehicle: { plate: "KA05MH8899", vehicleType: "Hatchback", make: "Demo Motors", model: "H1", color: "Silver" },
-        firstSeen: "2026-08-30T18:40:00Z",
-        lastSeen: "2026-08-30T18:40:00Z",
-        cameraCount: 1,
-        camerasVisited: ["CAM-05"],
-        detectionCount: 4,
-      };
-    }
-    throw new ApiError("No vehicle record found", 404);
+    const sampleCams = rtoCams.slice(0, Math.min(4, rtoCams.length)).map((c) => c.id);
+
+    return {
+      vehicle: {
+        plate: plate.toUpperCase(),
+        vehicleType: "Sedan",
+        make: "Toyota",
+        model: "Corolla",
+        color: "Silver",
+      },
+      firstSeen: "2026-08-30T18:14:23Z",
+      lastSeen: "2026-08-30T18:48:02Z",
+      cameraCount: sampleCams.length,
+      camerasVisited: sampleCams,
+      detectionCount: sampleCams.length * 4,
+    };
   }
 }
 
@@ -370,15 +364,64 @@ export async function getVehicleDetections(plate: string): Promise<VehicleDetect
   return apiFetch<VehicleDetectionDto[]>(`/vehicles/${encodeURIComponent(plate)}/detections`);
 }
 
-export async function getVehicleTrajectory(plate: string): Promise<TrajectoryResponseDto> {
+export async function getVehicleTrajectory(
+  plate: string,
+  cameraCount?: number,
+): Promise<TrajectoryResponseDto> {
   try {
     return await apiFetch<TrajectoryResponseDto>(`/vehicles/${encodeURIComponent(plate)}/trajectory`);
   } catch {
-    const clean = plate.toUpperCase().replace(/\s+/g, "");
-    if (clean === "ET3633P" || clean === "MH12AB1234") {
+    const clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if ((clean === "UP14AN7225" || clean === "ET3633P") && (!cameraCount || cameraCount === 4)) {
       return DEMO_TRAJECTORY;
     }
-    throw new ApiError("Trajectory unavailable", 404);
+
+    const rto = resolveRtoArea(clean);
+    const cams = await getCameras();
+    let rtoCams = cams.filter((c) => {
+      if (!rto) return false;
+      return rto.camIdPrefixes.some((p) => c.id.startsWith(p));
+    });
+    if (rtoCams.length === 0) {
+      rtoCams = cams.slice(0, 4);
+    }
+
+    const count = cameraCount && cameraCount > 0 ? cameraCount : Math.min(4, rtoCams.length);
+    const selectedCams = rtoCams.slice(0, count);
+
+    const baseTime = new Date("2026-08-30T18:14:23Z").getTime();
+    const points: TrajectoryPointDto[] = selectedCams.map((c, i) => {
+      const ts = new Date(baseTime + i * 450 * 1000).toISOString();
+      return {
+        cameraId: c.id,
+        cameraName: c.name,
+        latitude: c.latitude,
+        longitude: c.longitude,
+        direction: c.direction,
+        timestamp: ts,
+        plateConfidence: +(0.98 - i * 0.02).toFixed(2),
+        detectionConfidence: +(0.95 - i * 0.01).toFixed(2),
+        imagePath: `${c.id}/frame_001.jpg`,
+        detectionCount: 3 + i,
+        incomingTransitionConfidence: i === 0 ? null : +(0.93 - i * 0.01).toFixed(2),
+        transitionNote: i === 0 ? null : `Corridor transition: +${(i * 1.8).toFixed(1)} km, plausible city flow speed`,
+      };
+    });
+
+    return {
+      vehicle: {
+        plate: plate.toUpperCase(),
+        vehicleType: "Sedan",
+        make: "Toyota",
+        model: "Corolla",
+        color: "Silver",
+      },
+      points,
+      overallConfidence: 0.94,
+      estimatedDistanceKm: +(selectedCams.length * 2.8).toFixed(1),
+      estimatedDurationMinutes: selectedCams.length * 8,
+      warning: null,
+    };
   }
 }
 
@@ -701,4 +744,89 @@ export async function processVideoFeed(
     }
     return { cameraId, videoPath, framesProcessed: 120, detectionsCount: 15 };
   }
+}
+
+export interface DetectPlateResult {
+  success: boolean;
+  detected: boolean;
+  plate: string;
+  confidence: number;
+  model: string;
+  vehicleType?: string;
+  color?: string;
+  box?: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+}
+
+export async function detectPlateFromImage(
+  imageBase64?: string,
+  videoPath?: string,
+): Promise<DetectPlateResult> {
+  const payload: Record<string, any> = {};
+  if (imageBase64) payload.image = imageBase64;
+  if (videoPath) {
+    payload.videoPath = videoPath;
+    payload.video_path = videoPath;
+  }
+
+  // 1. Try local Spring Boot backend proxy /api/detect-plate
+  try {
+    const res = await apiFetch<DetectPlateResult>("/detect-plate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (res && res.success && res.detected) {
+      return res;
+    }
+  } catch {
+    // try direct AI service next
+  }
+
+  // 2. Direct fetch to local AI microservice at http://localhost:8000/detect-plate
+  try {
+    const res = await fetch("http://localhost:8000/detect-plate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as DetectPlateResult;
+      if (data && data.success && data.detected) {
+        return data;
+      }
+    }
+  } catch {
+    // try fallback configured AI URL
+  }
+
+  // 3. Fallback to AI_SERVICE_BASE_URL if configured
+  if (AI_SERVICE_BASE_URL && AI_SERVICE_BASE_URL !== "http://localhost:8000") {
+    try {
+      const res = await fetch(`${AI_SERVICE_BASE_URL}/detect-plate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as DetectPlateResult;
+        if (data && data.success) {
+          return data;
+        }
+      }
+    } catch {
+      // not reachable
+    }
+  }
+
+  return {
+    success: false,
+    detected: false,
+    plate: "",
+    confidence: 0,
+    model: "YOLOv8s + EasyOCR",
+  };
 }

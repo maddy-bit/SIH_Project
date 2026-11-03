@@ -126,8 +126,8 @@ public class TrajectoryEngine {
         List<CameraVisit> visits = groupIntoVisits(detections);
 
         if (visits.isEmpty()) {
-            // Build fallback demo trajectory using camera nodes
-            List<CameraVisit> fallbackVisits = buildFallbackVisits();
+            // Build fallback demo trajectory using camera nodes matching region
+            List<CameraVisit> fallbackVisits = buildFallbackVisits(normalizedPlate);
             List<Transition> fallbackTransitions = buildFallbackTransitions(fallbackVisits);
             return new TrajectoryResult(vehicle, fallbackVisits, fallbackTransitions, 0.94, 11.2, 34, null);
         }
@@ -171,16 +171,54 @@ public class TrajectoryEngine {
         return reconstruct(normalizedPlate).toDto();
     }
 
-    private List<CameraVisit> buildFallbackVisits() {
+    private List<CameraVisit> buildFallbackVisits(String plate) {
         List<CameraVisit> visits = new ArrayList<>();
-        List<String> targetIds = List.of("CAM-01", "CAM-03", "CAM-07", "CAM-11");
+        List<String> targetIds = new ArrayList<>();
+
+        String clean = plate != null ? plate.replaceAll("[^A-Za-z0-9]", "").toUpperCase() : "";
+
+        // 1. Check for specific 4-character RTO cameras in repository (e.g. CAM-BR01-, CAM-AN01-, CAM-UP32-)
+        if (clean.length() >= 4) {
+            String rto4 = clean.substring(0, 4);
+            List<String> matched = cameraRepository.findAll().stream()
+                    .map(Camera::getId)
+                    .filter(id -> id != null && id.startsWith("CAM-" + rto4 + "-"))
+                    .limit(4)
+                    .toList();
+            if (!matched.isEmpty()) {
+                targetIds.addAll(matched);
+            }
+        }
+
+        // 2. State-level prefix matching (e.g. DL, MH, etc.)
+        if (targetIds.isEmpty() && clean.length() >= 2) {
+            String rto2 = clean.substring(0, 2);
+            if (rto2.equals("UP") && (clean.startsWith("UP14") || clean.length() < 4)) {
+                targetIds = List.of("CAM-01", "CAM-03", "CAM-07", "CAM-11");
+            } else {
+                List<String> matched = cameraRepository.findAll().stream()
+                        .map(Camera::getId)
+                        .filter(id -> id != null && id.startsWith("CAM-" + rto2))
+                        .limit(4)
+                        .toList();
+                if (!matched.isEmpty()) {
+                    targetIds.addAll(matched);
+                }
+            }
+        }
+
+        // 3. Fallback default to Dasna corridor
+        if (targetIds.isEmpty()) {
+            targetIds = List.of("CAM-01", "CAM-03", "CAM-07", "CAM-11");
+        }
+
         Instant baseTime = Instant.parse("2026-08-30T18:14:23Z");
 
         for (int i = 0; i < targetIds.size(); i++) {
             String camId = targetIds.get(i);
             if (camId == null) continue;
             Camera cam = cameraRepository.findById(camId)
-                    .orElse(new Camera(camId, "Junction " + camId, 18.5308 + (i * 0.01), 73.8474 + (i * 0.01), "SE", "ONLINE", "videos/cam01.mp4"));
+                    .orElse(new Camera(camId, "Junction " + camId, 28.6792 + (i * 0.01), 77.5315 + (i * 0.01), "SE", "ONLINE", "videos/cam01.mp4"));
             Instant seen = baseTime.plusSeconds(i * 600L);
             visits.add(new CameraVisit(cam, seen, seen.plusSeconds(120), 0.95 - (i * 0.02), 0.92, camId + "/frame_001.jpg", 3 + i));
         }

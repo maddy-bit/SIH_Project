@@ -18,9 +18,9 @@ def main():
 
     # Register camera nodes
     orchestrator.register_camera_nodes([
-        CameraNode("CAM-01", 19.0760, 72.8777, "Junction A - Central Mall"),
-        CameraNode("CAM-02", 19.0820, 72.8850, "Junction B - Highway Toll"),
-        CameraNode("CAM-03", 19.0900, 72.8950, "Junction C - City Exit"),
+        CameraNode("CAM-01", 28.6792, 77.5315, "Dasna Toll Plaza - NH-9"),
+        CameraNode("CAM-02", 28.6835, 77.5420, "Eastern Peripheral Interchange - Dasna"),
+        CameraNode("CAM-03", 28.6755, 77.5210, "Dasna Flyover - Hapur Road"),
     ])
 
     # Check initial traffic summary

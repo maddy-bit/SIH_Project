@@ -284,7 +284,7 @@ export function generateRcPdf(record: IndianVehicleRcRecord): void {
   doc.setFontSize(5);
   doc.setTextColor(30, 58, 138);
   doc.text("REGIONAL TRANSPORT", sealX + 14, footerY + 8, { align: "center" });
-  doc.text("OFFICE - PUNE", sealX + 14, footerY + 11, { align: "center" });
+  doc.text(`OFFICE - ${cleanText(record.district || "GHAZIABAD").toUpperCase()}`, sealX + 14, footerY + 11, { align: "center" });
   doc.text("SEAL VERIFIED", sealX + 14, footerY + 14, { align: "center" });
 
   // Save the PDF file using standard blob download

@@ -55,6 +55,8 @@ export function InvestigationDashboard() {
   const [isVideoIngestOpen, setIsVideoIngestOpen] = useState(false);
   const [isRegistryModalOpen, setIsRegistryModalOpen] = useState(false);
   const [customVideoUrls, setCustomVideoUrls] = useState<Record<string, string>>({});
+  const [enteredPlate, setEnteredPlate] = useState<string>("");
+  const [isConstructed, setIsConstructed] = useState<boolean>(false);
   const liveCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -121,10 +123,13 @@ export function InvestigationDashboard() {
     overrideVehicleType?: string,
     overrideColor?: string,
     overrideVideoUrls?: Record<string, string>,
+    overrideTrajectory?: TrajectoryResponseDto,
   ) {
     if (overrideVideoUrls) {
       setCustomVideoUrls(overrideVideoUrls);
     }
+    setEnteredPlate(plate);
+    setIsConstructed(true);
     stopLive();
     setSearchState("searching");
     setErrorMessage(null);
@@ -141,9 +146,17 @@ export function InvestigationDashboard() {
       if (overrideColor) {
         summaryResult.vehicle.color = overrideColor;
       }
+      if (overrideTrajectory) {
+        summaryResult.cameraCount = overrideTrajectory.points.length;
+        summaryResult.camerasVisited = overrideTrajectory.points.map((p) => p.cameraId);
+        summaryResult.detectionCount = overrideTrajectory.points.reduce((acc, p) => acc + (p.detectionCount || 1), 0);
+      }
       setSummary(summaryResult);
 
-      if (mode === "historical" || mode === "combined") {
+      if (overrideTrajectory) {
+        setTrajectory(overrideTrajectory);
+        if (overrideTrajectory.points.length > 0) setSelectedIndex(0);
+      } else if (mode === "historical" || mode === "combined") {
         try {
           const trajectoryResult = await getVehicleTrajectory(plate);
           if (overrideVehicleType) {
@@ -221,7 +234,25 @@ export function InvestigationDashboard() {
       <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[360px_1fr_360px] xl:grid-cols-[380px_1fr_380px]">
         {/* Left Column: Target Search & Surveillance Controls */}
         <div className="flex flex-col gap-4">
-          <VehicleSearchPanel onSearch={handleSearch} isSearching={searchState === "searching"} />
+          <VehicleSearchPanel
+            onSearch={(plate, mode) => {
+              setEnteredPlate(plate);
+              setIsConstructed(true);
+              handleSearch(plate, mode);
+            }}
+            isSearching={searchState === "searching"}
+            currentPlate={enteredPlate}
+            onPlateChange={(plate) => {
+              setEnteredPlate(plate);
+              setIsConstructed(false);
+              if (!plate.trim()) {
+                setSearchState("idle");
+                setSummary(null);
+                setTrajectory(null);
+                setSelectedIndex(null);
+              }
+            }}
+          />
 
           <SecurityWatchlistModal />
 
@@ -309,12 +340,14 @@ export function InvestigationDashboard() {
         <div className="min-h-[480px] flex flex-col gap-4">
           <InvestigationMap
             cameras={cameras}
-            points={points}
-            selectedIndex={selectedIndex}
+            points={isConstructed ? points : []}
+            selectedIndex={isConstructed ? selectedIndex : null}
             onSelectPoint={setSelectedIndex}
             replayToken={replayToken}
+            enteredPlate={enteredPlate}
+            isConstructed={isConstructed}
           />
-          {points.length > 0 && (
+          {isConstructed && points.length > 0 && (
             <InteractiveTrajectoryPlayer
               points={points}
               selectedIndex={selectedIndex}
@@ -328,28 +361,44 @@ export function InvestigationDashboard() {
 
         {/* Right Column: Timeline & Forensic CCTV Viewer */}
         <div className="flex flex-col gap-4 overflow-y-auto p-1 -m-1">
-          <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
-          {points.length > 0 && selectedPoint ? (
-            <EvidenceViewer
-              point={selectedPoint}
-              targetPlate={summary?.vehicle.plate ?? "ET3633P"}
-              vehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
-              vehicleColor={summary?.vehicle.color ?? trajectory?.vehicle.color ?? "Silver"}
-              customVideoUrls={customVideoUrls}
-              selectedIndex={selectedIndex}
-              totalPoints={points.length}
-              onNextCheckpoint={() => {
-                if (selectedIndex !== null && selectedIndex < points.length - 1) {
-                  setSelectedIndex(selectedIndex + 1);
-                }
-              }}
-              onPrevCheckpoint={() => {
-                if (selectedIndex !== null && selectedIndex > 0) {
-                  setSelectedIndex(selectedIndex - 1);
-                }
-              }}
-            />
-          ) : null}
+          {isConstructed && points.length > 0 ? (
+            <>
+              <DetectionTimeline points={points} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+              {selectedPoint ? (
+                <EvidenceViewer
+                  point={selectedPoint}
+                  targetPlate={summary?.vehicle.plate ?? enteredPlate ?? "UP14 AN 7225"}
+                  vehicleType={summary?.vehicle.vehicleType ?? trajectory?.vehicle.vehicleType ?? "Sedan"}
+                  vehicleColor={summary?.vehicle.color ?? trajectory?.vehicle.color ?? "Silver"}
+                  customVideoUrls={customVideoUrls}
+                  selectedIndex={selectedIndex}
+                  totalPoints={points.length}
+                  onNextCheckpoint={() => {
+                    if (selectedIndex !== null && selectedIndex < points.length - 1) {
+                      setSelectedIndex(selectedIndex + 1);
+                    }
+                  }}
+                  onPrevCheckpoint={() => {
+                    if (selectedIndex !== null && selectedIndex > 0) {
+                      setSelectedIndex(selectedIndex - 1);
+                    }
+                  }}
+                />
+              ) : null}
+            </>
+          ) : (
+            <div className="neo-box p-4 bg-slate-900/90 text-white border-2 border-slate-700">
+              <div className="flex items-center gap-2 mb-2 font-mono text-xs uppercase tracking-wider text-amber-400 font-bold">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>Forensic CCTV & Timeline</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed font-mono">
+                {enteredPlate.trim()
+                  ? `Regional cameras around ${enteredPlate} are spotlighted on the map. Click "⚡ Reconstruct 3D Trajectory" or "📹 Ingest Video Feed" to trace the vehicle's chronological 3D route and view camera CCTV evidence.`
+                  : "Enter a vehicle number plate or pick a preset scenario to view regional cameras, or ingest surveillance video footage to automatically reconstruct 3D trajectories."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -365,9 +414,11 @@ export function InvestigationDashboard() {
       <VideoIngestionModal
         isOpen={isVideoIngestOpen}
         onClose={() => setIsVideoIngestOpen(false)}
-        onTargetDetected={(plate, vType, vColor, vUrls) => {
+        onTargetDetected={(plate, vType, vColor, vUrls, customTrajectory) => {
           if (vUrls) setCustomVideoUrls(vUrls);
-          handleSearch(plate, "historical", vType, vColor, vUrls);
+          setEnteredPlate(plate);
+          setIsConstructed(true);
+          handleSearch(plate, "historical", vType, vColor, vUrls, customTrajectory);
         }}
       />
 
@@ -375,7 +426,7 @@ export function InvestigationDashboard() {
       <VehicleRegistryModal
         isOpen={isRegistryModalOpen}
         onClose={() => setIsRegistryModalOpen(false)}
-        initialPlate={summary?.vehicle.plate ?? "ET3633P"}
+        initialPlate={summary?.vehicle.plate ?? "UP14 AN 7225"}
       />
     </div>
   );

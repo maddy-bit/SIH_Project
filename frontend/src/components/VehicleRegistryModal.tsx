@@ -14,7 +14,7 @@ interface VehicleRegistryModalProps {
 export function VehicleRegistryModal({
   isOpen,
   onClose,
-  initialPlate = "ET3633P",
+  initialPlate = "UP14 AN 7225",
 }: VehicleRegistryModalProps) {
   const [queryPlate, setQueryPlate] = useState(initialPlate);
   const [activePlate, setActivePlate] = useState(initialPlate);

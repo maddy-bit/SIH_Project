@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { image, targetPlate = "ET3633P", cameraId = "CAM-01" } = body;
+    const { image, targetPlate = "UP14 AN 7225", cameraId = "CAM-01" } = body;
 
     if (!image) {
       return NextResponse.json({ success: false, detected: false, message: "No frame image provided" }, { status: 400 });

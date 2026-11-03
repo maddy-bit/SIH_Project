@@ -21,7 +21,7 @@ interface EvidenceViewerProps {
 
 export function EvidenceViewer({
   point,
-  targetPlate = "ET3633P",
+  targetPlate = "UP14 AN 7225",
   vehicleType = "Sedan",
   vehicleColor = "Silver",
   customVideoUrls = {},
@@ -38,13 +38,13 @@ export function EvidenceViewer({
   // Active point fallback: if no checkpoint selected, show CAM-01 corridor node
   const activePoint: TrajectoryPointDto = point ?? {
     cameraId: "CAM-01",
-    cameraName: "Shivajinagar Chowk",
-    latitude: 18.5308,
-    longitude: 73.8474,
-    direction: "SE",
+    cameraName: "Dasna Toll Plaza - NH-9 / DME",
+    latitude: 28.6792,
+    longitude: 77.5315,
+    direction: "E",
     timestamp: "2026-08-30T18:14:23Z",
-    plateConfidence: 0.968,
-    detectionConfidence: 0.942,
+    plateConfidence: 0.98,
+    detectionConfidence: 0.95,
     imagePath: "CAM-01/frame_001.jpg",
     detectionCount: 3,
     incomingTransitionConfidence: null,

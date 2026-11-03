@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TiltCard3D } from "./TiltCard3D";
+import { resolveRtoArea } from "@/lib/rtoDirectory";
 
 export type SearchMode = "historical" | "live" | "combined";
 
 interface VehicleSearchPanelProps {
   onSearch: (plate: string, mode: SearchMode) => void;
   isSearching: boolean;
+  currentPlate?: string;
+  onPlateChange?: (plate: string) => void;
 }
 
 const MODES: { value: SearchMode; label: string; desc: string }[] = [
@@ -17,23 +20,49 @@ const MODES: { value: SearchMode; label: string; desc: string }[] = [
 ];
 
 const PRESETS = [
-  { plate: "ET3633P", desc: "Silver Sedan (4 Cams)", tag: "DEMO TARGET" },
-  { plate: "DL04CA2020", desc: "Black Sedan (CAM-02)", tag: "DECOY" },
-  { plate: "KA05MH8899", desc: "Silver Hatch (CAM-05)", tag: "DECOY" },
+  { plate: "UP14 AN 7225", desc: "Silver Sedan (Dasna Corridor - UP-14)", tag: "DEMO TARGET" },
+  { plate: "DL04 CA 2020", desc: "Black Sedan (Connaught Place - DL)", tag: "DELHI" },
+  { plate: "MH12 AB 1234", desc: "Silver Sedan (Pune Expressway - MH-12)", tag: "PUNE" },
+  { plate: "KA05 MH 8899", desc: "Silver Hatch (Electronic City - KA-05)", tag: "BENGALURU" },
 ];
 
-export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanelProps) {
-  const [plate, setPlate] = useState("ET3633P");
+export function VehicleSearchPanel({ onSearch, isSearching, currentPlate, onPlateChange }: VehicleSearchPanelProps) {
+  const [plate, setPlate] = useState(currentPlate ?? "");
   const [mode, setMode] = useState<SearchMode>("historical");
+
+  // Keep internal plate in sync if parent updates it (e.g. after video ingestion)
+  useEffect(() => {
+    if (currentPlate !== undefined && currentPlate !== plate) {
+      setPlate(currentPlate);
+    }
+  }, [currentPlate]);
+
+  const activeRto = resolveRtoArea(plate);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!plate.trim()) return;
-    onSearch(plate.trim(), mode);
+    const target = plate.trim() || "UP14 AN 7225";
+    if (!plate.trim()) {
+      setPlate(target);
+      onPlateChange?.(target);
+    }
+    onSearch(target, mode);
   }
 
   function handlePresetClick(presetPlate: string) {
     setPlate(presetPlate);
+    onPlateChange?.(presetPlate);
+  }
+
+  function handleInputChange(val: string) {
+    const formatted = val.toUpperCase();
+    setPlate(formatted);
+    onPlateChange?.(formatted);
+  }
+
+  function handleClear() {
+    setPlate("");
+    onPlateChange?.("");
   }
 
   return (
@@ -70,10 +99,10 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
               {/* Input with JetBrains Mono */}
               <input
                 value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                placeholder="ET3633P"
+                onChange={(e) => handleInputChange(e.target.value)}
+                placeholder="ENTER PLATE (E.G. UP14 AN 7225)"
                 spellCheck={false}
-                className="w-full bg-transparent px-3 py-2 font-mono text-lg sm:text-xl font-bold tracking-widest text-slate-950 placeholder-slate-400 outline-none uppercase min-w-0"
+                className="w-full bg-transparent px-3 py-2 font-mono text-base sm:text-lg font-bold tracking-widest text-slate-950 placeholder-slate-400 outline-none uppercase min-w-0"
               />
 
               {/* Security Hologram & Clear Button */}
@@ -87,7 +116,7 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
                 {plate && (
                   <button
                     type="button"
-                    onClick={() => setPlate("")}
+                    onClick={handleClear}
                     className="rounded-xs p-1 text-sm font-bold text-slate-600 hover:text-slate-950 hover:bg-slate-200 transition-colors cursor-pointer"
                   >
                     ✕
@@ -95,6 +124,25 @@ export function VehicleSearchPanel({ onSearch, isSearching }: VehicleSearchPanel
                 )}
               </div>
             </div>
+
+            {/* Live RTO / Vicinity Identification Pill */}
+            {activeRto ? (
+              <div className="mt-2 flex items-center gap-2 rounded bg-sky-50 border border-sky-300 px-2.5 py-1 text-xs font-mono text-sky-900 animate-fadeIn">
+                <span className="h-2 w-2 rounded-full bg-sky-600 animate-pulse" />
+                <span className="font-bold">{activeRto.code}</span>
+                <span className="text-slate-600">·</span>
+                <span className="truncate">{activeRto.city} ({activeRto.state})</span>
+              </div>
+            ) : plate.trim() ? (
+              <div className="mt-2 flex items-center gap-2 rounded bg-amber-50 border border-amber-300 px-2.5 py-1 text-xs font-mono text-amber-900">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span>Custom Target · All-India Search Active</span>
+              </div>
+            ) : (
+              <div className="mt-2 flex items-center gap-2 rounded bg-slate-100 border border-slate-200 px-2.5 py-1 text-[11px] font-mono text-slate-600">
+                <span>Whole India View · Enter plate or select preset to zoom to vicinity</span>
+              </div>
+            )}
           </div>
 
           {/* Preset Target Scenarios */}

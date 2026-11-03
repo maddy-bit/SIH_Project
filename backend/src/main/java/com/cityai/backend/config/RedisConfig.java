@@ -93,7 +93,12 @@ public class RedisConfig implements CachingConfigurer {
 
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer() {
+            @Override
+            public boolean isAutoStartup() {
+                return false;
+            }
+        };
         container.setConnectionFactory(
                 Objects.requireNonNull(connectionFactory, "RedisConnectionFactory must not be null"));
         return container;

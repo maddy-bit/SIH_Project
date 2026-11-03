@@ -11,7 +11,7 @@ interface VehicleRegistrySectionProps {
 }
 
 export function VehicleRegistrySection({
-  plateNumber = "ET3633P",
+  plateNumber = "UP14 AN 7225",
   className = "",
   defaultExpanded = true,
 }: VehicleRegistrySectionProps) {

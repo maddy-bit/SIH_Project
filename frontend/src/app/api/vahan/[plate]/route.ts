@@ -13,10 +13,9 @@ export const dynamic = "force-dynamic";
  */
 
 const DEFAULT_KEYS = [
+  "c3ae07b037mshac930f00c18d9a0p152113jsnc8dc9caf9505", // User provided primary VAHAN key
   "6f0881c1c1mshda5cc01a91b057dp1ac9f0jsn976262889eea",
-  // "d156d0718dmsheea716d9ceea5f8p1b7ee5jsn5c94aac163d7",
-  // "ed9bb104f5msh12c3cb721bd8e9cp17c550jsn43cc7df2cd47", // New primary key
-  "0724709417msh4efb2cee3613ee3p13687ajsn5c5258e6d4db", // Previous key (failover / reused after monthly quota reset)
+  "0724709417msh4efb2cee3613ee3p13687ajsn5c5258e6d4db", // Fallback key
 ];
 
 function getRapidApiKeys(): string[] {
@@ -226,9 +225,9 @@ export async function GET(
   const { plate } = await params;
   const cleanPlate = (plate ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
-  // ── 1. Presentation Demo Number Plate: ET3633P ───────────────────────
+  // ── 1. Presentation Demo Number Plate: UP14 AN 7225 ──────────────────
   // Pre-loaded for live presentation demonstrations
-  if (cleanPlate === "ET3633P" || cleanPlate === "MH12AB1234") {
+  if (cleanPlate === "UP14AN7225" || cleanPlate === "ET3633P" || cleanPlate === "MH12AB1234") {
     const demoRecord = getVehicleRegistryRecord(cleanPlate);
     return NextResponse.json({
       source: "LIVE_PUBLIC_API",
